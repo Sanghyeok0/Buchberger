@@ -11,8 +11,8 @@ This project is based on **Lean 4** and **Mathlib**, and aims to **rigorously fo
 
 ## 📖 Documentation
 
-- **Blueprint (Formalization Write-up)**: [📚 Buchberger Blueprint](https://sanghyeok0.github.io/Buchberger/blueprint/)
-- **API Documentation** (doc-gen): [📜 Lean API Docs](https://sanghyeok0.github.io/Buchberger/docs/)
+- **Blueprint of the proof**: [📚 Buchberger Blueprint](https://sanghyeok0.github.io/Buchberger/blueprint/)
+- **Documentation of the methods**: [📜 Lean API Docs](https://sanghyeok0.github.io/Buchberger/docs/)
 - **GitHub Repository**: [🔗 GitHub](https://github.com/Sanghyeok0/Buchberger)
 - **Discussion on Zulip**: [💬 Zulip Chat](https://leanprover.zulipchat.com/)
 
