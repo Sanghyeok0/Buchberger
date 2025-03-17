@@ -1,0 +1,9 @@
+# Fdb version 4
+["pdflatex"] 0 "print.tex" "C:/Users/Home/Buchberger/blueprint/print/print.pdf" "print" 0 -1
+  "C:/Users/Home/Buchberger/blueprint/print/print.aux" 0 -1 0 "pdflatex"
+  "print.tex" 0 -1 0 ""
+  (generated)
+  "C:/Users/Home/Buchberger/blueprint/print/print.aux"
+  "C:/Users/Home/Buchberger/blueprint/print/print.log"
+  "C:/Users/Home/Buchberger/blueprint/print/print.pdf"
+  (rewritten before read)
