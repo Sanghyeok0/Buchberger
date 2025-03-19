@@ -99,10 +99,10 @@ noncomputable def remainder {ι : Type*} (b : ι →₀ MvPolynomial σ k) (hb :
     (∀ (i : ι), m.toSyn (m.degree (b i * g i)) ≤ m.toSyn (m.degree f)) ∧ ∀ c ∈ r.support, ∀ (i : ι), ¬m.degree (b i) ≤ c := MonomialOrder.div hb f
   -/
 
-variable [Fintype σ] [DecidableEq (MvPolynomial σ R)] in
-noncomputable def remainder₁ {ι : Type*} (b : ι →₀ MvPolynomial σ k) (f : MvPolynomial σ k) : MvPolynomial σ k :=
-  let ⟨g, r, _⟩ := MonomialOrder.div (m := m) (fun i : {x // x ∈ b.support}  => (isUnit_leadingCoeff_iff_nonzero m (b i.val)).mpr (Finsupp.mem_support_iff.mp i.2)) f
-  r
+-- variable [Fintype σ] [DecidableEq (MvPolynomial σ R)] in
+-- noncomputable def remainder₁ {ι : Type*} (b : ι →₀ MvPolynomial σ k) (f : MvPolynomial σ k) : MvPolynomial σ k :=
+--   let ⟨g, r, _⟩ := MonomialOrder.div (m := m) (fun i : {x // x ∈ b.support}  => (isUnit_leadingCoeff_iff_nonzero m (b i.val)).mpr (Finsupp.mem_support_iff.mp i.2)) f
+--   r
 /-
 Buchberger’s Criterion (Theorem 6) says:
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I = ideal.span G`).

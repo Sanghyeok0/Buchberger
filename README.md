@@ -19,11 +19,19 @@ This project is based on **Lean 4** and **Mathlib**, and aims to **rigorously fo
 ---
 
 ## **📂 Project Structure**
-- `blueprint/` - Lean Blueprint documentation (LaTeX & HTML)
-- `src/` - Lean 4 source files
-- `chapter/` - Individual chapters for the Blueprint
-- `lakefile.toml` - Lean 4 package configuration
-- `README.md` - This file!
+- `Buchberger/` - Lean 4 source files  
+  - Contains Lean formalizations (e.g., `MonomialIdeal.lean`, `GroebnerBases.lean`)  
+- `blueprint/` - Lean Blueprint documentation  
+  - `src/` - LaTeX sources for the Blueprint  
+    - `chapter/` - Individual chapters in LaTeX  
+    - `macros/` - Common and format-specific macros (`common.tex`, `web.tex`, `print.tex`)  
+    - `content.tex` - Main Blueprint content file  
+  - `web/` - HTML output of the Blueprint (after `leanblueprint web`)  
+  - `print/` - PDF output of the Blueprint (after `leanblueprint pdf`)  
+- `home_page/` - Jekyll-based GitHub Pages website  
+- `lakefile.toml` - Lean 4 package configuration  
+- `README.md` - This file!  
+- `.github/workflows/` - Continuous integration (CI) for Lean & Blueprint  
 
 ---
 
@@ -33,20 +41,18 @@ This project is based on **Lean 4** and **Mathlib**, and aims to **rigorously fo
 To compile the Lean 4 code, ensure you have Lean installed.  
 Follow the [Lean installation guide](https://leanprover-community.github.io/get_started.html).
 
-Run the following:
-```sh
-lake exe cache get
-lake build
-```
-
 ### **🔹 Build the Blueprint**
 To generate the **Blueprint (formalization document)** and web version, run:
 ```sh
 leanblueprint web
 ```
-To view the generated **PDF**, open:
+To generate the **PDF version**, run:
 ```
-build/blueprint.pdf
+leanblueprint pdf
+```
+The compiled **PDF document** will be located at:
+```
+blueprint/print/print.pdf
 ```
 
 ---
