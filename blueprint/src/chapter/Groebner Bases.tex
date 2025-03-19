@@ -1,3 +1,19 @@
 \chapter{Gr{\"o}bner Bases} 
 
-\section{Groebner Bases-Existence and Uniqueness}
+\section{Gr{\"o}bner Bases-Existence and Uniqueness}
+
+\begin{definition}\label{def:Buchberger’s Criterion}% [Cox] 86p Buchberger’s Criterion
+    Let I be a polynomial ideal. Then a basis
+    G = {g1, . . . , gt} of I is a Gröbner basis of I if and only if for all pairs i ̸= j, the
+    remainder on division of S(gi, gj) by G (listed in some order) is zero.
+\end{definition}
+
+\begin{definition}\label{def:reduces_to_zero} % [Cox] 104p
+    \lean{MvPolynomial.reduces_to_zero}
+    Fix a monomial order and let $G = \left{g_1, \ldots , gt} \subseteq k[x_1, \lodts , x_n]$.
+    Given $f \in k[x_1, \lodts , x_n]$, we say that $f$ reduces to zero modulo $G$, written $f \xrightarrow{G} 0$,
+    if $f$ has a \textbf{standard representation}
+    \[ f = A_1g_1 + \cdots A_tg_t,\ A_i \in k[x_1, \lodts , x_n],\]
+    which means that whenever $A_ig_i \neq 0$, we have
+    \[\operatorname{deg}(f) ≥ \operatorname{deg}(A_ig_i).\]
+\end{definition}
