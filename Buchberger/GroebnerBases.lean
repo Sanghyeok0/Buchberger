@@ -87,13 +87,19 @@ theorem grobner_basis_exists (I : Ideal (MvPolynomial σ R)) :
   sorry
 
 
-variable [Fintype σ] [DecidableEq (MvPolynomial σ R)] in
+variable [DecidableEq (MvPolynomial σ R)] in
 noncomputable def remainder {ι : Type*} (b : ι →₀ MvPolynomial σ k) (hb : ∀ (i : ι), b i ≠ 0) (f : MvPolynomial σ k) : MvPolynomial σ k :=
   have hb' : ∀ (i : ι), IsUnit (m.leadingCoeff (b i)) := by
     intro i
     exact (isUnit_leadingCoeff_iff_nonzero m (b i)).mpr (hb i)
   let div_result := MonomialOrder.div hb' f
-  Exists.choose (div_result).2
+  have : Nonempty { g | ∃ r, f = (Finsupp.linearCombination (MvPolynomial σ k) ⇑b) g + r ∧
+    (∀ (i : ι), m.toSyn (m.degree (b i * g i)) ≤ m.toSyn (m.degree f)) ∧ ∀ c ∈ r.support, ∀ (i : ι), ¬m.degree (b i) ≤ c } := by exact Set.Nonempty.to_subtype div_result
+  let g := Exists.choose div_result
+  have r_choose : ∃ r, f = (Finsupp.linearCombination (MvPolynomial σ k) ⇑b) g + r ∧
+    (∀ (i : ι), m.toSyn (m.degree (b i * g i)) ≤ m.toSyn (m.degree f)) ∧ ∀ c ∈ r.support, ∀ (i : ι), ¬m.degree (b i) ≤ c := by sorry
+  let r := Exists.choose r_choose
+  r
   /-div_result : ∃ g r,
   f = (Finsupp.linearCombination (MvPolynomial σ k) ⇑b) g + r ∧
     (∀ (i : ι), m.toSyn (m.degree (b i * g i)) ≤ m.toSyn (m.degree f)) ∧ ∀ c ∈ r.support, ∀ (i : ι), ¬m.degree (b i) ≤ c := MonomialOrder.div hb f
@@ -110,7 +116,7 @@ Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomial
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
 
-variable [Fintype σ] [DecidableEq (MvPolynomial σ k)] in
+variable (m) [Fintype σ] [DecidableEq (MvPolynomial σ k)] in
 theorem Buchberger_criterion
   {ι : Type*} {I : Ideal (MvPolynomial σ k)}
   (G : ι →₀ MvPolynomial σ k)
@@ -120,8 +126,7 @@ theorem Buchberger_criterion
       g₁ ∈ (Set.range G) →
       g₂ ∈ (Set.range G) →
       g₁ ≠ g₂ →
-      remainder (S_polynomial g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) :=
-sorry
+      remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
 
 /-
 A polynomial `f` in `MvPolynomial σ R` is said to reduce to zero modulo a
