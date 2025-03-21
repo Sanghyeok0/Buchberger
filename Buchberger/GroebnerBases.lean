@@ -116,17 +116,17 @@ Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomial
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
 
-variable (m) [Fintype σ] [DecidableEq (MvPolynomial σ k)] in
-theorem Buchberger_criterion
-  {ι : Type*} {I : Ideal (MvPolynomial σ k)}
-  (G : ι →₀ MvPolynomial σ k)
-  (hG : I = Ideal.span (Set.range G)) :
-  is_GrobnerBasis m I G ↔
-    (∀ (g₁ g₂ : MvPolynomial σ k),
-      g₁ ∈ (Set.range G) →
-      g₂ ∈ (Set.range G) →
-      g₁ ≠ g₂ →
-      remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
+-- variable (m) [Fintype σ] [DecidableEq (MvPolynomial σ k)] in
+-- theorem Buchberger_criterion
+--   {ι : Type*} {I : Ideal (MvPolynomial σ k)}
+--   (G : ι →₀ MvPolynomial σ k)
+--   (hG : I = Ideal.span (Set.range G)) :
+--   is_GrobnerBasis m I G ↔
+--     (∀ (g₁ g₂ : MvPolynomial σ k),
+--       g₁ ∈ (Set.range G) →
+--       g₂ ∈ (Set.range G) →
+--       g₁ ≠ g₂ →
+--       remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
 
 /-
 A polynomial `f` in `MvPolynomial σ R` is said to reduce to zero modulo a
