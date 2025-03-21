@@ -14,10 +14,10 @@
 
 \begin{definition}\label{def:reduces_to_zero} % [Cox] 104p
     \lean{MvPolynomial.reduces_to_zero}
-    Fix a monomial order and let $G = \left\{g_1, \ldots , gt\right\} \subseteq k[x_1, \lodts , x_n]$.
-    Given $f \in k[x_1, \lodts , x_n]$, we say that $f$ reduces to zero modulo $G$, written $f \xrightarrow{G} 0$,
+    Fix a monomial order and let $G = \left\{g_1, \ldots , g_t\right\} \subseteq k[x_1, \ldots , x_n]$.
+    Given $f \in k[x_1, \ldots , x_n]$, we say that $f$ reduces to zero modulo $G$, written $f \xrightarrow{G} 0$,
     if $f$ has a \textbf{standard representation}
-    \[ f = A_1g_1 + \cdots A_tg_t,\ A_i \in k[x_1, \lodts , x_n],\]
+    \[ f = A_1g_1 + \cdots A_tg_t,\ A_i \in k[x_1, \ldots , x_n],\]
     which means that whenever $A_ig_i \neq 0$, we have
     \[\operatorname{deg}(f) ≥ \operatorname{deg}(A_ig_i).\]
 \end{definition}
