@@ -2,15 +2,15 @@
 
 \section{Gr{\"o}bner Bases-Existence and Uniqueness}
 
-\begin{theorem}
-    test
+\begin{theorem}[Buchberger's Criterion]\label{def:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion
+    \lean{MvPolynomial.Buchberger_criterion}
+    Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
+    Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
+    if and only if for all pairs $i \neq j$, the remainder on division of the $S$-polynomial $S(g_i, g_j)$ by $G$ (listed in some order) is zero.
+    \[ \forall i \neq j, \quad S(g_i, g_j) \xrightarrow{G} 0 \]
+    or equivalently,
+    \[ \forall i \neq j, \quad \rem(S(g_i, g_j), G) = 0. \]
 \end{theorem}
-
-\begin{definition}\label{def:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion
-    Let $I$ be a polynomial ideal. Then a basis
-    $ G = \left\{g_1, \ldots , g_t\right\}$ of $I$ is a Gröbner basis of $I$ if and only if for all pairs $i \neq j$
-    remainder on division of $S(g_i, g_j)$ by $G$ (listed in some order) is zero.
-\end{definition}
 
 \begin{definition}\label{def:reduces_to_zero} % [Cox] 104p
     \lean{MvPolynomial.reduces_to_zero}
@@ -19,9 +19,34 @@
     if $f$ has a \textbf{standard representation}
     \[ f = A_1g_1 + \cdots A_tg_t,\ A_i \in k[x_1, \ldots , x_n],\]
     which means that whenever $A_ig_i \neq 0$, we have
-    \[\operatorname{deg}(f) ≥ \operatorname{deg}(A_ig_i).\]
+    \[\operatorname{deg}(f) \geq \operatorname{deg}(A_ig_i).\]
 \end{definition}
 
-\begin{theorem}
-    test
-\end{theorem}
+\begin{algorithm} % [Cox] 91p
+    \lean{MvPolynomial.Buchberger_Algorithm}
+    \caption{Buchberger's Algorithm}
+    \label{alg:buchberger_list}
+    \begin{algorithmic}[1]
+    \Statex \textbf{Input:} An ordered list of polynomials $F = (f_1, \dots, f_s)$, a monomial order $>$
+    \Statex \textbf{Output:} A Gr{\"o}bner basis $G = (g_1, \dots, g_t)$ for $I = \ideal{f_1, \dots, f_s}$ such that $F \subseteq G$.
+    
+    \State $G := F$ \Comment{Initialize $G$ as the input list}
+    \State $t := s$ \Comment{Current number of polynomials in $G$}
+    \State $B := \{(i, j) \mid 1 \le i < j \le t\}$ \Comment{Set of index pairs to process}
+    
+    \While{$B \neq \emptyset$}
+        \State Select $(i, j)$ from $B$
+        \State $B := B \setminus \{(i, j)\}$
+        \State $S := \SPoly(g_i, g_j)$ \Comment{Compute S-polynomial (using indices for $G$)}
+        \State $r := \rem(S, G)$ \Comment{Compute remainder w.r.t. the ordered list $G$}
+        \If{$r \neq 0$}
+            \State $t := t + 1$
+            \State Append $r$ to the list $G$ as $g_t$ \Comment{Add non-zero remainder to end of list}
+            % Alternative: G := G ++ [r]
+            \State $B := B \cup \{(i, t) \mid 1 \le i < t\}$ \Comment{Add new pairs involving $g_t$}
+        \EndIf
+    \EndWhile
+    
+    \State \Return $G$
+    \end{algorithmic}
+\end{algorithm}
