@@ -181,17 +181,17 @@ theorem Buchberger_criterion
       g₁ ≠ g₂ →
       remainder (S_polynomial m g₁ g₂) G hg_all = 0) := by sorry
 
-variable (m) [Fintype σ] [DecidableEq (MvPolynomial σ k)] in
-theorem Buchberger_criterion_domain
-  {ι : Type*} {I : Ideal (MvPolynomial σ k)}
-  (G : ι →₀ MvPolynomial σ k)
-  (hG : I = Ideal.span (Set.range G)) :
-  is_GrobnerBasis_domain m I G ↔
-    (∀ (g₁ g₂ : MvPolynomial σ k),
-      g₁ ∈ (Set.range G) →
-      g₂ ∈ (Set.range G) →
-      g₁ ≠ g₂ →
-      remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
+-- variable (m) [Fintype σ]  [DecidableEq (MvPolynomial σ k)] in
+-- theorem Buchberger_criterion_domain
+--   {ι : Type*} {I : Ideal (MvPolynomial σ k)}
+--   (G : ι →₀ MvPolynomial σ k)
+--   (hG : I = Ideal.span (Set.range G)) :
+--   is_GrobnerBasis_domain m I G ↔
+--     (∀ (g₁ g₂ : MvPolynomial σ k),
+--       g₁ ∈ (Set.range G) →
+--       g₂ ∈ (Set.range G) →
+--       g₁ ≠ g₂ →
+--       remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
 
 /-
 A polynomial `f` in `MvPolynomial σ R` is said to reduce to zero modulo a
@@ -209,70 +209,70 @@ def reduces_to_zero (G : Finset (MvPolynomial σ k)) (f : MvPolynomial σ k) : P
 ∃ (A : MvPolynomial σ k → MvPolynomial σ k),
   (f = ∑ g ∈ G, (A g) * g) ∧ ∀ g ∈ G, (A g) * g ≠ 0 → m.degree ((A g) * g) ≼[m] m.degree f
 
-variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
-partial def BuchbergerAux (G : List (MvPolynomial σ k)) (B : List (Nat × Nat)) :
-    List (MvPolynomial σ k) :=
-  -- Use pattern matching directly on B for the loop condition
-  match hB : B with
-  | [] => G -- Base case: No more pairs, return current G
-  | (i, j) :: B_tl => -- Get head and tail
-      -- Get polynomials safely (ensure indices are valid for THIS G)
-      if hi : i < G.length then
-        if hj : j < G.length then
-          let gi := G.get ⟨i, hi⟩ -- Use Fin index for guaranteed validity
-          let gj := G.get ⟨j, hj⟩ -- Use Fin index
+-- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
+-- partial def BuchbergerAux (G : List (MvPolynomial σ k)) (B : List (Nat × Nat)) :
+--     List (MvPolynomial σ k) :=
+--   -- Use pattern matching directly on B for the loop condition
+--   match hB : B with
+--   | [] => G -- Base case: No more pairs, return current G
+--   | (i, j) :: B_tl => -- Get head and tail
+--       -- Get polynomials safely (ensure indices are valid for THIS G)
+--       if hi : i < G.length then
+--         if hj : j < G.length then
+--           let gi := G.get ⟨i, hi⟩ -- Use Fin index for guaranteed validity
+--           let gj := G.get ⟨j, hj⟩ -- Use Fin index
 
-          -- Compute S-polynomial and remainder
-          let S_ij := S_polynomial m gi gj
-          let r := remainder S_ij G -- Divide by the current ordered list G
-          if hr : r ≠ 0 then
-            -- Add non-zero remainder to basis G
-            let G' := G ++ [r]
-            let t' := G.length -- Current length BEFORE adding r
-            -- Add new pairs involving the new element (index t')
-            let new_pairs := (List.range t').map fun k ↦ (k, t')
-            -- Recursive call with updated G and B
-            BuchbergerAux G' (new_pairs ++ B_tl)
-          else
-            -- Remainder is zero, just continue with the remaining pairs
-             BuchbergerAux G B_tl
-        else -- Index j out of bounds (should ideally not happen if B is managed correctly)
-          BuchbergerAux G B_tl -- Skip pair if index j is invalid
-      else -- Index i out of bounds (should ideally not happen)
-        BuchbergerAux G B_tl -- Skip pair if index i is invalid
+--           -- Compute S-polynomial and remainder
+--           let S_ij := S_polynomial m gi gj
+--           let r := remainder S_ij G -- Divide by the current ordered list G
+--           if hr : r ≠ 0 then
+--             -- Add non-zero remainder to basis G
+--             let G' := G ++ [r]
+--             let t' := G.length -- Current length BEFORE adding r
+--             -- Add new pairs involving the new element (index t')
+--             let new_pairs := (List.range t').map fun k ↦ (k, t')
+--             -- Recursive call with updated G and B
+--             BuchbergerAux G' (new_pairs ++ B_tl)
+--           else
+--             -- Remainder is zero, just continue with the remaining pairs
+--              BuchbergerAux G B_tl
+--         else -- Index j out of bounds (should ideally not happen if B is managed correctly)
+--           BuchbergerAux G B_tl -- Skip pair if index j is invalid
+--       else -- Index i out of bounds (should ideally not happen)
+--         BuchbergerAux G B_tl -- Skip pair if index i is invalid
 
-partial def Buchberger_Algorithm (F : List (MvPolynomial σ R)) : List (MvPolynomial σ R) :=
-  Id.run do
-    let mut G : List (MvPolynomial σ R) := F -- Explicit type
-    let mut t : Nat := G.length           -- Explicit type
-    -- Generate initial pairs (i, j) with 0 <= i < j < t
-    let mut B : List (Nat × Nat) := List.flatten <| (List.range t).map fun i ↦
-       (List.range (t - (i + 1))).map fun k ↦ (i, i + 1 + k)
+partial def Buchberger_Algorithm (F : List (MvPolynomial σ R)) : List (MvPolynomial σ R) := by sorry
+  -- Id.run do
+  --   let mut G : List (MvPolynomial σ R) := F -- Explicit type
+  --   let mut t : Nat := G.length           -- Explicit type
+  --   -- Generate initial pairs (i, j) with 0 <= i < j < t
+  --   let mut B : List (Nat × Nat) := List.flatten <| (List.range t).map fun i ↦
+  --      (List.range (t - (i + 1))).map fun k ↦ (i, i + 1 + k)
 
-    -- Use `B ≠ []` which is Decidable
-    while hB : B ≠ [] do
-      -- Use pattern matching on the list B
-      match B with
-      | [] => panic! "while condition ¬(B = []) failed" -- Should be unreachable
-      | (i, j) :: B_tl => -- Get head and tail
-          let gi := G.getD i 0 -- Default to 0 if index is somehow invalid
-          let gj := G.getD j 0 -- Default to 0 if index is somehow invalid
+  --   -- Use `B ≠ []` which is Decidable
+  --   while hB : B ≠ [] do
+  --     -- Use pattern matching on the list B
+  --     match B with
+  --     | [] => panic! "while condition ¬(B = []) failed" -- Should be unreachable
+  --     | (i, j) :: B_tl => -- Get head and tail
+  --         let gi := G.getD i 0 -- Default to 0 if index is somehow invalid
+  --         let gj := G.getD j 0 -- Default to 0 if index is somehow invalid
 
-          -- Compute S-polynomial and remainder
-          let S_ij := sPolynomial m gi gj
-          let r := remainder m S_ij G -- Divide by the current ordered list G
+  --         -- Compute S-polynomial and remainder
+  --         let S_ij := sPolynomial m gi gj
+  --         let r := remainder m S_ij G -- Divide by the current ordered list G
 
-          if hr : r ≠ 0 then
-            -- Add non-zero remainder to basis G
-            let t' := G.length -- Get current length *before* adding
-            let G' := G ++ [r]
-            -- Add new pairs involving the new element (index t')
-            let new_pairs := (List.range t').map fun k ↦ (k, t')
-            -- Update state
-            G := G'
-            t := t' + 1 -- Update count *after* using old length for pairs
-            B := new_pairs ++ B_tl -- Add new pairs (e.g., at the front)
-          else
-            -- Remainder is zero, just continue with the remaining pairs
-             B := B_tl -- Update B to the tail
-    return G
+  --         if hr : r ≠ 0 then
+  --           -- Add non-zero remainder to basis G
+  --           let t' := G.length -- Get current length *before* adding
+  --           let G' := G ++ [r]
+  --           -- Add new pairs involving the new element (index t')
+  --           let new_pairs := (List.range t').map fun k ↦ (k, t')
+  --           -- Update state
+  --           G := G'
+  --           t := t' + 1 -- Update count *after* using old length for pairs
+  --           B := new_pairs ++ B_tl -- Add new pairs (e.g., at the front)
+  --         else
+  --           -- Remainder is zero, just continue with the remaining pairs
+  --            B := B_tl -- Update B to the tail
+  --   return G
