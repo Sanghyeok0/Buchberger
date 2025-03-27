@@ -68,9 +68,11 @@ We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the Gröb
 
 variable (m) [DecidableEq (MvPolynomial σ R)] in
 def is_GrobnerBasis (I : Ideal (MvPolynomial σ R)) (G : List (MvPolynomial σ R)): Prop :=
-  (I = ⊥ ∧ G = []) ∨
-  (I ≠ ⊥ ∧ (G.toFinset.toSet ⊆ I) ∧
-    Ideal.span (G.toFinset.image (fun g ↦ leadingTerm m g)) = initialIDeal m I)
+  (G.toFinset.toSet ⊆ I) ∧
+    Ideal.span (G.toFinset.image (fun g ↦ leadingTerm m g)) = initialIDeal m I
+  -- (I = ⊥ ∧ G = []) ∨
+  -- (I ≠ ⊥ ∧ (G.toFinset.toSet ⊆ I) ∧
+  --   Ideal.span (G.toFinset.image (fun g ↦ leadingTerm m g)) = initialIDeal m I)
 
 variable (m) [DecidableEq (MvPolynomial σ R)] in
 def is_GrobnerBasis_domain {ι : Type*} (I : Ideal (MvPolynomial σ R)) (G : ι →₀ MvPolynomial σ R): Prop :=
@@ -154,12 +156,18 @@ noncomputable def remainderRec (f : MvPolynomial σ k) (B : List (MvPolynomial �
     exact hl0
 
 variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
-noncomputable def remainder (f : MvPolynomial σ k) (B : List (MvPolynomial σ k)) (hb_all : ∀ p ∈ B, IsUnit (m.leadingCoeff p)) : MvPolynomial σ k :=
-  remainderRec f B hb_all 0
+noncomputable def remainder (f : MvPolynomial σ k) (B : List (MvPolynomial σ k)) (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) : MvPolynomial σ k :=
+  remainderRec f B hB 0
 
 /-MonomialOrder.div를 이용해 remainder를 정의할 방법 찾기-/
 def remainder' (f : MvPolynomial σ R) {ι : Type*} (b : ι → MvPolynomial σ R)
     (hb : ∀ i : ι, IsUnit (m.leadingCoeff (b i))) : MvPolynomial σ R := sorry -- (Classical.choose (m.div hb f)).2.1 -- wrong
+
+variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
+theorem mem_ideal_iff_remainder_GB_eq_zero
+    {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)} (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
+    (hGB : is_GrobnerBasis m I G) :
+    ∀ (f : MvPolynomial σ k), f ∈ I ↔ remainder f G hG = 0 := by sorry
 
 /-
 Buchberger’s Criterion (Theorem 6) says:
@@ -170,16 +178,23 @@ Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomial
 
 variable (m) [Fintype σ] [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 theorem Buchberger_criterion
-  {ι : Type*} {I : Ideal (MvPolynomial σ k)}
-  (G : List (MvPolynomial σ k))
-  (hg_all : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
-  (hG : I = Ideal.span G.toFinset) :
+  {I : Ideal (MvPolynomial σ k)}
+  {G : List (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
+  (hGI : I = Ideal.span G.toFinset) :
   is_GrobnerBasis m I G ↔
     (∀ (g₁ g₂ : MvPolynomial σ k),
       g₁ ∈ G →
       g₂ ∈ G →
       g₁ ≠ g₂ →
-      remainder (S_polynomial m g₁ g₂) G hg_all = 0) := by sorry
+      remainder (S_polynomial m g₁ g₂) G hG = 0) := by
+        constructor
+        · intro h_isGB g₁ g₂ hg₁ hg₂ hneq
+          have : G.toFinset.toSet ⊆ I := by apply h_isGB.1
+          have : S_polynomial m g₁ g₂ ∈ I := by sorry
+          exact (mem_ideal_iff_remainder_GB_eq_zero hG h_isGB (S_polynomial m g₁ g₂)).mp this
+        · sorry
+
 
 -- variable (m) [Fintype σ]  [DecidableEq (MvPolynomial σ k)] in
 -- theorem Buchberger_criterion_domain
