@@ -2,6 +2,17 @@
 
 \section{Gr{\"o}bner Bases-Existence and Uniqueness}
 
+\begin{theorem} % [Cox] 77p Proposition 3
+    Let $I \subseteq k[x_1, \ldots , x_n]$ be an ideal different from $\{ 0 \}$.
+    \begin{enumerate}
+        \item $\langle\LT(I)\rangle$ is a monomial ideal.
+        \lean{MvPolynomial.initialIDeal_is_monomial_ideal}
+        \item There are $g_1, \ldots , g_t \in I$ such that $\langle \LT(I)\rangle = \langle \LT(g_1), \ldots , \LT(g_t)\rangle$.
+        \uses{thm:Dickson}
+        \lean{MvPolynomial.initialIdeal_is_FG}
+    \end{enumerate}
+\end{theorem}
+
 \begin{definition}\label{def:Groebner_basis}
     \lean{MvPolynomial.is_GrobnerBasis}
     Fix a monomial order $>$ on the polynomial ring $k[x_1, \dots, x_n]$. A finite subset
