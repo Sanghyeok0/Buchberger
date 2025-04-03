@@ -3,13 +3,12 @@
 \section{Gr{\"o}bner Bases-Existence and Uniqueness}
 
 \begin{theorem} % [Cox] 77p Proposition 3
+    \uses{thm:Dickson}
+    \lean{MvPolynomial.initialIDeal_is_monomial_ideal, MvPolynomial.initialIdeal_is_FG}
     Let $I \subseteq k[x_1, \ldots , x_n]$ be an ideal different from $\{ 0 \}$.
     \begin{enumerate}
         \item $\langle\LT(I)\rangle$ is a monomial ideal.
-        \lean{MvPolynomial.initialIDeal_is_monomial_ideal}
         \item There are $g_1, \ldots , g_t \in I$ such that $\langle \LT(I)\rangle = \langle \LT(g_1), \ldots , \LT(g_t)\rangle$.
-        \uses{thm:Dickson}
-        \lean{MvPolynomial.initialIdeal_is_FG}
     \end{enumerate}
 \end{theorem}
 
@@ -85,3 +84,11 @@
     \State \Return $G$
     \end{algorithmic}
 \end{algorithm}
+
+\begin{lemma} % [Cox] 92p
+    \lean{MvPolynomial.grobner_basis_remove_redundant}
+    Let $G$ be a Gr{\"o}bner basis of $I \subseteq k[x_1, \ldots, x_n]$.  
+    Let $p \in G$ be a polynomial such that $\LT(p) \in \langle \LT(G \setminus \{p\}) \rangle.$  
+    Then $G \setminus \{p\}$ is also a Gr{\"o}bner basis for $I$.
+\end{lemma}
+    
