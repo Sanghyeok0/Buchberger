@@ -30,7 +30,7 @@ def initialIdeal (I : Ideal (MvPolynomial σ R)) : Ideal (MvPolynomial σ R) :=
 /-
 ## TODO
 * [Field k] 조건 완화 -/
-theorem initialIDeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
+theorem initialIdeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
     initialIdeal m I = Ideal.span { f | ∃g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } := by
   apply le_antisymm
   · -- Show span(LT) ⊆ span(LM)

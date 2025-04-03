@@ -3,8 +3,9 @@
 \section{Gr{\"o}bner Bases-Existence and Uniqueness}
 
 \begin{theorem} % [Cox] 77p Proposition 3
+    \label{thm:initialIdeal_is_FG}
     \uses{thm:Dickson}
-    \lean{MvPolynomial.initialIDeal_is_monomial_ideal, MvPolynomial.initialIdeal_is_FG}
+    \lean{MvPolynomial.initialIdeal_is_monomial_ideal, MvPolynomial.initialIdeal_is_FG}
     Let $I \subseteq k[x_1, \ldots , x_n]$ be an ideal different from $\{ 0 \}$.
     \begin{enumerate}
         \item $\langle\LT(I)\rangle$ is a monomial ideal.
@@ -60,7 +61,6 @@
 \begin{algorithm}\label{alg:Buchberger's_Algorithm} % [Cox] 91p
     \lean{MvPolynomial.Buchberger_Algorithm}
     \caption{Buchberger's Algorithm}
-    \label{alg:buchberger_list}
     \begin{algorithmic}[1]
     \Statex \textbf{Input:} An ordered list of polynomials $F = (f_1, \dots, f_s)$, a monomial order $>$
     \Statex \textbf{Output:} A Gr{\"o}bner basis $G = (g_1, \dots, g_t)$ for $I = \ideal{f_1, \dots, f_s}$ such that $F \subseteq G$.

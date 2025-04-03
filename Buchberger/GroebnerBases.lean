@@ -46,7 +46,7 @@ noncomputable def S_polynomial (f g : MvPolynomial σ k) : MvPolynomial σ k :=
 variable [DecidableEq (MvPolynomial σ k)] [Fintype σ] in
 theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).FG := by
   -- 1. Show initialIdeal m I is spanned by monomials with coefficient 1
-  rw [initialIDeal_is_monomial_ideal I]
+  rw [initialIdeal_is_monomial_ideal I]
   rw [Ideal.FG]
   rw [Mvpoly_to_mono]
   have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma k (LM_set m I)
