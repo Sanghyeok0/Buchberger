@@ -31,23 +31,19 @@ def initialIdeal (I : Ideal (MvPolynomial σ R)) : Ideal (MvPolynomial σ R) :=
 ## TODO
 * [Field k] 조건 완화 -/
 theorem initialIDeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
-    initialIdeal m I = Ideal.span { f | ∃g ∈ I, g ≠ 0 ∧ monomial
-(m.degree g) 1 = f } := by
+    initialIdeal m I = Ideal.span { f | ∃g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } := by
   apply le_antisymm
   · -- Show span(LT) ⊆ span(LM)
     rw [initialIdeal, Ideal.span_le]
     intro f hf_in
     rcases hf_in with ⟨g, hg_mem, hg_ne_zero, h_LT_eq⟩
-    have hlc_ne_zero : m.leadingCoeff g ≠ 0 :=
-MonomialOrder.leadingCoeff_ne_zero_iff.mpr hg_ne_zero
-    have h_lt : leadingTerm m g = (MvPolynomial.C (m.leadingCoeff g))
-* (monomial (m.degree g) (1 : k)) := by
+    have hlc_ne_zero : m.leadingCoeff g ≠ 0 := MonomialOrder.leadingCoeff_ne_zero_iff.mpr hg_ne_zero
+    have h_lt : leadingTerm m g = (MvPolynomial.C (m.leadingCoeff g)) * (monomial (m.degree g) (1 : k)) := by
       simp [leadingTerm, C_mul_monomial]
     rw [h_lt] at h_LT_eq
     rw [←h_LT_eq]
     apply Ideal.mul_mem_left
-    simp only [ne_eq, Set.mem_setOf_eq, one_ne_zero,
-not_false_eq_true, monomial_left_inj]
+    simp only [ne_eq, Set.mem_setOf_eq, one_ne_zero, not_false_eq_true, monomial_left_inj]
     apply Ideal.subset_span (by use g)
   · -- Show span(LM) ⊆ span(LT)
     rw [initialIdeal, Ideal.span_le]
@@ -55,16 +51,13 @@ not_false_eq_true, monomial_left_inj]
     rcases hf_in with ⟨g, hg_mem, hg_ne_zero, h_lm_eq⟩
     let lt_g := leadingTerm m g
     let lc_g := m.leadingCoeff g
-    have hlc_ne_zero : m.leadingCoeff g ≠ 0 :=
-MonomialOrder.leadingCoeff_ne_zero_iff.mpr hg_ne_zero
-    have h_lm : (monomial (m.degree g) (1 : k)) = C (m.leadingCoeff
-g)⁻¹ * (leadingTerm m g):= by
+    have hlc_ne_zero : m.leadingCoeff g ≠ 0 := MonomialOrder.leadingCoeff_ne_zero_iff.mpr hg_ne_zero
+    have h_lm : (monomial (m.degree g) (1 : k)) = C (m.leadingCoeff g)⁻¹ * (leadingTerm m g):= by
       simp only [leadingTerm, C_mul_monomial, inv_mul_cancel₀ hlc_ne_zero]
     rw [h_lm] at h_lm_eq
     rw [←h_lm_eq]
     apply Ideal.mul_mem_left
-    simp only [ne_eq, Set.mem_setOf_eq, one_ne_zero,
-not_false_eq_true, monomial_left_inj]
+    simp only [ne_eq, Set.mem_setOf_eq, one_ne_zero, not_false_eq_true, monomial_left_inj]
     apply Ideal.subset_span (by use g)
 
 

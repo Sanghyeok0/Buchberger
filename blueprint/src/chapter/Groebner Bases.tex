@@ -56,7 +56,7 @@
     \[\operatorname{deg}(f) \geq \operatorname{deg}(A_ig_i).\]
 \end{definition}
 
-\begin{algorithm} % [Cox] 91p
+\begin{algorithm}\label{alg:Buchberger's_Algorithm} % [Cox] 91p
     \lean{MvPolynomial.Buchberger_Algorithm}
     \caption{Buchberger's Algorithm}
     \label{alg:buchberger_list}
@@ -85,7 +85,7 @@
     \end{algorithmic}
 \end{algorithm}
 
-\begin{lemma} % [Cox] 92p
+\begin{lemma}\label{lem:grobner_basis_remove_redundant} % [Cox] 92p
     \lean{MvPolynomial.grobner_basis_remove_redundant}
     Let $G$ be a Gr{\"o}bner basis of $I \subseteq k[x_1, \ldots, x_n]$.  
     Let $p \in G$ be a polynomial such that $\LT(p) \in \langle \LT(G \setminus \{p\}) \rangle.$  
