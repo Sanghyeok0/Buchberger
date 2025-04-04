@@ -49,7 +49,7 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   rw [initialIdeal_is_monomial_ideal I]
   rw [Ideal.FG]
   rw [Mvpoly_to_mono]
-  have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma k (LM_set m I)
+  have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma' k (LM_set m I)
   obtain ⟨b, h_span⟩ := h_fg
   use b
   exact h_span
@@ -114,8 +114,7 @@ Use same technique as mathlib4/Mathlib/RingTheory/MvPolynomial/Groebner.lean
 variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 noncomputable def remainderRec (f : MvPolynomial σ k) (B : List
 (MvPolynomial σ k))
-    (hb_all : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) (r : MvPolynomial σ
-k) : MvPolynomial σ k :=
+    (hb_all : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) (r : MvPolynomial σ k) : MvPolynomial σ k :=
   if hf : f = 0 then
     r
   else
@@ -157,8 +156,7 @@ k) : MvPolynomial σ k :=
 
 variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 noncomputable def remainder (f : MvPolynomial σ k) (B : List
-(MvPolynomial σ k)) (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) :
-MvPolynomial σ k :=
+(MvPolynomial σ k)) (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) : MvPolynomial σ k :=
   remainderRec f B hB 0
 
 /-MonomialOrder.div를 이용해 remainder를 정의할 방법 찾기-/
@@ -180,8 +178,8 @@ Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomial
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
 
-variable (m) [Fintype σ] [DecidableEq (σ →₀ ℕ)] [DecidableEq
-(MvPolynomial σ k)] in
+/-forward 증명이 지저분-/
+variable (m) [Fintype σ] [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 theorem Buchberger_criterion
   {I : Ideal (MvPolynomial σ k)}
   {G : List (MvPolynomial σ k)}
@@ -196,8 +194,21 @@ theorem Buchberger_criterion
         constructor
         · intro h_isGB g₁ g₂ hg₁ hg₂ hneq
           have : G.toFinset.toSet ⊆ I := by apply h_isGB.1
-          have : S_polynomial m g₁ g₂ ∈ I := by sorry
-          exact (mem_ideal_iff_remainder_GB_eq_zero hG h_isGB (S_polynomial m g₁ g₂)).mp this
+          have hGsubI: ∀g ∈ G, g ∈ I := by
+            simp [SetLike.coe_subset_coe, ←SetLike.setOf_mem_eq] at this
+            exact fun g a ↦ this g a
+          have h_Sp: S_polynomial m g₁ g₂ ∈ I := by
+            rw [S_polynomial]
+            have hg₁I : g₁ ∈ I := by exact hGsubI g₁ hg₁
+            have hg₂I : g₂ ∈ I := by exact hGsubI g₂ hg₂
+            apply Ideal.sub_mem
+            · exact
+              Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₁)
+                (hGsubI g₁ hg₁)
+            · exact
+              Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₂)
+                (hGsubI g₂ hg₂)
+          exact (mem_ideal_iff_remainder_GB_eq_zero hG h_isGB (S_polynomial m g₁ g₂)).mp h_Sp
         · sorry
 
 
