@@ -2,6 +2,80 @@
 
 \section{Monomial Ideals and Dickson’s Lemma}
 
+\begin{definition}\label{def:Orders}
+    Let $r$ be a relation on $M$.
+    Then $r$ is called
+    \begin{enumerate}
+        \item \textbf{reflexive} if $\Delta(M) \subseteq r$,
+        \item \textbf{symmetric} if $r \subseteq r^{-1}$,
+        \item \textbf{transitive} if $r \circ r \subseteq r$,
+        \item \textbf{antisymmetric} if $r \cap r^{-1} \subseteq \Delta(M)$,
+        \item \textbf{connex} if $r \cup r^{-1} = M \times M$,
+        \item \textbf{irreflexive} if $\Delta(M) \cap r = \emptyset$,
+        \item \textbf{strictly antisymmetric} if $r \cap r^{-1} = \emptyset$,
+        \item an \textbf{equivalence relation} on $M$ if $r$ is reflexive, symmetric, and transitive,
+        \item a \textbf{quasi-order} (\textbf{preorder}) on $M$ if $r$ is reflexive and transitive,
+        \item a \textbf{partial order} on $M$ if $r$ is reflexive, transitive and antisymmetric,
+        \item a \textbf{(linear) order} on $M$ if $r$ is a connex partial order on $M$, and
+        \item a \textbf{linear quasi-order} on $M$ if $r$ is a connex quasi-order on $M$.
+    \end{enumerate}
+    
+    \[
+    \begin{tikzcd}[row sep=huge, column sep=small]
+    & \textbf{quasi-orders} = \textbf{preorders} \arrow[dr] \arrow[dl]& \\
+    \textbf{linear quasi-orders} \arrow[dr] & & \textbf{partial orders} \arrow[dl] \\
+    & \textbf{(linear) orders} = \textbf{total orders} &
+    \end{tikzcd}
+    \]
+\end{definition}
+    
+\begin{definition}\label{def:well-founded}
+    Let $r$ be a relation on $M$ with strict part $r_s$, and let $N \subseteq M$.
+    \begin{enumerate}
+        \item Then an element $a$ of $N$ is called \textit{$r$-minimal} (\textit{$r$-maximal}) in $N$ if there is no $b \in N$ with $b \, r_s \, a$ (with $a \, r_s \, b$).
+        For $N = M$ the reference to $N$ is omitted.
+    
+        \item A \textit{strictly descending} (\textit{strictly ascending}) $r$-chain in $M$ is an infinite sequence $\{a_n\}_{n \in \mathbb{N}}$ of elements of $M$ such that $a_{n+1} \, r_s \, a_n$ (such that $a_n \, r_s \, a_{n+1}$) for all $n \in \mathbb{N}$.
+    
+        \item The relation $r$ is called \textbf{well-founded} (\textbf{noetherian}) if every non-empty subset $N$ of $M$ has an $r$-minimal (an $r$-maximal) element.
+        $r$ is a \textbf{well-order} on $M$ if $r$ is a well-founded linear order on $M$.
+    \end{enumerate}
+\end{definition}
+    
+\begin{definition}\label{def:wqo}
+    Let $\preceq$ be a quasi-order on $M$ and let $N \subseteq M$. 
+    Then a subset $B$ of $N$ is called a \textbf{Dickson basis}, or simply \textbf{basis} of $N$ w.r.t.\ $\preceq$, if for every $a \in N$ there exists some $b \in B$ with $b \preceq a$.
+    \begin{enumerate}
+        \item We say that $\preceq$ has the \textbf{Dickson property}, or is a \textbf{well-quasi-order}(wqo), if every subset $N$ of $M$ has a finite basis w.r.t.\ $\preceq$.
+        \item A \textbf{well partial order}, or a wpo, is a wqo that is a proper ordering relation, i.e., it is antisymmetric.
+    \end{enumerate}
+\end{definition}
+    
+\begin{proposition}\label{prop:wqoEquivalent}
+    Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
+    Then the following are equivalent:
+    \begin{enumerate}[label=(\roman*)]
+        \item $\preceq$ is a well-quasi-order.
+        \item Whenever $\{a_n\}_{n \in \mathbb{N}}$ is a sequence of elements of $M$, then there exist $i < j$ with $a_i \preceq a_j$.
+        \item \textit{For every nonempty subset $N$ of $M$, the number of min-classes in $N$ is finite and non-zero.}
+    \end{enumerate}
+\end{proposition}
+    
+\begin{corollary}\label{cor:MinimalFiniteBasis}
+    Let $\preceq$ be a well-partial-order on $M$.
+    Then every non-empty subset $N$ of $M$ has a \textup{\textbf{unique minimal finite basis}} $B$, i.e., a finite basis $B$ such that $B \subseteq C$ for all other bases $C$ of $N$. 
+    $B$ consists of all minimal elements of $N$.
+\end{corollary}
+    
+\begin{corollary}\label{cor:wqo_is_wellFounded}
+    Every well-quasi-order is well-founded.
+\end{corollary}
+    
+\begin{proposition}\label{prop:wqoAscendingSubsequence}
+    Let $\preceq$ be a well- quasi-order on $M$, and let $\{a_n\}_{n \in \mathbb{N}}$ be a sequence of elements of $M$.
+    Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.
+\end{proposition}
+
 \begin{lemma}\label{lem:monomial_ideal}
     \lean{MvPolynomial.initialIdeal_is_monomial_ideal}
     Let $I = \langle x^\alpha \mid \alpha \in A \rangle$ be a monomial ideal.
