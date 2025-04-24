@@ -2,6 +2,7 @@ import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.MonomialOrder
 import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.Order.Basic
 import Buchberger.Order
 
 variable {σ R : Type*} [CommSemiring R] --[EmptyCollection σ]
