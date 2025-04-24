@@ -49,7 +49,7 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   rw [initialIdeal_is_monomial_ideal I]
   rw [Ideal.FG]
   rw [Mvpoly_to_mono]
-  have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma' k (LM_set m I)
+  have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma_MV k (LM_set m I)
   obtain ⟨b, h_span⟩ := h_fg
   use b
   exact h_span
