@@ -164,11 +164,22 @@ def remainder' (f : MvPolynomial σ R) {ι : Type*} (b : ι → MvPolynomial σ 
     (hb : ∀ i : ι, IsUnit (m.leadingCoeff (b i))) : MvPolynomial σ R
   := sorry -- (Classical.choose (m.div hb f)).2.1 -- wrong
 
+-- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
+-- def remainder'' (f : MvPolynomial σ k) (G : List (MvPolynomial σ k))
+--   (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g)) : MvPolynomial σ k :=
+-- let B := G.toFinset.toSet
+-- let hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b) :=
+--   λ b hb => by simpa [List.mem_toFinset] using hG b hb
+-- -- extract the `r` from `m.div_set hB f`
+-- (Classical.choose (m.div_set hB f)).2.2
+
 variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 theorem mem_ideal_iff_remainder_GB_eq_zero
-    {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)} (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
-    (hGB : is_GrobnerBasis m I G) :
-    ∀ (f : MvPolynomial σ k), f ∈ I ↔ remainder f G hG = 0 := by sorry
+  {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)}
+  (hG  : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
+  (hGB : is_GrobnerBasis m I G)
+  (f   : MvPolynomial σ k) :
+  f ∈ I ↔ remainder f G hG = 0 := by sorry
 
 /-
 Buchberger’s Criterion (Theorem 6) says:
@@ -209,7 +220,22 @@ theorem Buchberger_criterion
               Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₂)
                 (hGsubI g₂ hg₂)
           exact (mem_ideal_iff_remainder_GB_eq_zero hG h_isGB (S_polynomial m g₁ g₂)).mp h_Sp
-        · sorry
+        · intro hSpols
+          -- (1) every g ∈ G lies in I because I = span G
+          have hGsubI : G.toFinset.toSet ⊆ I := by
+            simpa [hGI] using Ideal.subset_span
+
+          -- (2) we must show
+          --     span (leadingTerm m '' G) = initialIdeal m I
+          have : initialIdeal m I = initialIdeal m (Ideal.span G.toFinset) := by
+            simp [hGI]
+          -- reduce to
+          --   span (LT G) = initialIdeal m (span G)
+          rw [is_GrobnerBasis]
+          constructor
+          · exact hGsubI
+          · sorry
+
 
 
 -- variable (m) [Fintype σ]  [DecidableEq (MvPolynomial σ k)] in
@@ -271,6 +297,59 @@ def reduces_to_zero (G : Finset (MvPolynomial σ k)) (f : MvPolynomial σ k) : P
 --           BuchbergerAux G B_tl -- Skip pair if index j is invalid
 --       else -- Index i out of bounds (should ideally not happen)
 --         BuchbergerAux G B_tl -- Skip pair if index i is invalid
+
+/-
+Implementation of Buchberger's Algorithm based on the provided pseudocode.
+Input: F = a list of polynomials (generators of the ideal I)
+Output: G = a Gröbner basis for I such that F ⊆ G
+-/
+
+/- Buchberger's Algorithm to compute a Gröbner basis. -/
+/-Id.run do 사용 안함, List 없이 쓰려면?-/
+-- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
+-- noncomputable def Buchberger (F : List (MvPolynomial σ k)) : List (MvPolynomial σ k) :=
+--   let G₀ := F
+--   let rec loop (G : List (MvPolynomial σ k)) : List (MvPolynomial σ k) :=
+--     let G' := G
+--     -- Generate pairs {p, q}, p ≠ q in G'
+--     let pairs := G'.tails.flatMap (fun tail =>
+--       match tail with
+--       | [] => []
+--       | p :: ps => ps.map (fun q => (p, q)) -- Pair p with every q after it
+--     )
+--     -- Process pairs iteratively (simulating the FOR loop)
+--     let rec processPairs (currentG : List (MvPolynomial σ k)) (pairsToProcess : List (MvPolynomial σ k × MvPolynomial σ k)) : List (MvPolynomial σ k) :=
+--       match pairsToProcess with
+--       | [] => currentG -- No more pairs for this iteration, return the potentially updated G
+--       | (p, q) :: restOfPairs =>
+--           -- Assume polynomials in G are non-zero for remainder calculation (or handle zero case in remainder)
+--           -- have hG_nonzero : ∀ g ∈ currentG, g ≠ 0 := sorry -- Requires proof or assumption management
+--           have hG_nonzero : ∀ b ∈ currentG, IsUnit (m.leadingCoeff b) := by sorry
+--           -- r := remainder(S(p, q), G') -- Use currentG for division
+--           let r := remainder (S_polynomial m p q) currentG hG_nonzero
+--           -- IF r ≠ 0 THEN G := G ∪ {r}
+--           if hr : r ≠ 0 then
+--             -- Need to re-run the whole process with the new G
+--             -- The pseudocode implies a REPEAT-UNTIL structure which means we restart the pair checking
+--             let G_new := currentG ++ [r] -- Add r to G
+--             loop G_new -- Restart the outer loop with the new G
+--           else
+--             -- Remainder is 0, continue processing the rest of the pairs for *this* iteration
+--             processPairs currentG restOfPairs
+
+--     -- Start processing pairs for the current G
+--     let G_next := processPairs G pairs
+--     -- UNTIL G = G' (Check if G changed in this iteration)
+--     if G_next == G' then
+--       G' -- G did not change, terminate and return G'
+--     else
+--       -- G changed (implicitly handled by restarting loop in processPairs when r ≠ 0)
+--       -- If processPairs finishes *without* finding a non-zero remainder, G_next will equal G'
+--       G_next -- Should be G' if no change occurred
+
+--   -- Initial call to the loop
+--   loop G₀
+-- termination_by sorry
 
 partial def Buchberger_Algorithm (F : List (MvPolynomial σ R)) : List (MvPolynomial σ R) := by sorry
   -- Id.run do

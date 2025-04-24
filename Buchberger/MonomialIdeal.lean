@@ -2,6 +2,7 @@ import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.MonomialOrder
 import Mathlib.RingTheory.Finiteness.Defs
+import Buchberger.Order
 
 variable {σ R : Type*} [CommSemiring R] --[EmptyCollection σ]
 variable {k : Type*} [Field k]
@@ -139,30 +140,47 @@ be a monomial ideal. Then there exists a finite subset s ⊆ A such that
  I = ⟨ x^α | α ∈ s ⟩.
 In other words, every monomial ideal has a finite basis.
 -/
+-- Need Preorder instance for Finsupp (pointwise order)
+--instance {σ : Type*} : Preorder (σ →₀ ℕ) := by exact Finsupp.preorder
+
+theorem Dickson_lemma_n {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
+  -- (1) ℕ is well‐quasi-ordered, since it is well‐founded and linear
+  have h_nat_wqo : WellQuasiOrderedLE ℕ :=
+    wellQuasiOrderedLE_iff_wellFoundedLT.mpr instWellFoundedLTNat
+  sorry
 
 variable [Fintype σ] in
-theorem Dickson_lemma (S : Set (σ →₀ ℕ)) :
-  ∃ B : Finset (σ →₀ ℕ), B.toSet ⊆ S ∧ (∀ x ∈ S, ∃ y ∈ B, ∀ i, y i ≤ x i) := by sorry
+theorem Dickson_lemma : HasDicksonProperty (σ →₀ ℕ) := by sorry
 
-/-더 깔끔하게 가능할 듯-/
---(Ideal.span {f | ∃ g ∈ I, g ≠ 0 ∧ (monomial (m.degree g)) (1 : R) = f}).FG := by sorry
 variable [Fintype σ] (R) [DecidableEq (MvPolynomial σ R)] in
-theorem Dickson_lemma' (S : Set (σ →₀ ℕ)) :
+theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
   (monomialIdeal R S).FG := by
   rw [monomialIdeal, Ideal.FG]
-  obtain ⟨B, hB⟩ := Dickson_lemma S
-  use Finset.image (fun x ↦ (monomial x) 1 ) B
+  obtain ⟨B', hB'fin, ⟨hB'sub, hB'basis⟩⟩ := Dickson_lemma S
+  let B := @Set.toFinset (σ →₀ ℕ) B' (by exact hB'fin.fintype)
+  use Finset.image (fun x ↦ (monomial x) (1:R) ) B
+  have hBsub : B.toSet ⊆ S := by
+    rw [Set.coe_toFinset]
+    exact hB'sub
+  have hBbasis : ∀ a ∈ S, ∃ b ∈ B, b ≤ a := by
+    intro a ha
+    obtain ⟨b₀, hb₀B', hb₀a⟩ := hB'basis a ha
+    use b₀
+    constructor
+    · simp [B]
+      exact hb₀B'
+    · exact hb₀a
   simp only [Finset.coe_image]
   apply le_antisymm
   · apply Ideal.span_mono
     refine Set.image_mono ?_
-    exact hB.1
+    exact hBsub
   · refine Ideal.span_le.mpr ?_
     rw [Set.subset_def]
     intro d hS
     rw [Set.mem_image] at hS
     obtain ⟨x, hxd⟩ := hS
-    have hy : ∃ y ∈ B, ∀ (i : σ), y i ≤ x i := by apply hB.2 x hxd.1
+    have hy : ∃ y ∈ B, ∀ (i : σ), y i ≤ x i := by apply hBbasis x hxd.1
     obtain ⟨y, hyx⟩ := hy
     simp only [SetLike.mem_coe]
     let j : σ → ℕ := fun (i : σ) ↦ (x i - y i)
@@ -181,3 +199,50 @@ theorem Dickson_lemma' (S : Set (σ →₀ ℕ)) :
       simp only [Finset.mem_coe]
       exact hyx
       exact eq_false h_triv
+
+/-Dickson lemma 구버전-/
+
+-- variable [Fintype σ] in
+-- theorem Dickson_lemma₀ (S : Set (σ →₀ ℕ)) :
+--   ∃ B : Finset (σ →₀ ℕ), B.toSet ⊆ S ∧ (∀ x ∈ S, ∃ y ∈ B, y ≤ x) := by sorry
+
+-- --(Ideal.span {f | ∃ g ∈ I, g ≠ 0 ∧ (monomial (m.degree g)) (1 : R) = f}).FG := by sorry
+-- variable [Fintype σ] (R) [DecidableEq (MvPolynomial σ R)] in
+-- theorem Dickson_lemma_MV' (S : Set (σ →₀ ℕ)) :
+--   (monomialIdeal R S).FG := by
+--   rw [monomialIdeal, Ideal.FG]
+--   obtain ⟨B, hBfin, ⟨hBsub, hBbasis⟩⟩ := Dickson_lemma S
+--   let B' := @Set.toFinset (σ →₀ ℕ) B (by exact hBfin.fintype)
+--   --B : Finset (σ →₀ ℕ)
+--   --hB : ↑B ⊆ S ∧ ∀ x ∈ S, ∃ y ∈ B, y ≤ x
+--   obtain ⟨B, hB⟩ := Dickson_lemma₀ S
+--   use Finset.image (fun x ↦ (monomial x) 1 ) B
+--   simp only [Finset.coe_image]
+--   apply le_antisymm
+--   · apply Ideal.span_mono
+--     refine Set.image_mono ?_
+--     exact hB.1
+--   · refine Ideal.span_le.mpr ?_
+--     rw [Set.subset_def]
+--     intro d hS
+--     rw [Set.mem_image] at hS
+--     obtain ⟨x, hxd⟩ := hS
+--     have hy : ∃ y ∈ B, ∀ (i : σ), y i ≤ x i := by apply hB.2 x hxd.1
+--     obtain ⟨y, hyx⟩ := hy
+--     simp only [SetLike.mem_coe]
+--     let j : σ → ℕ := fun (i : σ) ↦ (x i - y i)
+--     refine mem_ideal_span_monomial_image.mpr ?_
+--     have : Decidable ((1:R) = 0) := by exact Classical.propDecidable (1 = 0) -- 괜찮?
+--     rw [←hxd.2, MvPolynomial.support_monomial]
+--     by_cases h_triv : (1:R) = 0
+--     · rw [ite_cond_eq_true]
+--       simp only [Finset.not_mem_empty, Finset.mem_coe, IsEmpty.forall_iff, implies_true]
+--       exact eq_true h_triv
+--     · intro xi hxi
+--       rw [ite_cond_eq_false] at hxi
+--       simp only [Finset.mem_singleton] at hxi
+--       rw [hxi]
+--       use y
+--       simp only [Finset.mem_coe]
+--       exact hyx
+--       exact eq_false h_triv
