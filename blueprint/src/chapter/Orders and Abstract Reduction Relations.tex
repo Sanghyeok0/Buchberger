@@ -41,6 +41,40 @@
         $r$ is a \textbf{well-order} on $M$ if $r$ is a well-founded linear order on $M$.
     \end{enumerate}
 \end{definition}
+
+\begin{definition}[The ``$\le$–setoid'' on $M$]\label{def:eq_rel}
+    \lean{leSetoid}
+    Let $(M,\le)$ be a preordered set.  Define an equivalence relation
+    \[
+      \sim\;\colon\;M\times M\;\to\;\mathrm{Prop},
+      \qquad
+      a\sim b \;\iff\; \bigl(a\le b \wedge b\le a\bigr).
+    \]
+    We write $[a]$ for the equivalence class of $a$, and denote the quotient by
+    \[
+      \mathrm{Quot}(M,\sim)\;=\;\{\, [a]\mid a\in M\}.
+    \]
+\end{definition}
+    
+\begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
+    \lean{minClasses}
+    Let $N\subseteq M$.  An element $b\in N$ is called \emph{minimal in $N$} if
+    \[
+      \forall\,y\in N,\;y\le b \;\Longrightarrow\; b\le y.
+    \]
+    We denote by
+    \[
+      \operatorname{Minimal}(N)
+      \;=\;
+      \{\,b\in N \mid \forall\,y\in N,\;y\le b\to b\le y\}
+    \]
+    the set of all minimal elements of $N$.  The \emph{min–classes} of $N$ are then
+    \[
+      \operatorname{minClasses}(N)
+      \;=\;
+      \bigl\{\, [b]\in \mathrm{Quot}(M,\sim)\;\bigm|\;b\in \operatorname{Minimal}(N)\bigr\}.
+    \]
+\end{definition}
     
 \begin{definition}\label{def:wqo}
     Let $\preceq$ be a quasi-order on $M$ and let $N \subseteq M$. 
@@ -52,6 +86,7 @@
 \end{definition}
     
 \begin{proposition}\label{prop:wqoEquivalent}
+    \lean{wf_and_finite_antichains_implies_hasDicksonProperty, finite_min_classes_implies_hasDicksonProperty}
     Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
     Then the following are equivalent:
     \begin{enumerate}
