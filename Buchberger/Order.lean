@@ -190,25 +190,25 @@ of `minClasses N` for any nonempty `N`. -/
 lemma wf_and_finite_antichains_implies_minClasses_finite_and_nonempty
   (h : WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) :
   ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
-intro N hN
--- Extract well-foundedness of `<`
-have wf_lt : WellFounded (· < ·) := h.1.wf
--- 1. Choose a `<`-minimal element b ∈ N
-obtain ⟨b, hbN, hb_min⟩ := wf_lt.has_min N hN
--- 2. Collect all minimal elements of N for `<`
-let A : Set M := { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
--- A is nonempty (contains b)
-have hA_nonempty : A.Nonempty := ⟨b, hbN, fun x hx => hb_min x hx⟩
--- A is an antichain under `≤`
-have hA_antichain : IsAntichain (· ≤ ·) A := by
-  intro x hx y hy hxy
+  intro N hN
+  -- Extract well-foundedness of `<`
+  have wf_lt : WellFounded (· < ·) := h.1.wf
+  -- 1. Choose a `<`-minimal element b ∈ N
+  obtain ⟨b, hbN, hb_min⟩ := wf_lt.has_min N hN
+  -- 2. Collect all minimal elements of N for `<`
+  let A : Set M := { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
+  -- A is nonempty (contains b)
+  have hA_nonempty : A.Nonempty := ⟨b, hbN, fun x hx => hb_min x hx⟩
+  -- A is an antichain under `≤`
+  have hA_antichain : IsAntichain (· ≤ ·) A := by
+    intro x hx y hy hxy
+    sorry
+  -- 3. A is finite by hypothesis
+  have hA_fin : A.Finite := h.2 A hA_antichain
+  -- 4. `minClasses N` is the image of A under `Quotient.mk leSetoid`
+  have : minClasses N = Quotient.mk leSetoid '' A := rfl
+  -- 5. Conclude finiteness and nonemptiness
   sorry
--- 3. A is finite by hypothesis
-have hA_fin : A.Finite := h.2 A hA_antichain
--- 4. `minClasses N` is the image of A under `Quotient.mk leSetoid`
-have : minClasses N = Quotient.mk leSetoid '' A := rfl
--- 5. Conclude finiteness and nonemptiness
-sorry
 
 
 /--
@@ -222,6 +222,7 @@ lemma wf_and_finite_antichains_implies_hasDicksonProperty :
     have : ∀ N : Set M, (N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty) := by
       exact fun N a ↦ wf_and_finite_antichains_implies_minClasses_finite_and_nonempty wf_and_finite_antichains N a
     exact finite_min_classes_implies_hasDicksonProperty this
+
 /--
 **Theorem (Proposition 4.42 formalised): Dickson Property ↔ Well Quasi-Ordered.**
 Equivalence of Condition (i) and Condition (ii).

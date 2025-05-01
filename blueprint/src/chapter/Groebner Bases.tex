@@ -88,7 +88,7 @@
     \end{enumerate}
 \end{definition}
 
-\begin{lemma}\lable{lem:exists_S_polynomial_syzygies} % [Cox] 85p Lemma 5
+\begin{lemma}\label{lem:exists_S_polynomial_syzygies} % [Cox] 85p Lemma 5
     \uses{def:S-polynomial}
     \lean{MvPolynomial.S_polynomial}
     Suppose we have a sum $\sum_{i=1}^s p_i,$ where $\operatorname{multideg}(p_i)=\delta\in\mathbb Z_{\ge0}^n$ for all $i$.
@@ -119,6 +119,7 @@
 
 \begin{latexonly}
 \begin{algorithm}\label{alg:Buchberger's_Algorithm} % [Cox] 91p
+    \uses{def:Buchberger’s Criterion}
     \lean{MvPolynomial.Buchberger_Algorithm}
     \caption{Buchberger's Algorithm}
     \begin{algorithmic}[1]

@@ -200,9 +200,26 @@ theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
         apply hg₂ 0 1 (by decide)
 
 /-- Dickson's lemma for `ℕ^n` (finitely supported functions on `Fin n`). -/
-theorem Dickson_lemma_n {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
-  apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
-  sorry
+theorem Dickson_lemma_Finsupp {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
+  have hF : HasDicksonProperty (Fin n → ℕ) := by exact Dickson_lemma_Fin n
+  simp only [HasDicksonProperty] at *
+  intro (N₀ : Set (Fin n →₀ ℕ))
+  let e := @Finsupp.equivFunOnFinite (Fin n) ℕ
+  let N  : Set (Fin n → ℕ) := e.toFun '' N₀
+  obtain ⟨B, hBfin, hBbasis⟩ := hF N
+  let B₀ : Set (Fin n →₀ ℕ) := e.invFun '' B
+  have hB₀fin : (B₀ : Set (Fin n →₀ ℕ)).Finite := by exact Set.Finite.image e.invFun hBfin
+  have hB₀N₀ : B₀ ⊆ N₀ := by
+    rintro b₀ ⟨b, hbB⟩
+    rw [←hbB.2]
+    have hbN : b ∈ N := hBbasis.1 hbB.1
+    rcases (Set.mem_image _ _ _).1 hbN with ⟨a, ha₀, rfl⟩
+    simp only [Equiv.toFun_as_coe, Equiv.invFun_as_coe, Equiv.symm_apply_apply, ha₀]
+  refine ⟨B₀, hB₀fin, ⟨hB₀N₀, fun a₀ ha₀ => ?_⟩⟩
+  have : ∃ b ∈ B, b ≤ e.toFun a₀ := by apply hBbasis.2 _ (Set.mem_image_of_mem _ ha₀)
+  obtain ⟨b, hbB, hb⟩ := this
+  use e.invFun b, Set.mem_image_of_mem _ hbB
+  exact hb
 
 -- /--
 -- Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
@@ -234,16 +251,11 @@ theorem Dickson_lemma_n {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
 
 theorem Dickson_lemma {σ : Type*} [Fintype σ] : HasDicksonProperty (σ →₀ ℕ) := by
   let n := Fintype.card σ
-  -- 1) Dickson for `Fin n → ℕ`
-  have hFin : HasDicksonProperty (Fin n → ℕ) := Dickson_lemma_Fin n
-  -- 2) `σ ≃ Fin n` induces an `OrderIso` on function spaces
-  let eFin : σ ≃ Fin n := Fintype.equivFin σ
-  let isoFun : (σ → ℕ) ≃o (Fin n →₀ ℕ) := by sorry
-    --(Equiv.arrowCongr eFin (Equiv.refl ℕ)).toOrderIso
-  -- Dickson for `σ → ℕ` via the congruence lemma
-  have hFun : HasDicksonProperty (σ → ℕ) := by sorry
-  -- 3) embed `σ →₀ ℕ` into `σ → ℕ` and pull back Dickson property
-  let emb : (σ →₀ ℕ) ↪o (σ → ℕ) := Finsupp.orderEmbeddingToFun
+  have hFin : HasDicksonProperty (Fin n →₀ ℕ) := Dickson_lemma_Finsupp
+  have hFun : HasDicksonProperty (σ →₀ ℕ) := by
+    simp only [HasDicksonProperty] at *
+    intro (Ns : Set (σ →₀ ℕ))
+    sorry
   sorry
 
 variable [Fintype σ] (R) [DecidableEq (MvPolynomial σ R)] in
