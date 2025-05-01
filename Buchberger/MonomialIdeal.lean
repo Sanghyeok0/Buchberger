@@ -3,6 +3,8 @@ import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.MonomialOrder
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.Order.Basic
+import Mathlib.Data.Fin.SuccPred
+import Mathlib.Order.Fin.Tuple
 import Buchberger.Order
 
 variable {σ R : Type*} [CommSemiring R] --[EmptyCollection σ]
@@ -144,14 +146,105 @@ In other words, every monomial ideal has a finite basis.
 -- Need Preorder instance for Finsupp (pointwise order)
 --instance {σ : Type*} : Preorder (σ →₀ ℕ) := by exact Finsupp.preorder
 
+/--
+Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
+We split each function into its head coordinate and its tail via `succOrderEmb`.
+-/
+theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
+  intro n
+  induction n with
+  | zero =>
+    -- `Fin 0 → ℕ` is a singleton function space
+    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+    refine (wellQuasiOrderedLE_def (Fin 0 → ℕ)).mpr fun f => ⟨0,1,by simp, by simp⟩
+  | succ n ih =>
+    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+    refine (wellQuasiOrderedLE_def (Fin (n+1) → ℕ)).mpr fun f => by
+      -- 1) extract head sequence `ℕ → ℕ`
+      let f_headSeq : ℕ → ℕ := fun k => f k 0
+      -- ℕ is WQO since it's linear and well-founded
+      have wq_nat : @WellQuasiOrdered ℕ (· ≤ ·) := by
+        refine (wellQuasiOrderedLE_def ℕ).mp ?_
+        refine wellQuasiOrderedLE_iff_wellFoundedLT.mpr ?_
+        exact instWellFoundedLTNat
+      obtain ⟨g₁, hg₁⟩ := wq_nat.exists_monotone_subseq f_headSeq
+
+      -- 2) build tail sequence on `Fin n → ℕ` by composing with `succOrderEmb`
+      let emb := Fin.succOrderEmb n -- Fin n ↪o Fin (n+1)
+      let f_tailSeq : ℕ → Fin n → ℕ := fun k => (f (g₁ k)) ∘ emb
+
+      -- WQO for the tail by IH
+      have wq_tail : @WellQuasiOrdered (Fin n → ℕ) (· ≤ ·) := by
+        rw [HasDicksonProperty_iff_WellQuasiOrderedLE] at ih
+        exact (wellQuasiOrderedLE_def (Fin n → ℕ)).mp ih
+      obtain ⟨g₂, hg₂⟩ := wq_tail.exists_monotone_subseq f_tailSeq
+
+      -- 3) combine the two subsequences
+      let i := g₁ (g₂ 0)
+      let j := g₁ (g₂ 1)
+      have hij : g₁ (g₂ 0) < g₁ (g₂ 1) := by
+        refine (OrderEmbedding.lt_iff_lt g₁).mpr ?_
+        refine (OrderEmbedding.lt_iff_lt g₂).mpr ?_
+        exact Nat.one_pos
+      have : i < j := by exact hij
+      use i, j, this
+      -- show `f i ≤ f j` pointwise
+      intro a
+      by_cases ha : a = 0
+      · -- at head index 0
+        subst ha; simp; apply hg₁; refine (OrderEmbedding.le_iff_le g₂).mpr ?_; exact
+          Nat.zero_le 1
+      · -- at tail indices >0
+        obtain ⟨k, rfl⟩ := Fin.eq_succ_of_ne_zero ha
+        simp only [Function.comp_apply]
+        apply hg₂ 0 1 (by decide)
+
+/-- Dickson's lemma for `ℕ^n` (finitely supported functions on `Fin n`). -/
 theorem Dickson_lemma_n {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
-  -- (1) ℕ is well‐quasi-ordered, since it is well‐founded and linear
-  have h_nat_wqo : WellQuasiOrderedLE ℕ :=
-    wellQuasiOrderedLE_iff_wellFoundedLT.mpr instWellFoundedLTNat
+  apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
   sorry
 
-variable [Fintype σ] in
-theorem Dickson_lemma : HasDicksonProperty (σ →₀ ℕ) := by sorry
+-- /--
+-- Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
+-- We split off the head and tail using a single order isomorphism `Fin.consOrderIso`.
+-- -/
+-- theorem Dickson_lemma_n₂ : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
+--   intro n
+--   apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+--   -- reduce to the raw WQO goal
+--   refine (wellQuasiOrderedLE_def (Fin n → ℕ)).mpr ?_
+--   -- proceed by induction on n
+--   induction n with
+--   | zero =>
+--     -- `Fin 0 → ℕ` is a singleton, any two indices work
+--     intro f; use 0, 1; simp
+--   | succ n ih =>
+--     -- use the order isomorphism between `Fin (n+1) → ℕ` and `ℕ × (Fin n → ℕ)`
+--     let iso := (Fin.consOrderIso fun _ => ℕ).symm.toOrderIso
+--     -- apply product WQO to the factors
+--     have h₁ : WellQuasiOrdered (· ≤ ·) :=
+--       (wellQuasiOrderedLE_iff_wellFoundedLT ℕ).mp instWellFoundedLTNat
+--     have h₂ : WellQuasiOrdered (· ≤ ·) := by simpa using ih
+--     exact iso.symm.wellQuasiOrdered_of (WellQuasiOrdered.prod h₁ h₂)
+
+-- variable [Fintype σ] in
+-- theorem Dickson_lemma : HasDicksonProperty (σ →₀ ℕ) := by
+--   have : HasDicksonProperty (σ →₀ ℕ) ↔ HasDicksonProperty (Fin (Fintype.card σ) →₀ ℕ) := by sorry
+--   sorry
+
+theorem Dickson_lemma {σ : Type*} [Fintype σ] : HasDicksonProperty (σ →₀ ℕ) := by
+  let n := Fintype.card σ
+  -- 1) Dickson for `Fin n → ℕ`
+  have hFin : HasDicksonProperty (Fin n → ℕ) := Dickson_lemma_Fin n
+  -- 2) `σ ≃ Fin n` induces an `OrderIso` on function spaces
+  let eFin : σ ≃ Fin n := Fintype.equivFin σ
+  let isoFun : (σ → ℕ) ≃o (Fin n →₀ ℕ) := by sorry
+    --(Equiv.arrowCongr eFin (Equiv.refl ℕ)).toOrderIso
+  -- Dickson for `σ → ℕ` via the congruence lemma
+  have hFun : HasDicksonProperty (σ → ℕ) := by sorry
+  -- 3) embed `σ →₀ ℕ` into `σ → ℕ` and pull back Dickson property
+  let emb : (σ →₀ ℕ) ↪o (σ → ℕ) := Finsupp.orderEmbeddingToFun
+  sorry
 
 variable [Fintype σ] (R) [DecidableEq (MvPolynomial σ R)] in
 theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
