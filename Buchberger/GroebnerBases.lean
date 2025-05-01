@@ -1,9 +1,10 @@
 import Mathlib.RingTheory.MvPolynomial.Groebner
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.Algebra.Ring.Defs
 import Buchberger.MonomialIdeal
 
-variable {σ R : Type*} [CommSemiring R] -- [DecidableEq σ]
+variable {σ : Type*} -- [DecidableEq σ]
 variable {k : Type*} [Field k]
 variable {m : MonomialOrder σ}
 
@@ -47,6 +48,10 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   obtain ⟨b, h_span⟩ := h_fg
   use b
   exact h_span
+
+section Semiring
+
+variable {R : Type*} [CommSemiring R]
 
 variable (m) [DecidableEq (MvPolynomial σ R)] in
 /-- Definition 5. Groebner_basis
@@ -157,7 +162,6 @@ noncomputable def remainder_old (f : MvPolynomial σ k) (B : List (MvPolynomial 
 
 
 /-MonomialOrder.div를 이용해 remainder를 정의할 방법 찾기-/
-variable [CommRing R] in
 noncomputable def remainder'
   {ι : Type*}
   (b : ι → MvPolynomial σ R)
@@ -185,6 +189,12 @@ theorem remainder_unique
   (hr': ∀ a ∈ r'.support, ∀ b ∈ G, ¬ (m.degree b ≤ a)) :
   r = r' := by sorry
 
+end Semiring
+
+section Ring
+
+variable {R : Type*} [CommRing R]
+
 variable [DecidableEq (MvPolynomial σ R)] in
 /--
 **Proposition 1.**  If `G` is a Gröbner basis for `I`, then every `f` admits
@@ -193,18 +203,24 @@ a unique decomposition `f = g + r` with
   2. no term of `r` is divisible by any `LT gₖ`.
 -/
 theorem remainder_exists_unique {I : Ideal (MvPolynomial σ R)} {G : Finset (MvPolynomial σ R)}
-  (hGB : @IsGrobnerBasis σ R _ m _ I G) (f : MvPolynomial σ R) :
+  (hGB : IsGrobnerBasis m I G)
+  (hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi)) (f : MvPolynomial σ R) :
   ∃! r : MvPolynomial σ R,
     (∃ g, g ∈ I ∧ f = g + r) ∧
-    ∀ c ∈ r.support, ∀ g ∈ G, ¬ m.degree (leadingTerm m g) ≤ c := by sorry
+    ∀ c ∈ r.support, ∀ gi ∈ G, ¬ m.degree (leadingTerm m gi) ≤ c := by
+      -- 1) Existence via the division algorithm `MonomialOrder.div_set`
+    have hGset : ∀ gi ∈ (G.toSet), IsUnit (m.leadingCoeff gi) := by exact fun gi a ↦ hG_unit gi a
+    obtain ⟨gcomb, r, div_props⟩ := @MonomialOrder.div_set σ m R _ (G.toSet) (by simpa using hG_unit) f
+    sorry
 
 variable [DecidableEq (MvPolynomial σ R)] in
 /-- The unique remainder of `f` upon division by a Gröbner basis `G`. -/
 noncomputable def remainder
   {I : Ideal (MvPolynomial σ R)} {G : Finset (MvPolynomial σ R)}
   (hGB : IsGrobnerBasis m I G)
+  (hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi))
   (f : MvPolynomial σ R) : MvPolynomial σ R :=
-  Classical.choose (ExistsUnique.exists (remainder_exists_unique hGB f))
+  Classical.choose (ExistsUnique.exists (remainder_exists_unique hGB hG_unit f))
 
 variable (m) in
 /-- The S-polynomial. -/
@@ -237,13 +253,13 @@ lemma exists_S_polynomial_syzygies
 -- -- extract the `r` from `m.div_set hB f`
 -- (Classical.choose (m.div_set hB f)).2.2
 
-variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
+variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ R)] in
 theorem mem_ideal_iff_remainder_GB_eq_zero
-  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
-  (hG  : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
+  {I : Ideal (MvPolynomial σ R)} {G : Finset (MvPolynomial σ R)}
+  {hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi)}
   (hGB : IsGrobnerBasis m I G)
-  (f   : MvPolynomial σ k) :
-  f ∈ I ↔ remainder hGB f = 0 := by sorry
+  (f   : MvPolynomial σ R) :
+  f ∈ I ↔ remainder hGB hG_unit f = 0 := by sorry
 
 variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
 theorem mem_ideal_iff_remainder_GB_eq_zero_old
@@ -466,3 +482,5 @@ lemma grobner_basis_remove_redundant
   (hpG : p ∈ G)
   (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).toFinset.image (fun g ↦ leadingTerm m g))) :
   is_GrobnerBasis m I (G.erase p) := by sorry
+
+end Ring

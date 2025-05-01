@@ -14,6 +14,7 @@
 \end{theorem}
 
 \begin{definition}\label{def:Groebner_basis}
+    \uses{thm:initialIdeal_is_FG}
     \lean{MvPolynomial.IsGrobnerBasis}
     Fix a monomial order $>$ on the polynomial ring $k[x_1, \dots, x_n]$. A finite subset
     $G = \{g_1, \dots, g_t\}$ of an ideal $I \subseteq k[x_1, \dots, x_n]$ is said to be a
@@ -40,7 +41,7 @@
 \end{proposition}
 
 \begin{corollary}\label{cor:GB_membership_test} % [Cox] 84p Corollary 2
-    \uses{def:Groebner_basis}
+    \uses{prop:GR_Unique_Remainder}
     \lean{MvPolynomial.mem_ideal_iff_remainder_GB_eq_zero}
     Let $G = \{g_1, \dots , g_t\}$ be a Gr{\"o}bner basis for an ideal $I \subseteq k[x_1, \dots , x_n]$
     (with respect to a given monomial order $>$) and let $f \in k[x_1, \dots , x_n]$.
@@ -97,7 +98,7 @@
 \end{lemma}
 
 \begin{theorem}[Buchberger's Criterion]\label{def:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
-    \uses{def:Groebner_basis, lem:exists_S_polynomial_syzygies}
+    \uses{cor:GB_membership_test, lem:exists_S_polynomial_syzygies}
     \lean{MvPolynomial.Buchberger_criterion}
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
     Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
