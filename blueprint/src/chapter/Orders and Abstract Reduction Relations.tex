@@ -30,6 +30,7 @@
 \end{definition}
     
 \begin{definition}\label{def:well-founded}
+    \uses{def:Orders}
     Let $r$ be a relation on $M$ with strict part $r_s$, and let $N \subseteq M$.
     \begin{enumerate}
         \item Then an element $a$ of $N$ is called \textit{$r$-minimal} (\textit{$r$-maximal}) in $N$ if there is no $b \in N$ with $b \, r_s \, a$ (with $a \, r_s \, b$).
@@ -43,6 +44,7 @@
 \end{definition}
 
 \begin{definition}[The ``$\le$–setoid'' on $M$]\label{def:eq_rel}
+    \uses{def:Orders}
     \lean{leSetoid}
     Let $(M,\le)$ be a preordered set.  Define an equivalence relation
     \[
@@ -57,6 +59,7 @@
 \end{definition}
     
 \begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
+    \uses{def:eq_rel}
     \lean{minClasses}
     Let $N\subseteq M$.  An element $b\in N$ is called \emph{minimal in $N$} if
     \[
@@ -77,6 +80,7 @@
 \end{definition}
     
 \begin{definition}\label{def:wqo}
+    \uses{def:Orders}
     Let $\preceq$ be a quasi-order on $M$ and let $N \subseteq M$. 
     Then a subset $B$ of $N$ is called a \textbf{Dickson basis}, or simply \textbf{basis} of $N$ w.r.t.\ $\preceq$, if for every $a \in N$ there exists some $b \in B$ with $b \preceq a$.
     \begin{enumerate}
@@ -85,7 +89,8 @@
     \end{enumerate}
 \end{definition}
     
-\begin{proposition}\label{prop:wqoEquivalent}
+\begin{proposition}\label{prop:wqoEquivalent} % [Becker-Weispfenning1993] 160p Proposition 4.42
+    \uses{def:wqo, def:min–classes}
     \lean{wf_and_finite_antichains_implies_hasDicksonProperty, finite_min_classes_implies_hasDicksonProperty}
     Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
     Then the following are equivalent:
@@ -96,28 +101,32 @@
     \end{enumerate}
 \end{proposition}
     
-\begin{corollary}\label{cor:MinimalFiniteBasis}
+\begin{corollary}\label{cor:MinimalFiniteBasis} % [Becker-Weispfenning1993] 161p Corollary 4.43
+    \uses{prop:wqoEquivalent}
     Let $\preceq$ be a well-partial-order on $M$.
     Then every non-empty subset $N$ of $M$ has a \textup{\textbf{unique minimal finite basis}} $B$, i.e., a finite basis $B$ such that $B \subseteq C$ for all other bases $C$ of $N$. 
     $B$ consists of all minimal elements of $N$.
 \end{corollary}
     
-\begin{corollary}\label{cor:wqo_is_wellFounded}
+\begin{corollary}\label{cor:wqo_is_wellFounded} % [Becker-Weispfenning1993] 161p Corollary 4.44
+    \uses{prop:wqoEquivalent}
     Every well-quasi-order is well-founded.
 \end{corollary}
     
-\begin{proposition}\label{prop:wqoAscendingSubsequence}
+\begin{proposition}\label{prop:wqoAscendingSubsequence} % [Becker-Weispfenning1993] 160p Proposition 4.45
+    \uses{prop:wqoEquivalent}
     Let $\preceq$ be a well- quasi-order on $M$, and let $\{a_n\}_{n \in \mathbb{N}}$ be a sequence of elements of $M$.
     Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.
 \end{proposition}
 
-\begin{lemma}\label{lem:monomial_ideal}
-    \lean{MvPolynomial.initialIdeal_is_monomial_ideal}
+\begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
+    \lean{MvPolynomial.mem_monomialIdeal_iff_divisible}
     Let $I = \langle x^\alpha \mid \alpha \in A \rangle$ be a monomial ideal.
     Then a monomial $x^\beta$ lies in $I$ if and only if $x^\beta$ is divisible by $x^\alpha$ for some $\alpha \in A$.
 \end{lemma}
 
 \begin{theorem}\label{thm:Dickson} % [Becker-Weispfenning1993] 163p
+    \uses{prop:wqoEquivalent, prop:wqoAscendingSubsequence}
     \lean{MvPolynomial.Dickson_lemma}
     Let $(\mathbb{N}^n, \le')$ be the direct product of $n$ copies of the natural numbers $(\mathbb{N}, \le)$ with their natural ordering. 
     Then $(\mathbb{N}^n, \le')$ is a Dickson partially ordered set. 
@@ -132,8 +141,4 @@
     \lean{MvPolynomial.Dickson_lemma_MV}
     Every subset $S\subseteq \mathbb{N}^n$ has only finitely many minimal elements with respect to the componentwise partial order. 
     In particular, every monomial ideal in $k[x_1,\dots,x_n]$ is finitely generated.
-\end{theorem}
-
-\begin{theorem}
-    test
 \end{theorem}

@@ -88,7 +88,7 @@
     \end{enumerate}
 \end{definition}
 
-\begin{lemma} % [Cox] 85p Lemma 5
+\begin{lemma}\lable{lem:exists_S_polynomial_syzygies} % [Cox] 85p Lemma 5
     \uses{def:S-polynomial}
     \lean{MvPolynomial.S_polynomial}
     Suppose we have a sum $\sum_{i=1}^s p_i,$ where $\operatorname{multideg}(p_i)=\delta\in\mathbb Z_{\ge0}^n$ for all $i$.
@@ -97,7 +97,7 @@
 \end{lemma}
 
 \begin{theorem}[Buchberger's Criterion]\label{def:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
-    \uses{def:Groebner_basis}
+    \uses{def:Groebner_basis, lem:exists_S_polynomial_syzygies}
     \lean{MvPolynomial.Buchberger_criterion}
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
     Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
