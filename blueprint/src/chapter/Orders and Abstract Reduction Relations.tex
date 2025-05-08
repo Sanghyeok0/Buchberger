@@ -3,6 +3,8 @@
 \section{Monomial Ideals and Dickson’s Lemma}
 
 \begin{definition}\label{def:Orders}
+    \lean{Preorder, LinearOrder}
+    \leanok
     Let $r$ be a relation on $M$.
     Then $r$ is called
     \begin{enumerate}
@@ -30,6 +32,8 @@
 \end{definition}
     
 \begin{definition}\label{def:well-founded}
+    \lean{WellFounded}
+    \leanok
     \uses{def:Orders}
     Let $r$ be a relation on $M$ with strict part $r_s$, and let $N \subseteq M$.
     \begin{enumerate}
@@ -45,6 +49,7 @@
 
 \begin{definition}[The ``$\le$–setoid'' on $M$]\label{def:eq_rel}
     \uses{def:Orders}
+    \leanok %확인 필요
     \lean{leSetoid}
     Let $(M,\le)$ be a preordered set.  Define an equivalence relation
     \[
@@ -60,6 +65,7 @@
     
 \begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
     \uses{def:eq_rel}
+    \leanok %확인 필요
     \lean{minClasses}
     Let $N\subseteq M$.  An element $b\in N$ is called \emph{minimal in $N$} if
     \[
@@ -80,6 +86,8 @@
 \end{definition}
     
 \begin{definition}\label{def:wqo}
+    \lean{HasDicksonProperty}
+    \leanok %확인 필요
     \uses{def:Orders}
     Let $\preceq$ be a quasi-order on $M$ and let $N \subseteq M$. 
     Then a subset $B$ of $N$ is called a \textbf{Dickson basis}, or simply \textbf{basis} of $N$ w.r.t.\ $\preceq$, if for every $a \in N$ there exists some $b \in B$ with $b \preceq a$.
@@ -114,6 +122,8 @@
 \end{corollary}
     
 \begin{proposition}\label{prop:wqoAscendingSubsequence} % [Becker-Weispfenning1993] 160p Proposition 4.45
+    \lean{WellQuasiOrdered.exists_monotone_subseq}
+    \leanok
     \uses{prop:wqoEquivalent}
     Let $\preceq$ be a well- quasi-order on $M$, and let $\{a_n\}_{n \in \mathbb{N}}$ be a sequence of elements of $M$.
     Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.

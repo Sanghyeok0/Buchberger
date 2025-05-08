@@ -100,7 +100,6 @@ x^β lies in I if and only if
 x^β is divisible by some x^α for α in A, i.e. there exists α ∈ A such
 that α ≤ β.
 -/
-
 lemma mem_monomialIdeal_iff_divisible {A : Set (σ →₀ ℕ)} {β : σ →₀ ℕ}
 [DecidableEq R] [Nontrivial R] :
   (monomial β (1 : R)) ∈ monomialIdeal R A ↔ ∃ α ∈ A, α ≤ β := by
