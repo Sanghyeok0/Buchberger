@@ -40,6 +40,39 @@ instance leSetoid : Setoid M where
              symm := by exact fun {x y} a ↦ id (And.symm a)
              trans := fun a b => ⟨le_trans a.1 b.1, le_trans b.2 a.2⟩ }
 
+namespace Quotient
+
+/-- The induced `≤` on `Quotient leSetoid`. -/
+instance quotientPreorder : Preorder (Quotient (@leSetoid M _)) where
+  le := fun a b =>
+    Quotient.liftOn₂ a b
+      (fun x y => x ≤ y)
+      (fun a₁ a₂ b₁ b₂ (⟨h₁, h₁'⟩ : a₁ ≤ b₁ ∧ b₁ ≤ a₁)
+                      (⟨h₂, h₂'⟩ : a₂ ≤ b₂ ∧ b₂ ≤ a₂) => by
+        -- we must show `(a₁ ≤ b₁) = (a₂ ≤ b₂)` as Prop‐equality
+        have : (a₁ ≤ a₂) ↔ (b₁ ≤ b₂) := by
+          constructor
+          · intro hab; exact h₁'.trans (hab.trans h₂)
+          · intro hba; exact h₁.trans (hba.trans h₂')
+        simp
+        exact this )
+  le_refl := by
+    intro a; refine Quotient.inductionOn a fun x => ?_
+    exact le_refl _
+  le_trans := by
+    intros q₁ q₂ q₃
+    refine Quotient.inductionOn₃ q₁ q₂ q₃ fun a b c => (le_trans : a ≤ b → b ≤ c → a ≤ c)
+
+/-- In the quotient, antisymmetry holds, so we get a `PartialOrder`. -/
+instance partialOrder : PartialOrder (Quotient (@leSetoid M _)) where
+  le_antisymm := by
+    rintro ⟨a⟩ ⟨b⟩
+    intro hab hba
+    apply Quotient.sound
+    exact ⟨hab, hba⟩
+
+end Quotient
+
 /-- A **min‑class** of `N` is the `~`‑equivalence class of a minimal element of `N`. -/
 def minClasses (N : Set M) : Set (Quotient (@leSetoid M _)) :=
   Quotient.mk leSetoid '' { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
@@ -217,11 +250,171 @@ Shows that if the order is well-founded and has no infinite antichains (Conditio
 then every subset `N` must have a finite basis (Condition i).
 -/
 lemma wf_and_finite_antichains_implies_hasDicksonProperty :
-    (WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) → HasDicksonProperty M := by
-    intro wf_and_finite_antichains
-    have : ∀ N : Set M, (N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty) := by
-      exact fun N a ↦ wf_and_finite_antichains_implies_minClasses_finite_and_nonempty wf_and_finite_antichains N a
-    exact finite_min_classes_implies_hasDicksonProperty this
+  (WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) → HasDicksonProperty M := by
+  intro wf_and_finite_antichains
+  have : ∀ N : Set M, (N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty) := by
+    exact fun N a ↦ wf_and_finite_antichains_implies_minClasses_finite_and_nonempty wf_and_finite_antichains N a
+  exact finite_min_classes_implies_hasDicksonProperty this
+
+/-- (i) ⇒ (ii): A poset with the Dickson property is well‐quasi‐ordered. -/
+theorem HasDicksonProperty.to_wellQuasiOrderedLE
+  (h : HasDicksonProperty M) :
+    WellQuasiOrderedLE M := by
+  refine { wqo := ?_ }
+  dsimp [WellQuasiOrdered]; intro f
+  -- 1) Let N = range f, apply Dickson
+  let N : Set M := Set.range f
+  obtain ⟨B, hBfin, ⟨hBsub, hbasis⟩⟩ := h N
+  -- 2) Turn B into a Finset: we need a concrete `Fintype B`.
+  haveI : Fintype B := Set.Finite.fintype hBfin
+  --let Bfin := @Set.toFinset M B (by exact hBfin.fintype)
+  -- 3) From B ⊆ range f get an index‐function
+  have hBfin_inx: ∀ b ∈ B.toFinset, ∃ i : ℕ, f i = b:= by
+    have : ∀ b ∈ B.toFinset, b ∈ B := by
+      intro b
+      intro hb_in_Bfin
+      exact Set.mem_toFinset.mp hb_in_Bfin
+    exact fun b a ↦ hBsub (this b a)
+  choose index h_index using hBfin_inx
+  -- 4) Collect all these indices into a finite set and pick one larger
+  let Bfinat := B.toFinset.attach
+  let Bfin_inx  : Finset ℕ := Bfinat.image fun x => index x.1 x.2
+  let j : ℕ := Bfin_inx.sup id + 1
+  have hj : ∀ i ∈ Bfin_inx, i < j := by
+    intro i hi
+    simp only [j]
+    apply Nat.lt_succ_of_le
+    apply Finset.le_sup hi
+  -- 5) Now `f j ∈ N`, cover it by some `b ∈ B`
+  have fjN : f j ∈ N := by exact Set.mem_range_self j
+  obtain ⟨b₀, hb₀B, hle⟩ := hbasis (f j) fjN
+  -- `b₀ ∈ B`, hence in `Bfin`
+  have hb₀fin : b₀ ∈ B.toFinset := by exact Set.mem_toFinset.mpr hb₀B
+  let i₀ : ℕ := index b₀ hb₀fin
+  let x₀ : Subtype _ := ⟨b₀, hb₀fin⟩
+  have hx₀ : x₀ ∈ Bfinat := by exact Finset.mem_attach B.toFinset x₀
+  have hi₀j : i₀ ∈ Bfin_inx := by
+     exact Finset.mem_image_of_mem _ hx₀
+  have hi₀_lt_j : i₀ < j := hj _ hi₀j
+  have fi : f i₀ = b₀ := h_index b₀ hb₀fin
+  exact ⟨i₀, j, hi₀_lt_j, fi.symm ▸ hle⟩
+
+-- /--
+-- **(ii) ⇒ (iii): A Well Quasi-Ordered preorder has only finitely many, but at least one,
+-- min‑classes in any nonempty subset.**
+-- -/
+-- theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
+--     (h_wqo : WellQuasiOrderedLE M) : -- Assume Condition (ii)
+--     ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
+--   intro N hN_nonempty
+--   haveI h_wf : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
+
+--   constructor
+--   · -- Part 1: Prove (minClasses N).Finite
+--     by_contra h_mc_infinite
+--     let QN := minClasses N
+--     have QN_inf : QN.Infinite := h_mc_infinite
+
+--     -- Construct infinite sequence of distinct min-classes and their representatives
+--     -- recursively using classical choice.
+--     let rec build_seq (n : ℕ) (picked_classes : Finset (Quotient leSetoid)) :
+--         Σ' (q : Quotient leSetoid) (m : M),
+--            q ∈ QN ∧ q ∉ picked_classes ∧ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) } ∧ Quotient.mk leSetoid m = q := by
+--       -- Since QN is infinite, QN \ picked_classes is non-empty
+--       have : (QN \ (↑picked_classes : Set (Quotient leSetoid))).Nonempty :=
+--         Set.Infinite.nonempty_diff_finite QN_inf picked_classes.finite_toSet
+--       -- Choose a class q from this difference
+--       let q := Classical.choose this
+--       have q_spec : q ∈ QN ∧ q ∉ picked_classes := Classical.choose_spec this
+--       -- Choose a representative m for q
+--       choose m hm_spec using (show ∃ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }, Quotient.mk leSetoid m = q by
+--           rw [minClasses, Set.mem_image] at q_spec; exact q_spec.1)
+--       -- Return the pair (class, representative) and the proofs
+--       exact ⟨q, m, q_spec.1, q_spec.2, hm_spec⟩
+
+--     -- Define the sequence of classes and elements using dependent recursion / choice
+--     let seq : ℕ → Σ' (q : Quotient leSetoid) (m : M),
+--                    q ∈ QN ∧ q ∉ (Finset.image (fun k => (build_seq k default).1) (Finset.range n))
+--                    ∧ m ∈ minimals_le N ∧ Quotient.mk Setoid.r m = q :=
+--        fun n => build_seq n (Finset.image (fun k => (seq k).1) (Finset.range n)) -- This definition is circular!
+
+--     -- Let's use exists_sequence_of_infinite instead.
+--     obtain ⟨g, hg_inj⟩ : ∃ g : ℕ → Quotient leSetoid, Function.Injective g ∧ Set.range g ⊆ QN :=
+--         Set.Infinite.exists_sequence_of_infinite QN_inf
+
+--     -- For each distinct class g n, choose a representative minimal element f n
+--     choose f hf_spec using (fun n => show ∃ m ∈ minimals_le N, Quotient.mk Setoid.r m = g n by
+--       have : g n ∈ QN := Set.mem_range_of_mem g (Set.mem_range_self n) ▸ (hg_inj.2)
+--       rw [minClasses, Set.mem_image] at this; exact this)
+--     -- hf_spec n : f n ∈ minimals_le N ∧ Quotient.mk Setoid.r (f n) = g n
+
+--     -- Now we have f : ℕ → M such that f n ∈ minimals_le N and ⟦f i⟧ ≠ ⟦f j⟧ for i ≠ j
+--     have h_f_pairwise_neq : ∀ i j, i ≠ j → ¬ (f i ≈ f j) := by
+--       intro i j hij_ne
+--       contrapose! hij_ne -- Assume f i ≈ f j, prove i = j
+--       apply hg_inj -- Use injectivity of g
+--       rw [← (hf_spec i).2, ← (hf_spec j).2] -- Rewrite g i = ⟦f i⟧ and g j = ⟦f j⟧
+--       exact Quotient.sound hij_ne -- f i ≈ f j → ⟦f i⟧ = ⟦f j⟧
+
+--     -- Apply WQO to the sequence f
+--     obtain ⟨i, j, hij_lt, hij_le⟩ := h_wqo.wqo f -- f i ≤ f j
+--     have f_i_min : f i ∈ minimals_le N := (hf_spec i).1
+--     have f_j_min : f j ∈ minimals_le N := (hf_spec j).1
+--     have hji_le : f j ≤ f i := f_j_min.2 (f i) f_i_min.1 hij_le -- Use minimality of f j
+--     have fi_equiv_fj : f i ≈ f j := ⟨hij_le, hji_le⟩
+--     -- Contradiction
+--     exact h_f_pairwise_neq i j hij_lt.ne fi_equiv_fj
+
+--   · -- Part 2: Prove (minClasses N).Nonempty
+--     rw [Set.nonempty_image_iff]
+--     exact WellFounded.has_min N hN_nonempty
+
+/--
+**(ii) ⇒ (iii): A Well Quasi-Ordered preorder has only finitely many, but at least one,
+min‑classes in any nonempty subset.**
+-/
+theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
+    (h_wqo : WellQuasiOrderedLE M) : -- Assume Condition (ii)
+    ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
+  intro N hN_nonempty
+  -- From WQO, we get WellFoundedLT
+  haveI h_wf : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
+
+  constructor
+  · -- Part 1: Prove (minClasses N).Finite
+    -- Proof by contradiction: Assume minClasses N is infinite.
+    by_contra h_mc_infinite
+    let QN := minClasses N
+    have mc_inf : (minClasses N).Infinite := h_mc_infinite
+    have bad_seq :
+        ∃ f : ℕ → M, (∀ n, f n ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }) ∧
+                      (∀ i j, i ≠ j → ¬ (f i ≈ f j)) := by
+
+      -- For each q ∈ minClasses N, choose a representative m_q ∈ minimal N such that ⟦m_q⟧ = q
+      choose m_rep h_m_rep_spec using (fun q (hq : q ∈ minClasses N) =>
+        show ∃ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }, Quotient.mk leSetoid m = q by
+          exact hq
+      )
+      sorry
+    sorry
+  · sorry
+
+
+-- /-- (ii) ⇒ (iii): A well‐quasi‐ordered preorder has only finitely many, but at least one,
+-- min‐classes in any nonempty subset. -/
+-- theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
+--   {M : Type*} [Preorder M]
+--   (h : WellQuasiOrderedLE M) :
+--   ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
+--   intro N hN
+--   have hfin : (minClasses N).Finite := by
+--     by_contra h_inf
+--     have : (minClasses N).Infinite := by exact h_inf
+--     -- build the bad sequence using classical.choice; leave the details to `sorry`
+--     have bad_seq : ∃ a : ℕ → M, ∀ i, a i ∈ N ∧ ∀ j, j < i → ¬ (Quotient.mk leSetoid (a j) = Quotient.mk leSetoid (a i)) := by
+--       have : ∀ a, ∃ b ∈ (minClasses N), b < a := sorry --Set.infinite_iff_exists_lt this
+--     sorry
+
 
 /--
 **Theorem (Proposition 4.42 formalised): Dickson Property ↔ Well Quasi-Ordered.**
@@ -234,9 +427,6 @@ theorem HasDicksonProperty_iff_WellQuasiOrderedLE :
   -- Goal is now HasDicksonProperty M ↔ (WellFoundedLT M ∧ FiniteAntichains M)
   exact ⟨hasDicksonProperty_implies_wf_and_finite_antichains,
          wf_and_finite_antichains_implies_hasDicksonProperty⟩
-
-
-
 
 -- 틀린 코드
 

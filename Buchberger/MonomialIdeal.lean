@@ -5,6 +5,7 @@ import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.Order.Basic
 import Mathlib.Data.Fin.SuccPred
 import Mathlib.Order.Fin.Tuple
+import Mathlib.Data.Finsupp.PWO
 import Buchberger.Order
 
 variable {σ R : Type*} [CommSemiring R] --[EmptyCollection σ]
@@ -34,8 +35,8 @@ def initialIdeal (I : Ideal (MvPolynomial σ R)) : Ideal (MvPolynomial σ R) :=
 /-
 ## TODO
 * [Field k] 조건 완화 -/
-theorem initialIdeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
-    initialIdeal m I = Ideal.span { f | ∃g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } := by
+lemma initialIdeal_is_monomial_ideal' (I : Ideal (MvPolynomial σ k)) :
+    initialIdeal m I = Ideal.span { f | ∃ g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } := by
   apply le_antisymm
   · -- Show span(LT) ⊆ span(LM)
     rw [initialIdeal, Ideal.span_le]
@@ -73,6 +74,25 @@ def LT_set (I : Ideal (MvPolynomial σ R)) : Set (MvPolynomial σ R) :=
 variable (m) in
 def LM_set (I : Ideal (MvPolynomial σ R)) : Set (σ →₀ ℕ) :=
   { f | ∃ g ∈ I, g ≠ 0 ∧ m.degree g = f }
+
+theorem initialIdeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
+  initialIdeal m I = monomialIdeal k (LM_set m I) := by
+  dsimp [monomialIdeal, LM_set]
+  have : { f | ∃ g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } = (fun α => monomial α (1 : k)) '' LM_set m I := by
+    ext f
+    constructor
+    · rintro ⟨g, hgI, h0, rfl⟩
+      use m.degree g
+      constructor
+      · exact ⟨g, hgI, h0, rfl⟩
+      · rfl
+    · rintro ⟨α, ⟨g, hgI, h0, hdeg⟩, hαf⟩
+      use g; simp [hdeg] at hαf;
+      rw [hdeg]
+      exact ⟨hgI, h0, hαf⟩
+  simp [LM_set] at this
+  rw [←this]
+  apply initialIdeal_is_monomial_ideal'
 
 /--
 Lemma 2. Let I = ⟨x^α | α ∈ A⟩ be a monomial ideal. Then a monomial
@@ -143,122 +163,31 @@ be a monomial ideal. Then there exists a finite subset s ⊆ A such that
  I = ⟨ x^α | α ∈ s ⟩.
 In other words, every monomial ideal has a finite basis.
 -/
--- Need Preorder instance for Finsupp (pointwise order)
---instance {σ : Type*} : Preorder (σ →₀ ℕ) := by exact Finsupp.preorder
 
-/--
-Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
-We split each function into its head coordinate and its tail via `succOrderEmb`.
--/
-theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
-  intro n
-  induction n with
-  | zero =>
-    -- `Fin 0 → ℕ` is a singleton function space
-    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
-    refine (wellQuasiOrderedLE_def (Fin 0 → ℕ)).mpr fun f => ⟨0,1,by simp, by simp⟩
-  | succ n ih =>
-    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
-    refine (wellQuasiOrderedLE_def (Fin (n+1) → ℕ)).mpr fun f => by
-      -- 1) extract head sequence `ℕ → ℕ`
-      let f_headSeq : ℕ → ℕ := fun k => f k 0
-      -- ℕ is WQO since it's linear and well-founded
-      have wq_nat : @WellQuasiOrdered ℕ (· ≤ ·) := by
-        refine (wellQuasiOrderedLE_def ℕ).mp ?_
-        refine wellQuasiOrderedLE_iff_wellFoundedLT.mpr ?_
-        exact instWellFoundedLTNat
-      obtain ⟨g₁, hg₁⟩ := wq_nat.exists_monotone_subseq f_headSeq
+open Set
 
-      -- 2) build tail sequence on `Fin n → ℕ` by composing with `succOrderEmb`
-      let emb := Fin.succOrderEmb n -- Fin n ↪o Fin (n+1)
-      let f_tailSeq : ℕ → Fin n → ℕ := fun k => (f (g₁ k)) ∘ emb
+theorem Dickson_lemma {σ : Type*} [Fintype σ] :
+  HasDicksonProperty (σ →₀ ℕ) := by
+  have hPWO : (Set.univ : Set (σ →₀ ℕ)).IsPWO := Finsupp.isPWO (S := Set.univ)
+  apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+  refine (wellQuasiOrderedLE_def (σ →₀ ℕ)).mpr ?_
+  -- Given any sequence f : ℕ → σ →₀ ℕ, PWO gives a monotone subsequence
+  intro f
+  obtain ⟨g, hg_mono⟩ := @hPWO.exists_monotone_subseq _ _ _ f (fun _ => mem_univ _)
+  -- Take the first two indices i := g 0, j := g 1
+  let i := g 0
+  let j := g 1
+  -- Strict‐mono of g turns 0 < 1 into i < j
+  have hij : i < j := g.strictMono (Nat.zero_lt_succ 0)
+  -- Monotonicity of f ∘ g at 0 ≤ 1 gives f i ≤ f j
+  have hle : f i ≤ f j := by
+    rw [Monotone] at hg_mono
+    refine hg_mono ?_
+    exact Nat.zero_le 1
+  exact ⟨i, j, hij, hle⟩
 
-      -- WQO for the tail by IH
-      have wq_tail : @WellQuasiOrdered (Fin n → ℕ) (· ≤ ·) := by
-        rw [HasDicksonProperty_iff_WellQuasiOrderedLE] at ih
-        exact (wellQuasiOrderedLE_def (Fin n → ℕ)).mp ih
-      obtain ⟨g₂, hg₂⟩ := wq_tail.exists_monotone_subseq f_tailSeq
 
-      -- 3) combine the two subsequences
-      let i := g₁ (g₂ 0)
-      let j := g₁ (g₂ 1)
-      have hij : g₁ (g₂ 0) < g₁ (g₂ 1) := by
-        refine (OrderEmbedding.lt_iff_lt g₁).mpr ?_
-        refine (OrderEmbedding.lt_iff_lt g₂).mpr ?_
-        exact Nat.one_pos
-      have : i < j := by exact hij
-      use i, j, this
-      -- show `f i ≤ f j` pointwise
-      intro a
-      by_cases ha : a = 0
-      · -- at head index 0
-        subst ha; simp; apply hg₁; refine (OrderEmbedding.le_iff_le g₂).mpr ?_; exact
-          Nat.zero_le 1
-      · -- at tail indices >0
-        obtain ⟨k, rfl⟩ := Fin.eq_succ_of_ne_zero ha
-        simp only [Function.comp_apply]
-        apply hg₂ 0 1 (by decide)
-
-/-- Dickson's lemma for `ℕ^n` (finitely supported functions on `Fin n`). -/
-theorem Dickson_lemma_Finsupp {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
-  have hF : HasDicksonProperty (Fin n → ℕ) := by exact Dickson_lemma_Fin n
-  simp only [HasDicksonProperty] at *
-  intro (N₀ : Set (Fin n →₀ ℕ))
-  let e := @Finsupp.equivFunOnFinite (Fin n) ℕ
-  let N  : Set (Fin n → ℕ) := e.toFun '' N₀
-  obtain ⟨B, hBfin, hBbasis⟩ := hF N
-  let B₀ : Set (Fin n →₀ ℕ) := e.invFun '' B
-  have hB₀fin : (B₀ : Set (Fin n →₀ ℕ)).Finite := by exact Set.Finite.image e.invFun hBfin
-  have hB₀N₀ : B₀ ⊆ N₀ := by
-    rintro b₀ ⟨b, hbB⟩
-    rw [←hbB.2]
-    have hbN : b ∈ N := hBbasis.1 hbB.1
-    rcases (Set.mem_image _ _ _).1 hbN with ⟨a, ha₀, rfl⟩
-    simp only [Equiv.toFun_as_coe, Equiv.invFun_as_coe, Equiv.symm_apply_apply, ha₀]
-  refine ⟨B₀, hB₀fin, ⟨hB₀N₀, fun a₀ ha₀ => ?_⟩⟩
-  have : ∃ b ∈ B, b ≤ e.toFun a₀ := by apply hBbasis.2 _ (Set.mem_image_of_mem _ ha₀)
-  obtain ⟨b, hbB, hb⟩ := this
-  use e.invFun b, Set.mem_image_of_mem _ hbB
-  exact hb
-
--- /--
--- Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
--- We split off the head and tail using a single order isomorphism `Fin.consOrderIso`.
--- -/
--- theorem Dickson_lemma_n₂ : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
---   intro n
---   apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
---   -- reduce to the raw WQO goal
---   refine (wellQuasiOrderedLE_def (Fin n → ℕ)).mpr ?_
---   -- proceed by induction on n
---   induction n with
---   | zero =>
---     -- `Fin 0 → ℕ` is a singleton, any two indices work
---     intro f; use 0, 1; simp
---   | succ n ih =>
---     -- use the order isomorphism between `Fin (n+1) → ℕ` and `ℕ × (Fin n → ℕ)`
---     let iso := (Fin.consOrderIso fun _ => ℕ).symm.toOrderIso
---     -- apply product WQO to the factors
---     have h₁ : WellQuasiOrdered (· ≤ ·) :=
---       (wellQuasiOrderedLE_iff_wellFoundedLT ℕ).mp instWellFoundedLTNat
---     have h₂ : WellQuasiOrdered (· ≤ ·) := by simpa using ih
---     exact iso.symm.wellQuasiOrdered_of (WellQuasiOrdered.prod h₁ h₂)
-
--- variable [Fintype σ] in
--- theorem Dickson_lemma : HasDicksonProperty (σ →₀ ℕ) := by
---   have : HasDicksonProperty (σ →₀ ℕ) ↔ HasDicksonProperty (Fin (Fintype.card σ) →₀ ℕ) := by sorry
---   sorry
-
-theorem Dickson_lemma {σ : Type*} [Fintype σ] : HasDicksonProperty (σ →₀ ℕ) := by
-  let n := Fintype.card σ
-  have hFin : HasDicksonProperty (Fin n →₀ ℕ) := Dickson_lemma_Finsupp
-  have hFun : HasDicksonProperty (σ →₀ ℕ) := by
-    simp only [HasDicksonProperty] at *
-    intro (Ns : Set (σ →₀ ℕ))
-    sorry
-  sorry
-
-variable [Fintype σ] (R) [DecidableEq (MvPolynomial σ R)] in
+variable [Fintype σ] (R) [DecidableEq σ] [DecidableEq R] in
 theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
   (monomialIdeal R S).FG := by
   rw [monomialIdeal, Ideal.FG]
@@ -352,3 +281,128 @@ theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
 --       simp only [Finset.mem_coe]
 --       exact hyx
 --       exact eq_false h_triv
+
+
+-- Need Preorder instance for Finsupp (pointwise order)
+--instance {σ : Type*} : Preorder (σ →₀ ℕ) := by exact Finsupp.preorder
+
+-- /--
+-- Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
+-- We split each function into its head coordinate and its tail via `succOrderEmb`.
+-- -/
+-- theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
+--   intro n
+--   induction n with
+--   | zero =>
+--     -- `Fin 0 → ℕ` is a singleton function space
+--     apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+--     refine (wellQuasiOrderedLE_def (Fin 0 → ℕ)).mpr fun f => ⟨0,1,by simp, by simp⟩
+--   | succ n ih =>
+--     apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+--     refine (wellQuasiOrderedLE_def (Fin (n+1) → ℕ)).mpr fun f => by
+--       -- 1) extract head sequence `ℕ → ℕ`
+--       let f_headSeq : ℕ → ℕ := fun k => f k 0
+--       -- ℕ is WQO since it's linear and well-founded
+--       have wq_nat : @WellQuasiOrdered ℕ (· ≤ ·) := by
+--         refine (wellQuasiOrderedLE_def ℕ).mp ?_
+--         refine wellQuasiOrderedLE_iff_wellFoundedLT.mpr ?_
+--         exact instWellFoundedLTNat
+--       obtain ⟨g₁, hg₁⟩ := wq_nat.exists_monotone_subseq f_headSeq
+
+--       -- 2) build tail sequence on `Fin n → ℕ` by composing with `succOrderEmb`
+--       let emb := Fin.succOrderEmb n -- Fin n ↪o Fin (n+1)
+--       let f_tailSeq : ℕ → Fin n → ℕ := fun k => (f (g₁ k)) ∘ emb
+
+--       -- WQO for the tail by IH
+--       have wq_tail : @WellQuasiOrdered (Fin n → ℕ) (· ≤ ·) := by
+--         rw [HasDicksonProperty_iff_WellQuasiOrderedLE] at ih
+--         exact (wellQuasiOrderedLE_def (Fin n → ℕ)).mp ih
+--       obtain ⟨g₂, hg₂⟩ := wq_tail.exists_monotone_subseq f_tailSeq
+
+--       -- 3) combine the two subsequences
+--       let i := g₁ (g₂ 0)
+--       let j := g₁ (g₂ 1)
+--       have hij : g₁ (g₂ 0) < g₁ (g₂ 1) := by
+--         refine (OrderEmbedding.lt_iff_lt g₁).mpr ?_
+--         refine (OrderEmbedding.lt_iff_lt g₂).mpr ?_
+--         exact Nat.one_pos
+--       have : i < j := by exact hij
+--       use i, j, this
+--       -- show `f i ≤ f j` pointwise
+--       intro a
+--       by_cases ha : a = 0
+--       · -- at head index 0
+--         subst ha; simp; apply hg₁; refine (OrderEmbedding.le_iff_le g₂).mpr ?_; exact
+--           Nat.zero_le 1
+--       · -- at tail indices >0
+--         obtain ⟨k, rfl⟩ := Fin.eq_succ_of_ne_zero ha
+--         simp only [Function.comp_apply]
+--         apply hg₂ 0 1 (by decide)
+
+-- /-- Dickson's lemma for `ℕ^n` (finitely supported functions on `Fin n`). -/
+-- theorem Dickson_lemma_Finsupp {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
+--   have hF : HasDicksonProperty (Fin n → ℕ) := by exact Dickson_lemma_Fin n
+--   simp only [HasDicksonProperty] at *
+--   intro (N₀ : Set (Fin n →₀ ℕ))
+--   let e := @Finsupp.equivFunOnFinite (Fin n) ℕ
+--   let N  : Set (Fin n → ℕ) := e.toFun '' N₀
+--   obtain ⟨B, hBfin, hBbasis⟩ := hF N
+--   let B₀ : Set (Fin n →₀ ℕ) := e.invFun '' B
+--   have hB₀fin : (B₀ : Set (Fin n →₀ ℕ)).Finite := by exact Set.Finite.image e.invFun hBfin
+--   have hB₀N₀ : B₀ ⊆ N₀ := by
+--     rintro b₀ ⟨b, hbB⟩
+--     rw [←hbB.2]
+--     have hbN : b ∈ N := hBbasis.1 hbB.1
+--     rcases (Set.mem_image _ _ _).1 hbN with ⟨a, ha₀, rfl⟩
+--     simp only [Equiv.toFun_as_coe, Equiv.invFun_as_coe, Equiv.symm_apply_apply, ha₀]
+--   refine ⟨B₀, hB₀fin, ⟨hB₀N₀, fun a₀ ha₀ => ?_⟩⟩
+--   have : ∃ b ∈ B, b ≤ e.toFun a₀ := by apply hBbasis.2 _ (Set.mem_image_of_mem _ ha₀)
+--   obtain ⟨b, hbB, hb⟩ := this
+--   use e.invFun b, Set.mem_image_of_mem _ hbB
+--   exact hb
+
+-- -- variable [Fintype σ] in
+-- -- theorem Dickson_lemma : HasDicksonProperty (σ →₀ ℕ) := by
+-- --   have : HasDicksonProperty (σ →₀ ℕ) ↔ HasDicksonProperty (Fin (Fintype.card σ) →₀ ℕ) := by sorry
+-- --   sorry
+
+-- theorem Dickson_lemma_old {σ : Type*} [Fintype σ] [DecidableEq σ] [LinearOrder σ] : HasDicksonProperty (σ →₀ ℕ) := by
+--   let n := Fintype.card σ
+--   --let e_finsupp : (Fin n →₀ ℕ) ≃o (σ →₀ ℕ) := finsuppDomCongrOrderIso hF
+--   have hF : Fin n ≃o σ := Fintype.orderIsoFinOfCardEq σ (by exact rfl)
+--   have : HasDicksonProperty (Fin n →₀ ℕ) := by exact Dickson_lemma_Finsupp
+--   rw [HasDicksonProperty] at *
+--   intro (N_σ  : Set (σ →₀ ℕ))
+--   let N_n := (@Finsupp.domCongr (Fin n) σ ℕ _ hF).symm.toFun '' N_σ
+--   have : ∃ B, B.Finite ∧ B ⊆ N_n ∧ ∀ a ∈ N_n, ∃ b ∈ B, b ≤ a := by exact this N_n
+--   obtain ⟨B, ⟨hB_fin, ⟨hB_sub, hB_basis⟩⟩⟩:= this
+--   let B_σ := (@Finsupp.domCongr (Fin n) σ ℕ _ hF).toFun '' B
+--   use B_σ
+--   constructor
+--   · show B_σ.Finite
+--     exact Set.Finite.image (Finsupp.domCongr _).toFun hB_fin
+--   · constructor
+--     · show B_σ ⊆ N_σ
+--       intro b_σ hb_σ; rw [Set.mem_image] at hb_σ
+--       obtain ⟨b_fin, hb_fin_B, hb_σ_eq⟩ := hb_σ; rw [← hb_σ_eq] -- b_σ = e_finsupp.symm b_fin
+--       -- We know b_fin ∈ B_fin and B_fin ⊆ N_fin = e_finsupp '' N_σ
+--       have b_fin_in_Nfin : b_fin ∈ N_n := by exact hB_sub hb_fin_B
+--       rw [Set.mem_image] at b_fin_in_Nfin
+--       obtain ⟨a_σ, ha_σ_Nσ, ha_iso⟩ := b_fin_in_Nfin -- b_fin = e_finsupp a_σ
+--       -- We want to show e_finsupp.symm b_fin ∈ N_σ
+--       -- Substitute b_fin: show e_finsupp.symm (e_finsupp a_σ) ∈ N_σ
+--       sorry
+--     · show ∀ a ∈ N_σ, ∃ b ∈ B_σ, b ≤ a
+--       intro a_σ ha_σ_Nσ
+--       -- Map a_σ to N_fin
+--       let a_fin := (@Finsupp.domCongr (Fin n) σ ℕ _ hF).symm.toFun a_σ
+--       have a_fin_in_Nfin : a_fin ∈ N_n := by exact Set.mem_image_of_mem (Finsupp.domCongr _).symm.toFun ha_σ_Nσ
+--       -- Find basis element b_fin ≤ a_fin in the Fin n world
+--       obtain ⟨b_fin, hb_fin_B, h_le_fin⟩ := hB_basis a_fin a_fin_in_Nfin
+--       -- Map b_fin back to B_σ
+--       let b_σ := (@Finsupp.domCongr (Fin n) σ ℕ _ hF).toFun b_fin
+--       have b_σ_in_Bσ : b_σ ∈ B_σ := by exact Set.mem_image_of_mem (Finsupp.domCongr _).toFun hb_fin_B
+--       -- Use this b_σ
+--       use b_σ, b_σ_in_Bσ
+--       have : a_σ = (Finsupp.domCongr ↑hF).toFun a_fin := by simp [a_fin]; sorry
+--       sorry
