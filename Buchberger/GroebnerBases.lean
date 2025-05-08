@@ -7,6 +7,19 @@ import Buchberger.MonomialIdeal
 variable {σ : Type*} -- [DecidableEq σ]
 variable {m : MonomialOrder σ}
 
+-- Mathlib4 최신버전에 있는 코드들----------------------------
+
+namespace MonomialOrder
+
+variable {R : Type*} [CommSemiring R]
+
+lemma degree_mem_support {p : MvPolynomial σ R} (hp : p ≠ 0) :
+    m.degree p ∈ p.support := by
+  rwa [MvPolynomial.mem_support_iff, coeff_degree_ne_zero_iff]
+
+end MonomialOrder
+---------------------------------------------------------------
+
 namespace MvPolynomial
 
 open scoped MonomialOrder MvPolynomial
@@ -38,11 +51,24 @@ lemma degree_leadingTerm (f : MvPolynomial σ R) :
   · -- Case 2: c ≠ 0.
     rfl
 
+end Semiring
+
+section CommRing
+
+variable {R : Type*} [CommRing R]
+
+noncomputable def normalForm
+  (B : Set (MvPolynomial σ R))
+  (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b))
+  (f : MvPolynomial σ R) : MvPolynomial σ R := by
+  choose gcomb r hr using MonomialOrder.div_set hB f
+  exact r
+
 variable [CommRing R] [Finite σ] [IsNoetherianRing R] in
 theorem Hilbert_basis_initial (I : Ideal (MvPolynomial σ R)) :
   Ideal.FG (initialIdeal m I) := by sorry --(inferInstance : IsNoetherianRing _).noetherian (initialIdeal m I) -- @isNoetherianRing R σ _ _
 
-end Semiring
+end CommRing
 
 section Field
 
