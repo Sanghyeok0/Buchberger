@@ -33,50 +33,12 @@ def HasDicksonProperty (M : Type*) [Preorder M] : Prop :=
 
 -- Condition (ii) is directly represented by the typeclass `WellQuasiOrderedLE M`.
 
-/-- The `~`‐equivalence on `M` associated to `≤`. -/
-instance leSetoid : Setoid M where
-  r := fun a b => a ≤ b ∧ b ≤ a
-  iseqv := { refl := fun a => ⟨le_refl _, le_refl _⟩
-             symm := by exact fun {x y} a ↦ id (And.symm a)
-             trans := fun a b => ⟨le_trans a.1 b.1, le_trans b.2 a.2⟩ }
-
-namespace Quotient
-
-/-- The induced `≤` on `Quotient leSetoid`. -/
-instance quotientPreorder : Preorder (Quotient (@leSetoid M _)) where
-  le := fun a b =>
-    Quotient.liftOn₂ a b
-      (fun x y => x ≤ y)
-      (fun a₁ a₂ b₁ b₂ (⟨h₁, h₁'⟩ : a₁ ≤ b₁ ∧ b₁ ≤ a₁)
-                      (⟨h₂, h₂'⟩ : a₂ ≤ b₂ ∧ b₂ ≤ a₂) => by
-        -- we must show `(a₁ ≤ b₁) = (a₂ ≤ b₂)` as Prop‐equality
-        have : (a₁ ≤ a₂) ↔ (b₁ ≤ b₂) := by
-          constructor
-          · intro hab; exact h₁'.trans (hab.trans h₂)
-          · intro hba; exact h₁.trans (hba.trans h₂')
-        simp
-        exact this )
-  le_refl := by
-    intro a; refine Quotient.inductionOn a fun x => ?_
-    exact le_refl _
-  le_trans := by
-    intros q₁ q₂ q₃
-    refine Quotient.inductionOn₃ q₁ q₂ q₃ fun a b c => (le_trans : a ≤ b → b ≤ c → a ≤ c)
-
-/-- In the quotient, antisymmetry holds, so we get a `PartialOrder`. -/
-instance partialOrder : PartialOrder (Quotient (@leSetoid M _)) where
-  le_antisymm := by
-    rintro ⟨a⟩ ⟨b⟩
-    intro hab hba
-    apply Quotient.sound
-    exact ⟨hab, hba⟩
-
-end Quotient
-
-/-- A **min‑class** of `N` is the `~`‑equivalence class of a minimal element of `N`. -/
-def minClasses (N : Set M) : Set (Quotient (@leSetoid M _)) :=
-  Quotient.mk leSetoid '' { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
-  -- WRONG DEFINITION! : Quotient.mk leSetoid '' { b | Minimal (· ∈ N) b }
+/--
+toAntisymmetrization (· ≤ ·) '' { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
+-/
+def minClasses (N : Set M) : Set (Antisymmetrization M (· ≤ ·)) :=
+  toAntisymmetrization (· ≤ ·) '' { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
+-- WRONG DEFINITION! : toAntisymmetrization (· ≤ ·) '' { b | Minimal (· ∈ N) b }
 
 lemma minClasses_restrict_le_subset {N : Set M} {a : M} {_ : a ∈ N} :
   minClasses { d | d ∈ N ∧ d ≤ a } ⊆ minClasses N := by
@@ -110,16 +72,6 @@ lemma minclass_iff_linear_and_wf :
     (IsLinearOrder M (· ≤ ·) ∧ IsWellFounded M (· ≤ ·)):= by sorry
 
 /--
-**Lemma (i) ⇒ (iv): Dickson Property implies Well-Foundedness + Finite Antichains.**
-Shows that if every subset has a finite basis (Condition i), then the order must
-be well-founded and contain no infinite antichains (Condition iv).
--/
-lemma hasDicksonProperty_implies_wf_and_finite_antichains :
-    HasDicksonProperty M → (WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) := by
-  intro h_dickson
-  sorry
-
-/--
 **Lemma (iii) ⇒ (i): finiteness and nonemptiness of min‑classes implies Dickson Property.**
 Shows that if for every nonempty N : Set M the set minClasses N is finite and nonempty
 (Condition iii), then every subset N has a finite basis (Condition i).
@@ -134,7 +86,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
     haveI : Fintype (minClasses N) := hfin.fintype
     let S := (minClasses N).toFinset
     -- pick a representative from each class in S
-    have pick : ∀ c ∈ S, ∃ b, b ∈ N ∧ (∀ x ∈ N, ¬(x < b)) ∧ Quotient.mk leSetoid b = c := by
+    have pick : ∀ c ∈ S, ∃ b, b ∈ N ∧ (∀ x ∈ N, ¬(x < b)) ∧ toAntisymmetrization ((· : M) ≤ ·) b = c := by
       -- if c ∈ S then c ∈ minClasses N, so c = Quotient.mk b for some minimal b
       intro c hc
       --simp only [Set.mem_setOf_eq]
@@ -143,9 +95,9 @@ lemma finite_min_classes_implies_hasDicksonProperty
       use x
       exact and_assoc.mp hx
     --choose rep rep_spec using pick
-    let rep (c : Quotient leSetoid) (hc : c ∈ S) : M :=
+    let rep (c : Antisymmetrization M (· ≤ ·)) (hc : c ∈ S) : M :=
       Classical.choose (pick c hc)
-    let rep_spec (c : Quotient leSetoid) (hc : c ∈ S)
+    let rep_spec (c : Antisymmetrization M (· ≤ ·)) (hc : c ∈ S)
       : rep c hc ∈ N ∧ (∀ x ∈ N, ¬x < rep c hc) ∧ ⟦rep c hc⟧ = c
       := (Classical.choose_spec (pick c hc))
 
@@ -168,24 +120,24 @@ lemma finite_min_classes_implies_hasDicksonProperty
         let N' := { x | x ∈ N ∧ x ≤ a }
         have hN' : N'.Nonempty := ⟨a, ⟨ha, le_rfl⟩⟩
         obtain ⟨hfin', hnonempty'⟩ := h N' hN'
-        let S' : Finset (Quotient leSetoid) := @(minClasses N').toFinset (Quotient leSetoid) (Set.Finite.fintype hfin')
+        let S' : Finset (Antisymmetrization M (· ≤ ·)) := @(minClasses N').toFinset (Antisymmetrization M (· ≤ ·)) (Set.Finite.fintype hfin')
         -- similarly pick one minimal class in S'
         have ⟨γ, hγ_in_S'⟩ : S'.Nonempty := by
-            exact @Set.Aesop.toFinset_nonempty_of_nonempty (Quotient leSetoid) (minClasses N') (by exact hfin'.fintype) hnonempty'
-        have pick' : ∀ c ∈ S', ∃ d, d ∈ N' ∧ (∀ x ∈ N', ¬(x < d)) ∧ Quotient.mk leSetoid d = c := by
+            exact @Set.Aesop.toFinset_nonempty_of_nonempty (Antisymmetrization M (· ≤ ·)) (minClasses N') (by exact hfin'.fintype) hnonempty'
+        have pick' : ∀ c ∈ S', ∃ d, d ∈ N' ∧ (∀ x ∈ N', ¬(x < d)) ∧ toAntisymmetrization ((· : M) ≤ ·) d = c := by
           intro c hc'
           simp [S', minClasses] at hc'
           obtain ⟨x, hx⟩ := hc'
           use x
           exact and_assoc.mp hx
-        let repS' (c : Quotient leSetoid) (hc' : c ∈ S') : M :=
+        let repS' (c : Antisymmetrization M (· ≤ ·)) (hc' : c ∈ S') : M :=
           Classical.choose (pick' c hc')
-        have repS'_spec (c : Quotient leSetoid) (hc' : c ∈ S')
+        have repS'_spec (c : Antisymmetrization M (· ≤ ·)) (hc' : c ∈ S')
           : repS' c hc' ∈ N' ∧ (∀ x ∈ N', ¬x < (repS' c hc')) ∧ ⟦repS' c hc'⟧ = c
           := Classical.choose_spec (pick' c hc')
         -- pick one class from S'
         have ⟨γ, hγ_in_S'⟩ : S'.Nonempty := by
-          exact @Set.Aesop.toFinset_nonempty_of_nonempty (Quotient leSetoid) (minClasses N') (by exact hfin'.fintype) hnonempty'
+          exact @Set.Aesop.toFinset_nonempty_of_nonempty (Antisymmetrization M (· ≤ ·)) (minClasses N') (by exact hfin'.fintype) hnonempty'
         let c : M := repS' γ hγ_in_S'
         have ⟨hc_in_N', hc_min_N', hc_rep_γ⟩ := (repS'_spec γ hγ_in_S')
         have hc'_le_a : c ≤ a := by exact hc_in_N'.2
@@ -195,66 +147,31 @@ lemma finite_min_classes_implies_hasDicksonProperty
           --have h_minclass_fin: Fintype ↑(minClasses N) := by exact hfin.fintype --를 적으면 오히려 증명 안됨
           exact Set.mem_toFinset.mpr (h_min_sub (by exact (Set.Finite.mem_toFinset hfin').mp hγ_in_S'))
 
-        have hbc' : ∃ b ∈ B, Quotient.mk leSetoid b = Quotient.mk leSetoid c := by
+        have hbc' : ∃ b ∈ B, toAntisymmetrization ((· : M) ≤ ·) b = toAntisymmetrization ((· : M) ≤ ·) c := by
           use rep γ hγS
           constructor
           · -- rep γ hc'S is one of your basis elements
             simp [B, hγS]
             exact BEx.intro γ hγS rfl
           · calc
-              Quot.mk leSetoid (rep γ hγS) = γ := (rep_spec γ hγS).2.2
-              _ = Quot.mk leSetoid (repS' γ hγ_in_S') := (repS'_spec γ hγ_in_S').2.2.symm
+              toAntisymmetrization ((· : M) ≤ ·) (rep γ hγS) = γ := (rep_spec γ hγS).2.2
+              _ = toAntisymmetrization ((· : M) ≤ ·) c := (repS'_spec γ hγ_in_S').2.2.symm
         obtain ⟨b, hbB, hb_eq⟩ := hbc'
         use b
         constructor
         · exact hbB
-        · have : Quotient.mk leSetoid b = Quotient.mk leSetoid c → b ≤ c := by
-            simp only [leSetoid, Quotient.eq, and_imp, S, rep, B]
-            exact fun a a_1 ↦ a
+        · have : toAntisymmetrization ((· : M) ≤ ·) b = toAntisymmetrization ((· : M) ≤ ·) c → ((· : M) ≤ ·) b c := by
+            rw [toAntisymmetrization, Quotient.eq]
+            simp only [AntisymmRel]
+            intro h
+            exact h.1
+
           exact Preorder.le_trans b c a (this hb_eq) hc'_le_a
   · -- N = ∅ : take the empty basis
     use ∅
     simp only [Set.finite_empty, Set.empty_subset, Set.mem_empty_iff_false, false_and, exists_false,
       imp_false, true_and]
     exact fun a ↦ forall_not_of_not_exists hN a
-
-/-- (iv) ⇒ (iii): Well‐Foundedness + Finite Antichains implies finiteness and non-emptiness
-of `minClasses N` for any nonempty `N`. -/
-lemma wf_and_finite_antichains_implies_minClasses_finite_and_nonempty
-  (h : WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) :
-  ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
-  intro N hN
-  -- Extract well-foundedness of `<`
-  have wf_lt : WellFounded (· < ·) := h.1.wf
-  -- 1. Choose a `<`-minimal element b ∈ N
-  obtain ⟨b, hbN, hb_min⟩ := wf_lt.has_min N hN
-  -- 2. Collect all minimal elements of N for `<`
-  let A : Set M := { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }
-  -- A is nonempty (contains b)
-  have hA_nonempty : A.Nonempty := ⟨b, hbN, fun x hx => hb_min x hx⟩
-  -- A is an antichain under `≤`
-  have hA_antichain : IsAntichain (· ≤ ·) A := by
-    intro x hx y hy hxy
-    sorry
-  -- 3. A is finite by hypothesis
-  have hA_fin : A.Finite := h.2 A hA_antichain
-  -- 4. `minClasses N` is the image of A under `Quotient.mk leSetoid`
-  have : minClasses N = Quotient.mk leSetoid '' A := rfl
-  -- 5. Conclude finiteness and nonemptiness
-  sorry
-
-
-/--
-**Lemma (iv) ⇒ (i): Well-Foundedness + Finite Antichains implies Dickson Property.**
-Shows that if the order is well-founded and has no infinite antichains (Condition iv),
-then every subset `N` must have a finite basis (Condition i).
--/
-lemma wf_and_finite_antichains_implies_hasDicksonProperty :
-  (WellFoundedLT M ∧ ∀ s : Set M, IsAntichain (· ≤ ·) s → s.Finite) → HasDicksonProperty M := by
-  intro wf_and_finite_antichains
-  have : ∀ N : Set M, (N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty) := by
-    exact fun N a ↦ wf_and_finite_antichains_implies_minClasses_finite_and_nonempty wf_and_finite_antichains N a
-  exact finite_min_classes_implies_hasDicksonProperty this
 
 /-- (i) ⇒ (ii): A poset with the Dickson property is well‐quasi‐ordered. -/
 theorem HasDicksonProperty.to_wellQuasiOrderedLE
@@ -299,105 +216,81 @@ theorem HasDicksonProperty.to_wellQuasiOrderedLE
   have fi : f i₀ = b₀ := h_index b₀ hb₀fin
   exact ⟨i₀, j, hi₀_lt_j, fi.symm ▸ hle⟩
 
--- /--
--- **(ii) ⇒ (iii): A Well Quasi-Ordered preorder has only finitely many, but at least one,
--- min‑classes in any nonempty subset.**
--- -/
--- theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
---     (h_wqo : WellQuasiOrderedLE M) : -- Assume Condition (ii)
---     ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
---   intro N hN_nonempty
---   haveI h_wf : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
-
---   constructor
---   · -- Part 1: Prove (minClasses N).Finite
---     by_contra h_mc_infinite
---     let QN := minClasses N
---     have QN_inf : QN.Infinite := h_mc_infinite
-
---     -- Construct infinite sequence of distinct min-classes and their representatives
---     -- recursively using classical choice.
---     let rec build_seq (n : ℕ) (picked_classes : Finset (Quotient leSetoid)) :
---         Σ' (q : Quotient leSetoid) (m : M),
---            q ∈ QN ∧ q ∉ picked_classes ∧ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) } ∧ Quotient.mk leSetoid m = q := by
---       -- Since QN is infinite, QN \ picked_classes is non-empty
---       have : (QN \ (↑picked_classes : Set (Quotient leSetoid))).Nonempty :=
---         Set.Infinite.nonempty_diff_finite QN_inf picked_classes.finite_toSet
---       -- Choose a class q from this difference
---       let q := Classical.choose this
---       have q_spec : q ∈ QN ∧ q ∉ picked_classes := Classical.choose_spec this
---       -- Choose a representative m for q
---       choose m hm_spec using (show ∃ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }, Quotient.mk leSetoid m = q by
---           rw [minClasses, Set.mem_image] at q_spec; exact q_spec.1)
---       -- Return the pair (class, representative) and the proofs
---       exact ⟨q, m, q_spec.1, q_spec.2, hm_spec⟩
-
---     -- Define the sequence of classes and elements using dependent recursion / choice
---     let seq : ℕ → Σ' (q : Quotient leSetoid) (m : M),
---                    q ∈ QN ∧ q ∉ (Finset.image (fun k => (build_seq k default).1) (Finset.range n))
---                    ∧ m ∈ minimals_le N ∧ Quotient.mk Setoid.r m = q :=
---        fun n => build_seq n (Finset.image (fun k => (seq k).1) (Finset.range n)) -- This definition is circular!
-
---     -- Let's use exists_sequence_of_infinite instead.
---     obtain ⟨g, hg_inj⟩ : ∃ g : ℕ → Quotient leSetoid, Function.Injective g ∧ Set.range g ⊆ QN :=
---         Set.Infinite.exists_sequence_of_infinite QN_inf
-
---     -- For each distinct class g n, choose a representative minimal element f n
---     choose f hf_spec using (fun n => show ∃ m ∈ minimals_le N, Quotient.mk Setoid.r m = g n by
---       have : g n ∈ QN := Set.mem_range_of_mem g (Set.mem_range_self n) ▸ (hg_inj.2)
---       rw [minClasses, Set.mem_image] at this; exact this)
---     -- hf_spec n : f n ∈ minimals_le N ∧ Quotient.mk Setoid.r (f n) = g n
-
---     -- Now we have f : ℕ → M such that f n ∈ minimals_le N and ⟦f i⟧ ≠ ⟦f j⟧ for i ≠ j
---     have h_f_pairwise_neq : ∀ i j, i ≠ j → ¬ (f i ≈ f j) := by
---       intro i j hij_ne
---       contrapose! hij_ne -- Assume f i ≈ f j, prove i = j
---       apply hg_inj -- Use injectivity of g
---       rw [← (hf_spec i).2, ← (hf_spec j).2] -- Rewrite g i = ⟦f i⟧ and g j = ⟦f j⟧
---       exact Quotient.sound hij_ne -- f i ≈ f j → ⟦f i⟧ = ⟦f j⟧
-
---     -- Apply WQO to the sequence f
---     obtain ⟨i, j, hij_lt, hij_le⟩ := h_wqo.wqo f -- f i ≤ f j
---     have f_i_min : f i ∈ minimals_le N := (hf_spec i).1
---     have f_j_min : f j ∈ minimals_le N := (hf_spec j).1
---     have hji_le : f j ≤ f i := f_j_min.2 (f i) f_i_min.1 hij_le -- Use minimality of f j
---     have fi_equiv_fj : f i ≈ f j := ⟨hij_le, hji_le⟩
---     -- Contradiction
---     exact h_f_pairwise_neq i j hij_lt.ne fi_equiv_fj
-
---   · -- Part 2: Prove (minClasses N).Nonempty
---     rw [Set.nonempty_image_iff]
---     exact WellFounded.has_min N hN_nonempty
-
 /--
 **(ii) ⇒ (iii): A Well Quasi-Ordered preorder has only finitely many, but at least one,
 min‑classes in any nonempty subset.**
 -/
 theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
-    (h_wqo : WellQuasiOrderedLE M) : -- Assume Condition (ii)
-    ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
-  intro N hN_nonempty
-  -- From WQO, we get WellFoundedLT
-  haveI h_wf : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
-
+  (h_wqo : WellQuasiOrderedLE M) :
+  ∀ N : Set M, N.Nonempty → (minClasses N).Finite ∧ (minClasses N).Nonempty := by
+  intro N hN
+  let QN : Set (Antisymmetrization M (· ≤ ·)) := minClasses N
   constructor
-  · -- Part 1: Prove (minClasses N).Finite
-    -- Proof by contradiction: Assume minClasses N is infinite.
-    by_contra h_mc_infinite
-    let QN := minClasses N
-    have mc_inf : (minClasses N).Infinite := h_mc_infinite
-    have bad_seq :
-        ∃ f : ℕ → M, (∀ n, f n ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }) ∧
-                      (∀ i j, i ≠ j → ¬ (f i ≈ f j)) := by
 
-      -- For each q ∈ minClasses N, choose a representative m_q ∈ minimal N such that ⟦m_q⟧ = q
-      choose m_rep h_m_rep_spec using (fun q (hq : q ∈ minClasses N) =>
-        show ∃ m ∈ { a | a ∈ N ∧ ∀ x ∈ N, ¬ (x < a) }, Quotient.mk leSetoid m = q by
-          exact hq
-      )
-      sorry
-    sorry
-  · sorry
+  · -- assume `QN` infinite and derive a contradiction
+    by_contra h_inf
+    have QN_inf : QN.Infinite := h_inf
+    clear h_inf
+    -- 1) get an embedding of ℕ into QN = minClasses N
+    let emb : ℕ ↪ Subtype QN := Set.Infinite.natEmbedding _ QN_inf
+
+    -- 2) turn that into an honest ℕ → Antisymmetrization M
+    let g_classes : ℕ → Antisymmetrization M (· ≤ ·) := fun n => (emb n).1
+
+    -- 3) injective followed by "embedding"
+    have inj : Function.Injective g_classes := by
+      intro i j h
+      have : emb i = emb j := Subtype.ext h
+      exact emb.injective this
+    -- 4) each `g_classes n` lands in `QN`
+    have mem : ∀ n, g_classes n ∈ QN := fun n => (emb n).2
+
+    -- pick actual representatives in S = {a ∈ N | minimal in N}
+    let S : Set M := { a | a ∈ N ∧ ∀ x ∈ N, ¬ x < a }
+
+    -- 5) from `mem` we know `g_classes n ∈ toAntisymmetrization '' S`,
+    --    so `∃ m ∈ S, toAntisymmetrization m = g_classes n`
+    choose g hg_spec using fun n =>
+      show ∃ m ∈ S, toAntisymmetrization ((· : M) ≤ ·) m = g_classes n
+        from by simpa [minClasses, QN] using mem n
+
+    -- unpack -- (range of g : ℕ → M) ⊆ N
+    have g_in_N    : ∀ n,      (g n) ∈ N       := fun n => (hg_spec n).1.1
+    have g_minimal : ∀ n x, x ∈ N → ¬ x < g n := fun n x hNx hlt =>
+      (hg_spec n).1.2 x hNx hlt
+    have g_eq      : ∀ n, toAntisymmetrization ((· : M) ≤ ·) (g n) = g_classes n := fun n => (hg_spec n).2
+
+    -- 6) now apply WQO to the real sequence `g : ℕ → M`
+    have ⟨i, j, hij, hle⟩ := h_wqo.wqo g
+
+    -- 7) rule out `g i < g j` because `g j` is minimal
+    by_cases heq : g i = g j
+    · -- if they were equal then `g_classes i = g_classes j`, contradicting injectivity
+      have hgceq : g_classes i = g_classes j := by
+        have : toAntisymmetrization ((· : M) ≤ ·) (g i) = toAntisymmetrization _ (g j) := by
+          exact congrArg (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) heq
+        rw [(hg_spec i).2, (hg_spec j).2] at this
+        exact this
+      exact (fun a ↦ Nat.ne_of_lt hij) hij (inj hgceq)
+    · -- otherwise `g i < g j`, contradict minimality of `g j`
+      simp only at hle
+      have hclass_le : g_classes i ≤ g_classes j := by
+        rw [←(hg_spec i).2, ←(hg_spec j).2]
+        exact hle
+      have hclass_neq : ¬g_classes i = g_classes j := by exact fun a ↦ heq (congrArg g (inj a))
+      have hclass_lt : g_classes i < g_classes j := by exact lt_of_le_of_ne hclass_le hclass_neq
+      have hlt : g i < g j := by
+        simp [←g_eq i, ←g_eq j] at hclass_lt
+        exact hclass_lt
+      exact (g_minimal j (g i) (g_in_N i)) hlt
+  · -- (minClasses N) is nonempty
+    -- from WQO we get well-foundedness of `<`
+    --haveI _ : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
+    have : ∃ a ∈ N, ∀ x ∈ N, ¬ x < a := @WellFounded.has_min M (· < ·) (wellFounded_lt) N hN
+    obtain ⟨a, ha⟩ := this
+    dsimp [Set.Nonempty, minClasses]
+    use toAntisymmetrization ((· : M) ≤ ·) a
+    exact Set.mem_image_of_mem (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) ha
 
 
 -- /-- (ii) ⇒ (iii): A well‐quasi‐ordered preorder has only finitely many, but at least one,
@@ -422,23 +315,65 @@ Equivalence of Condition (i) and Condition (ii).
 -/
 theorem HasDicksonProperty_iff_WellQuasiOrderedLE :
     HasDicksonProperty M ↔ WellQuasiOrderedLE M := by
-  -- We use the equivalence of both (i) and (ii) to (iv)
-  rw [wellQuasiOrderedLE_iff] -- Replace (ii) with (iv)
-  -- Goal is now HasDicksonProperty M ↔ (WellFoundedLT M ∧ FiniteAntichains M)
-  exact ⟨hasDicksonProperty_implies_wf_and_finite_antichains,
-         wf_and_finite_antichains_implies_hasDicksonProperty⟩
+  constructor
+  · exact HasDicksonProperty.to_wellQuasiOrderedLE
+  · intro h_wqo
+    apply finite_min_classes_implies_hasDicksonProperty
+    exact h_wqo.minClasses_finite_and_nonempty
+
+-- 필요없게 된 코드
+
+-- /-- The `~`‐equivalence on `M` associated to `≤`. -/
+-- instance leSetoid : Setoid M where
+--   r := fun a b => a ≤ b ∧ b ≤ a
+--   iseqv := { refl := fun a => ⟨le_refl _, le_refl _⟩
+--              symm := by exact fun {x y} a ↦ id (And.symm a)
+--              trans := fun a b => ⟨le_trans a.1 b.1, le_trans b.2 a.2⟩ }
+
+-- namespace Quotient
+
+-- /-- The induced `≤` on `Quotient leSetoid`. -/
+-- instance quotientPreorder : Preorder (Quotient (@leSetoid M _)) where
+--   le := fun a b =>
+--     Quotient.liftOn₂ a b
+--       (fun x y => x ≤ y)
+--       (fun a₁ a₂ b₁ b₂ (⟨h₁, h₁'⟩ : a₁ ≤ b₁ ∧ b₁ ≤ a₁)
+--                       (⟨h₂, h₂'⟩ : a₂ ≤ b₂ ∧ b₂ ≤ a₂) => by
+--         -- we must show `(a₁ ≤ b₁) = (a₂ ≤ b₂)` as Prop‐equality
+--         have : (a₁ ≤ a₂) ↔ (b₁ ≤ b₂) := by
+--           constructor
+--           · intro hab; exact h₁'.trans (hab.trans h₂)
+--           · intro hba; exact h₁.trans (hba.trans h₂')
+--         simp
+--         exact this )
+--   le_refl := by
+--     intro a; refine Quotient.inductionOn a fun x => ?_
+--     exact le_refl _
+--   le_trans := by
+--     intros q₁ q₂ q₃
+--     refine Quotient.inductionOn₃ q₁ q₂ q₃ fun a b c => (le_trans : a ≤ b → b ≤ c → a ≤ c)
+
+-- /-- In the quotient, antisymmetry holds, so we get a `PartialOrder`. -/
+-- instance partialOrder : PartialOrder (Quotient (@leSetoid M _)) where
+--   le_antisymm := by
+--     rintro ⟨a⟩ ⟨b⟩
+--     intro hab hba
+--     apply Quotient.sound
+--     exact ⟨hab, hba⟩
+
+-- end Quotient
 
 -- 틀린 코드
 
 -- def minClasses_old (N : Set M) : Set (Quotient (@leSetoid M _)) :=
---   Quotient.mk leSetoid '' { b | Minimal (· ∈ N) b }
+--   Quotient.mk leSetoid '' { a | a ∈ N ∧ ∀ x ∈ N, ¬ x < a }
 
 -- /--
 -- **Lemma (iii) ⇒ (i): finiteness and nonemptiness of min‑classes implies Dickson Property.**
 -- Shows that if for every nonempty N : Set M the set minClasses N is finite and nonempty
 -- (Condition iii), then every subset N has a finite basis (Condition i).
 -- -/
--- lemma finite_min_classes_implies_hasDicksonProperty_wrong_Minimal
+-- lemma finite_min_classes_implies_hasDicksonProperty_wrong_Minimal_old
 --   (h : ∀ N : Set M, N.Nonempty → (minClasses_old N).Finite ∧ (minClasses_old N).Nonempty) :
 --   HasDicksonProperty M := by
 --   intro N

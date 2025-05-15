@@ -57,7 +57,7 @@ section CommRing
 
 variable {R : Type*} [CommRing R]
 
-noncomputable def normalForm
+noncomputable def normalForm_general
   (B : Set (MvPolynomial σ R))
   (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b))
   (f : MvPolynomial σ R) : MvPolynomial σ R := by
@@ -75,70 +75,6 @@ section Field
 variable {k : Type*} [Field k] [DecidableEq k]
 
 /-
-Recursive step for the division algorithm, calculating the remainder.
-It takes the current polynomial `f`, the list of divisors `B`, the proof `hb`
-that leading coefficients are units, and the accumulated remainder `r`.
--/
-
-/-
-B : ι →₀ MvPolynomial σ R로 하려했으나 일단은 List로 정의
-Field가 아니면 Heartbeats 에러로 일단 Field k인 경우 정의
-[DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] <- 제거 가능한 방법?
--/
-
-/-
-Use same technique as mathlib4/Mathlib/RingTheory/MvPolynomial/Groebner.lean
--/
-
-/- Old Definition-/
-variable [DecidableEq σ] in
-noncomputable def remainderRec_old (f : MvPolynomial σ k) (B : List (MvPolynomial σ k))
-  (hb_all : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) (r : MvPolynomial σ k) : MvPolynomial σ k :=
-  if hf : f = 0 then
-    r
-  else
-    if hb' : ∃ b ∈ B , m.degree b = 0 then
-      0
-    else
-      -- Predicate to find a divisor
-      match h_find : B.find? (m.degree · ≤ m.degree f) with
-      | some b =>
-          -- Divisor b found
-          have hb_unit : IsUnit (m.leadingCoeff b) :=
-            have hb_mem : b ∈ B := by exact List.mem_of_find?_eq_some h_find
-            hb_all b hb_mem
-          remainderRec_old (m.reduce hb_unit f) B hb_all r
-      | none =>
-          -- No divisor's leading term divides LT(f).
-          if hl0 : (m.degree f) = 0
-          then
-            r + f
-          else
-          -- Add LT(f) to the remainder and continue with f - LT(f).
-            let LT_f := leadingTerm m f
-            remainderRec_old (f - LT_f) B hb_all (r + LT_f)
-  termination_by WellFounded.wrap
-  ((isWellFounded_iff m.syn fun x x_1 ↦ x < x_1).mp m.wf) (m.toSyn (m.degree f))
-  decreasing_by
-  · have deg_le : m.degree b ≤ m.degree f := by apply of_decide_eq_true (by apply List.find?_some h_find)
-    push_neg at hb'
-    have deg_reduce : m.degree (m.reduce hb_unit f) ≺[m] m.degree f := by
-      apply MonomialOrder.degree_reduce_lt hb_unit deg_le
-      intro hf0'
-      apply hb' b
-      · exact List.mem_of_find?_eq_some h_find
-      · simpa [hf0'] using deg_le
-    simp
-    exact deg_reduce
-  · apply MonomialOrder.degree_sub_LTerm_lt
-    exact hl0
-
-variable [DecidableEq σ] in
-noncomputable def remainder_old (f : MvPolynomial σ k) (B : List (MvPolynomial σ k))
- (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b)) : MvPolynomial σ k :=
-  remainderRec_old f B hB 0
-
-/-
 ## TODO
 
 * Authors: Antoine Chambert-Loir
@@ -146,7 +82,7 @@ noncomputable def remainder_old (f : MvPolynomial σ k) (B : List (MvPolynomial 
 * Prove that under `Field F`, `IsUnit (m.leadingCoeff (b i))` is
 equivalent to `b i ≠ 0`.
 -/
-
+omit [DecidableEq k] in
 theorem isUnit_leadingCoeff_iff_nonzero
   (m : MonomialOrder σ) (b : MvPolynomial σ k) :
   IsUnit (m.leadingCoeff b) ↔ b ≠ 0 := by
@@ -158,6 +94,21 @@ theorem isUnit_leadingCoeff_iff_nonzero
   · intro hb
     have h₁ : m.leadingCoeff b ≠ 0 := by exact MonomialOrder.leadingCoeff_ne_zero_iff.mpr hb
     exact isUnit_iff_ne_zero.mpr h₁
+/-
+## TODO
+normalForm과 remainder를 하나로 합치기
+-/
+
+variable (m) in
+noncomputable def normalForm
+  (B : Set (MvPolynomial σ k))
+  (hB : ∀ b ∈ B, b ≠ 0)
+  (f : MvPolynomial σ k) : MvPolynomial σ k := by
+  choose gcomb r hr using
+    MonomialOrder.div_set
+      (fun b hb => (isUnit_leadingCoeff_iff_nonzero m b).mpr (hB b hb))
+      f
+  exact r
 
 -- Proposition 3. -- (hI : I ≠ ⊥) -- 증명 수정 필요
 variable [Fintype σ] [DecidableEq σ] in
@@ -237,63 +188,17 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
       Finset.mem_image_of_mem (fun g ↦ leadingTerm m g) hg_in_G
     exact (Ideal.mem_span (leadingTerm m g)).mpr fun p a ↦ a hgen
 
-variable (m) [DecidableEq σ] in
-def is_GroebnerBasis_index {ι : Type*} (I : Ideal (MvPolynomial σ k)) (G : ι →₀ (MvPolynomial σ k)): Prop :=
-  (∀ g ∈ G.frange, g ∈ I) ∧ -- 1. 필요한가? 2. (G.frange) ⊆ I 형태로 쓰는법? 3. (G.frange) ⊆ I 형태가 더 나은가?
-    Ideal.span (G.frange.image (fun g ↦ leadingTerm m g)) = initialIdeal m I
---(∀ i ∈ G.support, G i ∈ I) ∧ Ideal.span (G.support.image (fun i ↦ leadingTerm m (G i))) = initialIdeal m I
-
-variable (m) [DecidableEq σ] in
-def is_GroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : List (MvPolynomial σ k)): Prop :=
-  (G.toFinset.toSet ⊆ I) ∧
-    Ideal.span (G.toFinset.image (fun g ↦ leadingTerm m g)) = initialIdeal m I
-  -- (I = ⊥ ∧ G = []) ∨
-  -- (I ≠ ⊥ ∧ (G.toFinset.toSet ⊆ I) ∧
-  --   Ideal.span (G.toFinset.image (fun g ↦ leadingTerm m g)) = initialIDeal m I)
-
 variable [Fintype σ] [DecidableEq σ] in
 /--
-Corollary 6.
+§5 Corollary 6.
 Fix a monomial order on \(k[x_1,\dots,x_n]\). Then every ideal \(I\)
 has a Gröbner basis.
 Furthermore, any Gröbner basis for \(I\) is a generating set of \(I\).
 -/
 theorem grobner_basis_exists (I : Ideal (MvPolynomial σ k)) :
-  ∃ (ι : Type*) (G : ι →₀ MvPolynomial σ k), is_GroebnerBasis_index m I G := by
+  ∃ G : Finset (MvPolynomial σ k), IsGroebnerBasis m I G := by
   -- have h_fin : Ideal.FG (initialIDeal m I) := Hilbert_basis_initial I
   sorry
-
-
--- variable [DecidableEq (MvPolynomial σ k)] in
--- /--
--- Suppose
---   f = g + r,  g ∈ I,  and no term of r is divisible by any leading term in `G`,
--- and likewise
---   f = g' + r',  g' ∈ I,  and no term of r' is divisible.
--- Then the two remainders agree.
--- -/
--- theorem remainder_unique
---   {f g g' r r' : MvPolynomial σ k}
---   {G : List (MvPolynomial σ k)}
---   {I : Ideal (MvPolynomial σ k)}
---   {_ : is_GroebnerBasis m I G}
---   (h₁ : f = g + r) (hg : g ∈ I)
---   (h₂ : f = g' + r') (hg' : g' ∈ I)
---   (hr : ∀ a ∈ r.support, ∀ b ∈ G, ¬ (m.degree b ≤ a))
---   (hr': ∀ a ∈ r'.support, ∀ b ∈ G, ¬ (m.degree b ≤ a)) :
---   r = r' := by
---     have hrg : r - r' = g' - g := by
---       rw [eq_sub_of_add_eq' (id (Eq.symm h₁)), eq_sub_of_add_eq' (id (Eq.symm h₂))]
---       exact sub_sub_sub_cancel_left g g' f
---     have : g' - g ∈ I := by exact (Submodule.sub_mem_iff_left I hg).mpr hg'
---     have : leadingTerm m (r - r') ∈ initialIdeal m I := by
---       rw [initialIdeal, hrg]
---       by_cases h : g' - g = 0
---       · rw [h, leadingTerm]
---         simp
---       · sorry
---     rw [initialIdeal_is_monomial_ideal] at this
---     sorry
 
 variable [DecidableEq σ] in
 /--
@@ -305,13 +210,16 @@ a unique decomposition `f = g + r` with
 theorem remainder_exists_unique
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB     : IsGroebnerBasis m I G)
-  (hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi))
+  --(hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi))
   (f : MvPolynomial σ k) :
   ∃! r : MvPolynomial σ k,
     (∃ g, g ∈ I ∧ f = g + r) ∧
     ∀ c ∈ r.support, ∀ gi ∈ G, ¬ m.degree gi ≤ c := by
   -- 1) **Existence** via the division algorithm
-  have hGset : ∀ gi ∈ (G : Set _), IsUnit (m.leadingCoeff gi) := fun _ hgi => hG_unit _ hgi
+  have hGset : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi) := by
+    intro gi
+    intro gi_in_G
+    exact (isUnit_leadingCoeff_iff_nonzero m gi).mpr (hGB.1 gi gi_in_G)
   obtain ⟨gcomb, r, ⟨hre, hdeg, hnil⟩⟩ := m.div_set hGset f
 
   -- 2) set `g := ∑ b in gcomb.support, gcomb b • (b : MvPolynomial)`
@@ -396,9 +304,80 @@ variable [DecidableEq σ] in
 noncomputable def remainder
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB : IsGroebnerBasis m I G)
-  (hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi))
   (f : MvPolynomial σ k) : MvPolynomial σ k :=
-  Classical.choose (ExistsUnique.exists (remainder_exists_unique hGB hG_unit f))
+  Classical.choose (ExistsUnique.exists (remainder_exists_unique hGB f))
+
+variable [DecidableEq σ] in
+/--
+**§6 Corollary 2**
+Let $G = \{g_1,\dots,g_t\}$ be a Gröbner basis for an ideal $I \subseteq k[x_1,\dots,x_n]$ and let $f \in k[x_1,\dots,x_n]$.
+Then $f \in I$ if and only if the remainder on division of $f$ by $G$ is zero.
+-/
+theorem mem_I_iff_normalForm_eq_zero
+  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
+  (hGB : IsGroebnerBasis m I G)
+  (f : MvPolynomial σ k) :
+  f ∈ I ↔ normalForm m G hGB.1 f = 0 := by
+  -- prepare the two hypotheses for `div_set` and for uniqueness
+  --let B := G.toSet
+  --have hB : ∀ b ∈ B, b ≠ 0 := fun _ hb => hGB.1 _ hb
+  let hU : ∀ g ∈ G, IsUnit (m.leadingCoeff g) := fun g hg =>
+    (isUnit_leadingCoeff_iff_nonzero m g).mpr (hGB.1 g hg)
+  have unique_rem := remainder_exists_unique hGB f
+
+  constructor
+  · -- (→) if `f ∈ I` then the chosen remainder must be `0`
+    intro hf
+    -- build the “r = 0” witness of the unique‐remainder property
+    have P₀ :
+      (∃ g, g ∈ I ∧ f = g + 0) ∧
+      ∀ c ∈ (0 : MvPolynomial σ k).support, ∀ gi ∈ G, ¬ m.degree gi ≤ c := by
+      constructor
+      · use f; constructor; exact hf; simp
+      · simp
+    -- build the “r = normalForm …” witness
+    have Pn :
+      (∃ g, g ∈ I ∧ f = g + normalForm m G hGB.1 f) ∧
+      ∀ c ∈ (normalForm m G hGB.1 f).support, ∀ gi ∈ G, ¬ m.degree gi ≤ c := by
+      obtain ⟨q, r, ⟨hre, _, hnil⟩⟩ :=
+        MonomialOrder.div_set hU f
+      dsimp [normalForm]
+      constructor
+      · -- `g := ∑ q i • (i : MvPolynomial)`
+        use q.sum fun i coeff => coeff • (i : MvPolynomial σ k)
+        -- this `g` lies in `I` because `G ⊆ I`
+        have : ∀ i ∈ q.support, (i : MvPolynomial σ k) ∈ I := fun i hi =>
+          hGB.2.1 i.2
+        sorry
+        --refine ⟨Submodule.sum_smul_mem I _ this, _⟩
+        --simpa [Finsupp.sum, *] using hre
+      · sorry
+    -- now uniqueness forces `normalForm … = 0`
+    sorry
+    --simpa [normalForm] using unique_rem.2 _ _ Pn P₀
+
+  · -- (←) if the remainder is `0` then `f = g + 0 ∈ I`
+    intro h0
+    obtain ⟨q, r, ⟨hre, _, _⟩⟩ := MonomialOrder.div_set hU f
+    -- since `r = normalForm … = 0`, we get `f = ∑ q i • i`
+    sorry
+
+variable [DecidableEq σ] in
+/--
+**§6 Corollary 2**
+Let $G = \{g_1,\dots,g_t\}$ be a Gröbner basis for an ideal $I \subseteq k[x_1,\dots,x_n]$ and let $f \in k[x_1,\dots,x_n]$.
+Then $f \in I$ if and only if the remainder on division of $f$ by $G$ is zero.
+-/
+theorem mem_ideal_iff_remainder_GB_eq_zero
+  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
+  (hGB : IsGroebnerBasis m I G)
+  (f   : MvPolynomial σ k) :
+  f ∈ I ↔ remainder hGB f = 0 := by
+  constructor
+  · rw [remainder]
+    rw [IsGroebnerBasis] at hGB
+    sorry
+  · sorry
 
 variable (m) in
 /-- The S-polynomial. -/
@@ -422,31 +401,6 @@ lemma exists_S_polynomial_syzygies
       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)
       := by sorry
 
--- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
--- def remainder'' (f : MvPolynomial σ k) (G : List (MvPolynomial σ k))
---   (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g)) : MvPolynomial σ k :=
--- let B := G.toFinset.toSet
--- let hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b) :=
---   λ b hb => by simpa [List.mem_toFinset] using hG b hb
--- -- extract the `r` from `m.div_set hB f`
--- (Classical.choose (m.div_set hB f)).2.2
-
-variable [DecidableEq σ] in
-theorem mem_ideal_iff_remainder_GB_eq_zero
-  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
-  {hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi)}
-  (hGB : IsGroebnerBasis m I G)
-  (f   : MvPolynomial σ k) :
-  f ∈ I ↔ remainder hGB hG_unit f = 0 := by sorry
-
-variable [DecidableEq σ] in
-theorem mem_ideal_iff_remainder_GB_eq_zero_old
-  {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)}
-  (hG  : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
-  (hGB : is_GroebnerBasis m I G)
-  (f   : MvPolynomial σ k) :
-  f ∈ I ↔ remainder_old f G hG = 0 := by sorry
-
 /-
 Buchberger’s Criterion (Theorem 6) says:
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
@@ -455,52 +409,64 @@ Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomial
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
 
-/-forward 증명이 지저분-/
 variable (m) [Fintype σ] [DecidableEq σ] in
 theorem Buchberger_criterion
   {I : Ideal (MvPolynomial σ k)}
-  {G : List (MvPolynomial σ k)}
-  (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
-  (hGI : I = Ideal.span G.toFinset) :
-  is_GroebnerBasis m I G ↔
+  {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0)
+  (hGI : I = Ideal.span G) :
+  IsGroebnerBasis m I G ↔
     (∀ (g₁ g₂ : MvPolynomial σ k),
       g₁ ∈ G →
       g₂ ∈ G →
-      g₁ ≠ g₂ →
-      remainder_old (S_polynomial m g₁ g₂) G hG = 0) := by
-        constructor
-        · intro h_isGB g₁ g₂ hg₁ hg₂ hneq
-          have : G.toFinset.toSet ⊆ I := by apply h_isGB.1
-          have hGsubI: ∀g ∈ G, g ∈ I := by
-            simp [SetLike.coe_subset_coe, ←SetLike.setOf_mem_eq] at this
-            exact fun g a ↦ this g a
-          have h_Sp: S_polynomial m g₁ g₂ ∈ I := by
-            rw [S_polynomial]
-            have hg₁I : g₁ ∈ I := by exact hGsubI g₁ hg₁
-            have hg₂I : g₂ ∈ I := by exact hGsubI g₂ hg₂
-            apply Ideal.sub_mem
-            · exact
-              Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₁)
-                (hGsubI g₁ hg₁)
-            · exact
-              Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₂)
-                (hGsubI g₂ hg₂)
-          exact (mem_ideal_iff_remainder_GB_eq_zero_old hG h_isGB (S_polynomial m g₁ g₂)).mp h_Sp
-        · intro hSpols
-          -- (1) every g ∈ G lies in I because I = span G
-          have hGsubI : G.toFinset.toSet ⊆ I := by
-            simpa [hGI] using Ideal.subset_span
+      g₁ ≠ g₂ → normalForm m G hG (S_polynomial m g₁ g₂) = 0) := by sorry
 
-          -- (2) we must show
-          --     span (leadingTerm m '' G) = initialIdeal m I
-          have : initialIdeal m I = initialIdeal m (Ideal.span G.toFinset) := by
-            simp [hGI]
-          -- reduce to
-          --   span (LT G) = initialIdeal m (span G)
-          rw [is_GroebnerBasis]
-          constructor
-          · exact hGsubI
-          · sorry
+-- /-forward 증명이 지저분-/
+-- variable (m) [Fintype σ] [DecidableEq σ] in
+-- theorem Buchberger_criterion_old
+--   {I : Ideal (MvPolynomial σ k)}
+--   {G : List (MvPolynomial σ k)}
+--   (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
+--   (hGI : I = Ideal.span G.toFinset) :
+--   is_GroebnerBasis m I G ↔
+--     (∀ (g₁ g₂ : MvPolynomial σ k),
+--       g₁ ∈ G →
+--       g₂ ∈ G →
+--       g₁ ≠ g₂ →
+--       remainder_old (S_polynomial m g₁ g₂) G hG = 0) := by
+--         constructor
+--         · intro h_isGB g₁ g₂ hg₁ hg₂ hneq
+--           have : G.toFinset.toSet ⊆ I := by apply h_isGB.1
+--           have hGsubI: ∀g ∈ G, g ∈ I := by
+--             simp [SetLike.coe_subset_coe, ←SetLike.setOf_mem_eq] at this
+--             exact fun g a ↦ this g a
+--           have h_Sp: S_polynomial m g₁ g₂ ∈ I := by
+--             rw [S_polynomial]
+--             have hg₁I : g₁ ∈ I := by exact hGsubI g₁ hg₁
+--             have hg₂I : g₂ ∈ I := by exact hGsubI g₂ hg₂
+--             apply Ideal.sub_mem
+--             · exact
+--               Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₁)
+--                 (hGsubI g₁ hg₁)
+--             · exact
+--               Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₂)
+--                 (hGsubI g₂ hg₂)
+--           exact (mem_ideal_iff_remainder_GB_eq_zero_old hG h_isGB (S_polynomial m g₁ g₂)).mp h_Sp
+--         · intro hSpols
+--           -- (1) every g ∈ G lies in I because I = span G
+--           have hGsubI : G.toFinset.toSet ⊆ I := by
+--             simpa [hGI] using Ideal.subset_span
+
+--           -- (2) we must show
+--           --     span (leadingTerm m '' G) = initialIdeal m I
+--           have : initialIdeal m I = initialIdeal m (Ideal.span G.toFinset) := by
+--             simp [hGI]
+--           -- reduce to
+--           --   span (LT G) = initialIdeal m (span G)
+--           rw [is_GroebnerBasis]
+--           constructor
+--           · exact hGsubI
+--           · sorry
 
 
 
@@ -655,11 +621,19 @@ partial def Buchberger_Algorithm (F : List (MvPolynomial σ k)) : List (MvPolyno
 
 variable [DecidableEq σ] in
 lemma grobner_basis_remove_redundant
-  {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)} {p : MvPolynomial σ k}
-  (hG : is_GroebnerBasis m I G)
+  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
+  (hG : IsGroebnerBasis m I G)
   (hpG : p ∈ G)
-  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).toFinset.image (fun g ↦ leadingTerm m g))) :
-  is_GroebnerBasis m I (G.erase p) := by sorry
+  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
+  IsGroebnerBasis m I (G.erase p) := by sorry
+
+-- variable [DecidableEq σ] in
+-- lemma grobner_basis_remove_redundant_old
+--   {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)} {p : MvPolynomial σ k}
+--   (hG : is_GroebnerBasis m I G)
+--   (hpG : p ∈ G)
+--   (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).toFinset.image (fun g ↦ leadingTerm m g))) :
+--   is_GroebnerBasis m I (G.erase p) := by sorry
 
 end Field
 
