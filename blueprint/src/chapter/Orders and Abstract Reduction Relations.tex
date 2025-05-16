@@ -47,10 +47,10 @@
     \end{enumerate}
 \end{definition}
 
-\begin{definition}[The ``$\le$–setoid'' on $M$]\label{def:eq_rel}
+\begin{definition}[The ``Antisymmetrization'' of $M$]\label{def:eq_rel}
     \uses{def:Orders}
     \leanok %확인 필요
-    \lean{leSetoid}
+    \lean{Antisymmetrization}
     Let $(M,\le)$ be a preordered set.  Define an equivalence relation
     \[
       \sim\;\colon\;M\times M\;\to\;\mathrm{Prop},
@@ -99,7 +99,7 @@
     
 \begin{proposition}\label{prop:wqoEquivalent} % [Becker-Weispfenning1993] 160p Proposition 4.42
     \uses{def:wqo, def:min–classes}
-    \lean{wf_and_finite_antichains_implies_hasDicksonProperty, finite_min_classes_implies_hasDicksonProperty}
+    \lean{HasDicksonProperty.to_wellQuasiOrderedLE, WellQuasiOrderedLE.minClasses_finite_and_nonempty, finite_min_classes_implies_hasDicksonProperty}
     Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
     Then the following are equivalent:
     \begin{enumerate}
