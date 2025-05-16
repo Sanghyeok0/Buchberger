@@ -1,5 +1,23 @@
 \chapter{Gr{\"o}bner Bases} 
 
+\section{Polynomial Reductions}
+
+\begin{theorem}
+[Division Algorithm for Multivariate Polynomials]\label{thm:div_alg}
+% [Becker] 198p Proposition 5.22 / [Cox] 64p Theorem 3
+  \lean{MonomialOrder.div_set}
+  \leanok
+  Let $P$ be a subset of $K[X]$ and $f\in K[X]$.
+  Then there exists a normal form $g\in K[X]$ of $f$ modulo $P$ and a family $\mathcal{F}=\{q_{p}\}_{p\in P}$ of elements of $K[X]$ with
+  \[
+    f=\sum_{p\in P}q_{p}\,p + g
+    \quad\text{and}\quad
+    \max\bigl\{\LT(q_{p}p)\mid p\in P,\;q_{p}p\neq 0\bigr\}\le \LT(f).
+  \]
+  If $P$ is finite, the ground field is computable, and the term order on $T$ is decidable, 
+  then $g$ and $\{q_{p}\}_{p\in P}$ can be computed from $f$ and $P$.
+\end{theorem}
+
 \section{Gr{\"o}bner Bases-Existence and Uniqueness}
 
 \begin{theorem} % [Cox] 77p Proposition 3
@@ -30,7 +48,7 @@
 \end{definition}
 
 \begin{proposition}\label{prop:GR_Unique_Remainder} % [Cox] 83p Proposition 1
-    \uses{def:Groebner_basis, lem:mem_monomialIdeal_iff_divisible}
+    \uses{thm:div_alg, def:Groebner_basis, lem:mem_monomialIdeal_iff_divisible}
     \lean{MvPolynomial.remainder_exists_unique}
     \leanok %확인 필요
     Let $I \subseteq k[x_1,\dots,x_n]$ be an ideal and let $G = \{g_1,\dots,g_t\}$ be a Gr{\"o}bner basis for $I$.  
@@ -94,7 +112,7 @@
 \end{definition}
 
 \begin{lemma}\label{lem:exists_S_polynomial_syzygies} % [Cox] 85p Lemma 5
-    \uses{def:S-polynomial}
+    \uses{thm:div_alg, def:S-polynomial}
     \lean{MvPolynomial.S_polynomial}
     Suppose we have a sum $\sum_{i=1}^s p_i,$ where $\operatorname{multideg}(p_i)=\delta\in\mathbb Z_{\ge0}^n$ for all $i$.
     If $\operatorname{multideg}\Bigl(\sum_{i=1}^s p_i\Bigr)<\delta,$ then $\sum_{i=1}^s p_i$ is a linear combination, with coefficients in~$k$, of the $S$-polynomials $S(p_j,p_l)\quad\text{for }1\le j,\,l\le s$.

@@ -49,8 +49,8 @@
 
 \begin{definition}[The ``Antisymmetrization'' of $M$]\label{def:eq_rel}
     \uses{def:Orders}
-    \leanok %확인 필요
     \lean{Antisymmetrization}
+    \leanok %확인 필요
     Let $(M,\le)$ be a preordered set.  Define an equivalence relation
     \[
       \sim\;\colon\;M\times M\;\to\;\mathrm{Prop},
@@ -65,8 +65,8 @@
     
 \begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
     \uses{def:eq_rel}
-    \leanok %확인 필요
     \lean{minClasses}
+    \leanok %확인 필요
     Let $N\subseteq M$.  An element $b\in N$ is called \emph{minimal in $N$} if
     \[
       \forall\,y\in N,\;y\le b \;\Longrightarrow\; b\le y.
@@ -100,6 +100,7 @@
 \begin{proposition}\label{prop:wqoEquivalent} % [Becker-Weispfenning1993] 160p Proposition 4.42
     \uses{def:wqo, def:min–classes}
     \lean{HasDicksonProperty.to_wellQuasiOrderedLE, WellQuasiOrderedLE.minClasses_finite_and_nonempty, finite_min_classes_implies_hasDicksonProperty}
+    \leanok %확인 필요
     Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
     Then the following are equivalent:
     \begin{enumerate}
