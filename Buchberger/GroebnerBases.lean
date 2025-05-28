@@ -3,6 +3,8 @@ import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Algebra.Ring.Defs
 import Buchberger.MonomialIdeal
+import Mathlib.Logic.Relation
+--import Buchberger.Order2
 
 variable {σ : Type*} -- [DecidableEq σ]
 variable {m : MonomialOrder σ}
@@ -98,6 +100,21 @@ theorem isUnit_leadingCoeff_iff_nonzero
 ## TODO
 normalForm과 remainder를 하나로 합치기
 -/
+
+/-- f reduces to g modulo a single nonzero p by eliminating one term -/
+def polyStep (p f g : MvPolynomial σ k) : Prop :=
+  sorry
+
+/-- One‐step reduction modulo a set `P`.  (Definition 5.18 (iii)). -/
+def Red (P : Set (MvPolynomial σ k)) : MvPolynomial σ k → MvPolynomial σ k → Prop :=
+  fun f g => ∃ p ∈ P, polyStep p f g
+
+/-- **Theorem 5.21.**  For any `P ⊆ K[X]`, the relation `→[P]` is a noetherian reduction. -/
+theorem red_P_isNoetherian (P : Set (MvPolynomial σ k)) :
+  -- (1) strictly antisymmetric
+  IsAsymm _ (Red P) ∧
+  -- (2) well‐founded (no infinite ascending chains)
+  WellFounded (Red P) := by sorry
 
 variable (m) in
 noncomputable def normalForm
