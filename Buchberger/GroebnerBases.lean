@@ -3,11 +3,12 @@ import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Algebra.Ring.Defs
 import Buchberger.MonomialIdeal
-import Mathlib.Logic.Relation
---import Buchberger.Order2
+import Buchberger.Order2
 
 variable {σ : Type*} -- [DecidableEq σ]
 variable {m : MonomialOrder σ}
+
+open MonomialOrder MvPolynomial
 
 -- Mathlib4 최신버전에 있는 코드들----------------------------
 
@@ -22,9 +23,7 @@ lemma degree_mem_support {p : MvPolynomial σ R} (hp : p ≠ 0) :
 end MonomialOrder
 ---------------------------------------------------------------
 
-namespace MvPolynomial
-
-open scoped MonomialOrder MvPolynomial
+namespace MonomialOrder
 
 set_option maxHeartbeats 3000000
 
@@ -59,6 +58,100 @@ section CommRing
 
 variable {R : Type*} [CommRing R]
 
+variable (m) in
+/-- f reduces to g modulo a single nonzero p by eliminating term t -/
+def red_poly_step_by_term (p f g : MvPolynomial σ R) (hp : IsUnit (m.leadingCoeff p)) (t : σ →₀ ℕ) : Prop :=
+  g = f - (MvPolynomial.monomial (t - (m.degree p)) (hp.unit⁻¹ * f.coeff t)) * p
+
+variable (m) in
+/-- f reduces to g modulo a single nonzero p by eliminating one term -/
+def red_poly_step (p f g : MvPolynomial σ R) (hp : IsUnit (m.leadingCoeff p)) : Prop :=
+  ∃ t, red_poly_step_by_term m p f g hp t
+
+variable (m) in
+/-- One‐step reduction modulo a set `P`.  (Definition 5.18 (iii)). -/
+def Red_Poly_step (P : Set (MvPolynomial σ R))
+  (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
+  MvPolynomial σ R → MvPolynomial σ R → Prop
+| f, g => ∃ (p : MvPolynomial σ R) (hp : p ∈ P),
+    red_poly_step m p f g (hP p hp)
+
+/-- (iii)  In a single step `f →[p] g` eliminating `t`,
+  * `t ∉ g.support`, and
+  * for every `u > t`, `u ∈ f.support ↔ u ∈ g.support`. -/
+theorem support_after_step
+  {p f g : MvPolynomial σ R}
+  (hp : IsUnit (m.leadingCoeff p))
+  {t : σ →₀ ℕ}
+  (h : red_poly_step_by_term m p f g hp t)
+  : (t ∉ g.support) ∧ ∀ u, t < u → (u ∈ f.support ↔ u ∈ g.support) := by
+  rw [red_poly_step_by_term] at h
+  have : m.degree ((monomial (t - m.degree p)) (↑hp.unit⁻¹ * coeff t f) * p) = t := by sorry
+  constructor
+  · sorry
+  · sorry
+
+
+/-- Single‐step "top" reduction by any `p ∈ P`. -/
+def Reduce (m : MonomialOrder σ)
+  (P : Set (MvPolynomial σ R)) (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
+  MvPolynomial σ R → MvPolynomial σ R → Prop
+| g, f => ∃ (p : MvPolynomial σ R) (hp : p ∈ P) (hpf : m.degree p ≤ m.degree f) (hf : m.degree f ≠ 0) , g = m.reduce (hP p hp) f
+
+/-- **Theorem 5.21.**  For any `P ⊆ K[X]`, the relation `→[P]` is a noetherian reduction. (top‐reduction case).-/
+theorem Reduce.noetherian
+  (P : Set (MvPolynomial σ R))
+  (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
+  IsAsymm _ (m.Reduce P hP) ∧ WellFounded (m.Reduce P hP) := by
+  constructor
+  · -- asymmetry:
+    refine { asymm := ?_ }
+    intro f g hfg hgf
+    simp only [Reduce] at hfg
+    rcases hfg with ⟨p, hpP, hpg, hg_ne, hf_red_g⟩
+    simp only [Reduce] at hgf
+    rcases hgf with ⟨q, hqP, hqf, hf_ne, hg_red_f⟩
+
+    have d1 : (m.degree g) ≺[m] (m.degree f) := by
+      rw [hg_red_f]
+      exact degree_reduce_lt (hP q hqP) hqf hf_ne
+    have d2 : (m.degree f) ≺[m] (m.degree g) := by
+      rw [hf_red_g]
+      exact degree_reduce_lt (hP p hpP) hpg hg_ne
+    let cyc : m.degree f ≺[m] m.degree f := by
+      simpa using d2.trans d1
+    exact (lt_self_iff_false (m.toSyn (m.degree f))).mp cyc
+
+  · -- Well‐foundedness
+    apply WellFounded.wellFounded_iff_no_descending_seq.mpr
+    by_contra h
+    simp at h
+    obtain ⟨f_seq, h_step⟩ := h
+    let u_seq : ℕ → (σ →₀ ℕ) := fun n => m.degree (f_seq n)
+    have h_dec : ∀ n, u_seq (n+1) ≺[m] u_seq n := by
+      intro n
+      simp only [Reduce] at h_step
+      obtain ⟨p, ⟨hp_mem, ⟨hpf, ⟨hf, f_red⟩⟩⟩⟩ := h_step n
+      have : m.degree (m.reduce (hP p hp_mem) (f_seq n)) ≺[m] m.degree (f_seq n) := by
+        apply degree_reduce_lt (hP p hp_mem) hpf hf
+      simp only [f_red, gt_iff_lt, u_seq]
+      exact this
+    have m_wf : WellFounded (· ≺[m] ·) := by
+      have : WellFounded (· < ·) := (m.wf.wf)
+      exact WellFounded.onFun this
+    -- convert to the subtype of strictly‐descending sequences
+    let desc_sub : {u : ℕ → _ // ∀ n, (· ≺[m] ·) (u (n+1)) (u n)} :=
+      ⟨u_seq, h_dec⟩
+    have no_seq : IsEmpty { f : ℕ → (σ →₀ ℕ)// ∀ (n : ℕ), (· ≺[m] ·) (f (n + 1)) (f n) } := by
+      rw [WellFounded.wellFounded_iff_no_descending_seq] at m_wf
+      exact m_wf
+    exact no_seq.elim desc_sub
+
+variable (m) in
+def normalform_rel (P : Set (MvPolynomial σ R))
+  (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) (f g : MvPolynomial σ R) :=
+  @Relation.NormalFormof _ (Reduce m P hP) (Reduce.noetherian P hP).1 g f
+
 noncomputable def normalForm_general
   (B : Set (MvPolynomial σ R))
   (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b))
@@ -71,7 +164,9 @@ theorem Hilbert_basis_initial (I : Ideal (MvPolynomial σ R)) :
   Ideal.FG (initialIdeal m I) := by sorry --(inferInstance : IsNoetherianRing _).noetherian (initialIdeal m I) -- @isNoetherianRing R σ _ _
 
 end CommRing
+end MonomialOrder
 
+namespace MvPolynomial
 section Field
 
 variable {k : Type*} [Field k] [DecidableEq k]
@@ -100,21 +195,6 @@ theorem isUnit_leadingCoeff_iff_nonzero
 ## TODO
 normalForm과 remainder를 하나로 합치기
 -/
-
-/-- f reduces to g modulo a single nonzero p by eliminating one term -/
-def polyStep (p f g : MvPolynomial σ k) : Prop :=
-  sorry
-
-/-- One‐step reduction modulo a set `P`.  (Definition 5.18 (iii)). -/
-def Red (P : Set (MvPolynomial σ k)) : MvPolynomial σ k → MvPolynomial σ k → Prop :=
-  fun f g => ∃ p ∈ P, polyStep p f g
-
-/-- **Theorem 5.21.**  For any `P ⊆ K[X]`, the relation `→[P]` is a noetherian reduction. -/
-theorem red_P_isNoetherian (P : Set (MvPolynomial σ k)) :
-  -- (1) strictly antisymmetric
-  IsAsymm _ (Red P) ∧
-  -- (2) well‐founded (no infinite ascending chains)
-  WellFounded (Red P) := by sorry
 
 variable (m) in
 noncomputable def normalForm
@@ -200,7 +280,7 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
       rw [this]
     rw [hlt]
     apply Ideal.mul_mem_left
-    show leadingTerm m g ∈ Ideal.span ↑(Finset.image (fun g ↦ leadingTerm m g) G)
+    --show leadingTerm m g ∈ Ideal.span ↑(Finset.image (fun g ↦ leadingTerm m g) G)
     have hgen : leadingTerm m g ∈ (G.image fun g => leadingTerm m g) :=
       Finset.mem_image_of_mem (fun g ↦ leadingTerm m g) hg_in_G
     exact (Ideal.mem_span (leadingTerm m g)).mpr fun p a ↦ a hgen
@@ -653,6 +733,7 @@ lemma grobner_basis_remove_redundant
 --   is_GroebnerBasis m I (G.erase p) := by sorry
 
 end Field
+end MvPolynomial
 
 /-Old version-/
 -- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] [DecidableEq k] in
