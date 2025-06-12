@@ -25,6 +25,7 @@ variable [IsAsymm M r]
 -/
 def IsRelMaximalIn (N : Set M) (a : M) : Prop :=
   a ∈ N ∧ ∀ b, b ∈ N → ¬ strict r a b
+-- a ∈ N ∧ ∀ b, b ∈ N → (¬ r a b ∨ r b a)
 
 def IsRelMaximal (a : M) : Prop :=
   IsRelMaximalIn r Set.univ a
@@ -57,7 +58,7 @@ A “normal form” for a relation `r` is simply an `r`-maximal element.
 def IsNormalForm (a : M) : Prop :=
   IsRelMaximal r a
 
-def NormalFormof [IsAsymm M r] (b : M) (a : M) : Prop :=
+def NormalFormof [IsAsymm M r] (a b : M) : Prop :=
   IsNormalForm r b ∧ a →*[r] b
 
 end IsAsymm
