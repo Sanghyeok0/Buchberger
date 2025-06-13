@@ -1,7 +1,7 @@
 import Mathlib.RingTheory.MvPolynomial.Groebner
 import Mathlib.RingTheory.Noetherian.Defs
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.Algebra.Ring.Defs
+-- import Mathlib.RingTheory.Polynomial.Basic
+-- import Mathlib.Algebra.Ring.Defs
 import Buchberger.MonomialIdeal
 import Buchberger.Order2
 
@@ -25,7 +25,7 @@ end MonomialOrder
 
 namespace MonomialOrder
 
-set_option maxHeartbeats 3000000
+set_option maxHeartbeats 0
 
 /-
 ## Reference : [Becker-Weispfenning1993]
@@ -96,7 +96,33 @@ theorem support_after_step
 def Reduce (m : MonomialOrder σ)
   (P : Set (MvPolynomial σ R)) (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
   MvPolynomial σ R → MvPolynomial σ R → Prop
-| g, f => ∃ (p : MvPolynomial σ R) (hp : p ∈ P) (hpf : m.degree p ≤ m.degree f) (hf : m.degree f ≠ 0) , g = m.reduce (hP p hp) f
+| g, f => ∃ (p : MvPolynomial σ R) (hp : p ∈ P) (hpf : m.degree p ≤ m.degree f) (hf_ne : f ≠ 0) , g = m.reduce (hP p hp) f
+
+/-- If `f` is reduced to `g`, and `m.degree f = 0`, then `g` must be `0`. -/
+lemma Reduce.target_is_zero_if_source_deg_is_zero
+  {f g : MvPolynomial σ R}
+  {P : Set (MvPolynomial σ R)} {hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)}
+  (hgf : m.Reduce P hP g f) (hf_deg_eq_0 : m.degree f = 0) :
+    g = 0 := by
+    simp only [Reduce] at hgf
+    obtain ⟨p, hp_mem, hpf_le_df, hf_ne, hg_eq_reduce_f⟩ := hgf
+    -- If `f ≠ 0` and `m.degree f = 0`, then `f = C (m.leadingCoeff f)`.
+    have hf_eq_C_lc : f = C (m.leadingCoeff f) := m.eq_C_of_degree_eq_zero hf_deg_eq_0
+    -- `m.leadingCoeff f ≠ 0` since `f ≠ 0`.
+    have hf_lc_ne_0 : m.leadingCoeff f ≠ 0 := m.leadingCoeff_ne_zero_iff.mpr hf_ne
+    -- `hpf_le_df : m.degree p ≤ m.degree f` becomes `m.degree p ≤ 0`, so `m.degree p = 0`.
+    have hp_deg_eq_0 : m.degree p = 0 := by rw [hf_deg_eq_0] at hpf_le_df; exact nonpos_iff_eq_zero.mp hpf_le_df
+    -- Since `m.degree p = 0`, `p` is a constant `C (m.leadingCoeff p)`.
+    have hp_eq_C_lc : p = C (m.leadingCoeff p) := m.eq_C_of_degree_eq_zero hp_deg_eq_0
+    -- Substitute into `hg_eq_reduce` and simplify
+    rw [reduce, hf_eq_C_lc, hp_deg_eq_0, degree_C, tsub_self, monomial_zero'] at hg_eq_reduce_f
+    nth_rw 2 [mul_comm] at hg_eq_reduce_f
+    rw [C_mul, congrArg m.leadingCoeff (id (Eq.symm hf_eq_C_lc))] at hg_eq_reduce_f
+    nth_rw 3 [hp_eq_C_lc] at hg_eq_reduce_f
+    rw [←C_mul, ←C_mul, mul_assoc] at hg_eq_reduce_f
+    rw [IsUnit.val_inv_mul, mul_one, sub_self] at hg_eq_reduce_f
+    exact hg_eq_reduce_f
+
 
 /-- **Theorem 5.21.**  For any `P ⊆ K[X]`, the relation `→[P]` is a noetherian reduction. (top‐reduction case).-/
 theorem Reduce.noetherian
@@ -107,20 +133,32 @@ theorem Reduce.noetherian
   · -- asymmetry:
     refine { asymm := ?_ }
     intro f g hfg hgf
-    simp only [Reduce] at hfg
-    rcases hfg with ⟨p, hpP, hpg, hg_ne, hf_red_g⟩
-    simp only [Reduce] at hgf
-    rcases hgf with ⟨q, hqP, hqf, hf_ne, hg_red_f⟩
-
-    have d1 : (m.degree g) ≺[m] (m.degree f) := by
-      rw [hg_red_f]
-      exact degree_reduce_lt (hP q hqP) hqf hf_ne
-    have d2 : (m.degree f) ≺[m] (m.degree g) := by
-      rw [hf_red_g]
-      exact degree_reduce_lt (hP p hpP) hpg hg_ne
-    let cyc : m.degree f ≺[m] m.degree f := by
-      simpa using d2.trans d1
-    exact (lt_self_iff_false (m.toSyn (m.degree f))).mp cyc
+    by_cases h_lmf_eq_zero : m.degree f = 0
+    · -- m.degree f = 0
+      have hg_zero : g = 0 := by exact Reduce.target_is_zero_if_source_deg_is_zero hgf h_lmf_eq_zero
+      simp only [Reduce] at hfg
+      rcases hfg with ⟨p, hpP, hpg, hg_ne, hf_eq_reduce_g⟩
+      exact hg_ne hg_zero
+    · -- m.degree f ≠ 0
+      by_cases h_lmg_eq_zero : m.degree g = 0
+      · -- m.degree f ≠ 0 ∧ m.degree g = 0
+        have hg_zero : f = 0 := by exact Reduce.target_is_zero_if_source_deg_is_zero hfg h_lmg_eq_zero
+        have : m.degree f = 0 := by rw [hg_zero, degree_zero]
+        exact h_lmf_eq_zero this
+      · -- m.degree f ≠ 0 ∧ m.degree g ≠ 0
+        simp only [Reduce] at hfg
+        rcases hfg with ⟨p, hpP, hpg, hg_ne, hf_eq_reduce_g⟩
+        simp only [Reduce] at hgf
+        rcases hgf with ⟨q, hqP, hqf, hf_ne, hg_eq_reduce_f⟩
+        have d1 : (m.degree g) ≺[m] (m.degree f) := by
+          rw [hg_eq_reduce_f]
+          exact degree_reduce_lt (hP q hqP) hqf h_lmf_eq_zero
+        have d2 : (m.degree f) ≺[m] (m.degree g) := by
+          rw [hf_eq_reduce_g]
+          exact degree_reduce_lt (hP p hpP) hpg h_lmg_eq_zero
+        let cyc : m.degree f ≺[m] m.degree f := by
+          simpa using d2.trans d1
+        exact (lt_self_iff_false (m.toSyn (m.degree f))).mp cyc
 
   · -- Well‐foundedness
     apply WellFounded.wellFounded_iff_no_descending_seq.mpr
@@ -133,7 +171,12 @@ theorem Reduce.noetherian
       simp only [Reduce] at h_step
       obtain ⟨p, ⟨hp_mem, ⟨hpf, ⟨hf, f_red⟩⟩⟩⟩ := h_step n
       have : m.degree (m.reduce (hP p hp_mem) (f_seq n)) ≺[m] m.degree (f_seq n) := by
-        apply degree_reduce_lt (hP p hp_mem) hpf hf
+        by_cases h_lmf_n_eq_zero : m.degree (f_seq n) = 0
+        · have : f_seq (n + 1) = 0 := by exact
+            Reduce.target_is_zero_if_source_deg_is_zero (h_step n) h_lmf_n_eq_zero
+          obtain ⟨q, ⟨hq_mem, ⟨hqf, ⟨hf', f_red'⟩⟩⟩⟩ := h_step (n + 1)
+          exact absurd this hf'
+        · exact degree_reduce_lt (hP p hp_mem) hpf h_lmf_n_eq_zero
       simp only [f_red, gt_iff_lt, u_seq]
       exact this
     have m_wf : WellFounded (· ≺[m] ·) := by
@@ -150,7 +193,36 @@ theorem Reduce.noetherian
 variable (m) in
 def normalform_rel (P : Set (MvPolynomial σ R))
   (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) (f g : MvPolynomial σ R) :=
-  @Relation.NormalFormof _ (Reduce m P hP) (Reduce.noetherian P hP).1 g f
+  @Relation.NormalFormof _ (Reduce m P hP) (Reduce.noetherian P hP).1 f g
+
+theorem div_set'
+  {B : Set (MvPolynomial σ R)} (hB : ∀ p ∈ B, IsUnit (m.leadingCoeff p))
+  (f : MvPolynomial σ R) :
+  ∃ (g : B →₀ (MvPolynomial σ R)) (r : MvPolynomial σ R),
+    f = Finsupp.linearCombination _ (fun (p : B) ↦ (p : MvPolynomial σ R)) g
+      + r
+    ∧ (∀ (p : B), m.degree ((p : MvPolynomial σ R) * (g p)) ≼[m] m.degree f)
+    ∧ normalform_rel m B hB f r := by
+      obtain ⟨g, r, H⟩ := m.div (b := fun (p : B) ↦ p) (fun b ↦ hB b b.prop) f
+      refine ⟨g, r, H.1, H.2.1, ?_⟩
+      show m.normalform_rel B hB f r
+      rw [normalform_rel, Relation.NormalFormof, Relation.IsNormalForm, Relation.IsRelMaximal, Relation.IsRelMaximalIn]
+      simp only [Set.mem_univ, forall_const, true_and]
+      constructor
+      · show ∀ (b : MvPolynomial σ R), ¬Relation.strict (m.Reduce B hB) r b
+        intro b
+        simp only [Relation.strict, not_and, not_not]
+        intro hrb
+        rw [Reduce] at hrb
+        rcases hrb with ⟨p, hp_mem, hpb, hb_ne, hrb⟩
+        rw [reduce] at hrb
+
+        -- intro ⟨hrb, h_ne_br⟩
+        -- have : ¬(m.Reduce B hB b r) := (Reduce.noetherian B hB).1.asymm r b hrb
+        sorry
+      · show f →*[m.Reduce B hB] r
+        sorry
+
 
 noncomputable def normalForm_general
   (B : Set (MvPolynomial σ R))
@@ -479,25 +551,202 @@ theorem mem_ideal_iff_remainder_GB_eq_zero
 variable (m) in
 /-- The S-polynomial. -/
 noncomputable def S_polynomial (f g : MvPolynomial σ k) : MvPolynomial σ k :=
-  let γ := monomial (m.degree f ⊔ m.degree g) (1 : k)
-  (γ - leadingTerm m f) * f - (γ - leadingTerm m g) * g
+  monomial (m.degree f ⊔ m.degree g - m.degree f) ((m.leadingCoeff f)⁻¹ : k) * f
+  - monomial (m.degree f ⊔ m.degree g - m.degree g) (( m.leadingCoeff g)⁻¹ : k) * g
 
+variable (m) [DecidableEq σ] in
 /--
 **Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Lemma 5): Cancellation Lemma**
-Suppose we have a sum `P = ∑ pᵢ` where all `pᵢ` have the same multidegree `δ`.
-If `m.degree P < δ`, then `P` is a linear combination of the S-polynomials `S(pⱼ, pₗ)`,
-and each `S(pⱼ, pₗ)` has multidegree less than `δ`.
+Suppose we have a sum P = ∑ pᵢ where all pᵢ have the same multidegree δ.
+If m.degree P < δ, then P is a linear combination of the S-polynomials S(pⱼ, pₗ),
+and each S(pⱼ, pₗ) has multidegree less than δ.
 -/
 lemma exists_S_polynomial_syzygies
     (p : Finset (MvPolynomial σ k)) -- The list of polynomials p₁, ..., pₛ
+    (hp : ∀ pi ∈ p, pi ≠ 0) -- Finset.nonempty_of_sum_ne_zero
     (δ : σ →₀ ℕ) -- The common multidegree
+    (hδ : 0 ≺[m] δ)
     (hp_deg : ∀ pi ∈ p, m.degree pi = δ) -- All polynomials have multidegree δ
     (hsum   : m.degree (∑ pi ∈ p, pi) ≺[m] δ)
-    : ∃ coeff : MvPolynomial σ k → MvPolynomial σ k → k,
-      (∑ pi ∈ p, pi = ∑ pi ∈ p, ∑ pj ∈ p, coeff pj pi • S_polynomial m pj pi
+    : ∃ ps ∈ p,
+      (∑ pi ∈ p, pi = ∑ pi ∈ p.erase ps, m.leadingCoeff pi • S_polynomial m pi ps
       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)
-      := by sorry
+      := by
+      by_cases hp_nonempty : p.Nonempty -- Finset.nonempty_of_sum_ne_zero -- Fintype.sum_empty
+      · obtain ⟨ps, hps⟩ := hp_nonempty
+        let p' : Finset (MvPolynomial σ k) := p.erase ps
+        -- First, all polynomials `pi ∈ p` must be non-zero.
+        -- have hp_ne_zero : ∀ pi ∈ p, pi ≠ 0 := by
+        --   intro pi hpi_mem
+        --   intro h_pi_zero
+        --   have h_pi_deg_zero : δ = 0 := by
+        --     calc
+        --       δ = m.degree pi := by exact (hp_deg pi hpi_mem).symm
+        --       _ = m.degree (0 : MvPolynomial σ k) := by rw [h_pi_zero]
+        --       _ = 0 := by exact degree_zero
+        --   have hdelta_ne_zero : δ ≠ 0 := m.toSyn.injective.ne (ne_of_lt hsum.symm)
+        --   exact hdelta_ne_zero (hp_deg pi hpi_mem ▸ rfl)
+        -- Next, because m.degree (∑ pi∈p, pi) < δ, the coefficient of x^δ in that sum is zero.
+        have coeff_sum_zero : (∑ pi ∈ p, pi).coeff δ = 0 := by
+          apply coeff_eq_zero_of_lt
+          simpa using hsum
+        -- But (∑ pi in p, pi).coeff δ = ∑ pi in p, pi.coeff δ by coeff_sum.
+        have sum_of_coeffs : ∑ pi ∈ p, pi.coeff δ = 0 := by
+          simp [coeff_sum] at coeff_sum_zero
+          exact coeff_sum_zero
+        -- 3)  Because m.degree pi = δ for each pi ∈ p, we have pi.coeff δ = m.leadingCoeff pi.
+        have sum_lead_coeffs : ∑ pi ∈ p, m.leadingCoeff pi = 0 := by
+          have eq_coeff_lead : ∀ pi ∈ p, pi.coeff δ = m.leadingCoeff pi := by
+            intro pi hpi
+            rw [leadingCoeff, hp_deg pi hpi]
+          calc
+            ∑ pi ∈ p, m.leadingCoeff pi = ∑ pi ∈ p, coeff δ pi := by exact Eq.symm (Finset.sum_congr rfl eq_coeff_lead)
+            _ = 0 := by exact sum_of_coeffs
 
+        have sum_split : ps + (∑ pi ∈ p', pi) = (∑ pi ∈ p, pi) := by
+          -- p = p' ∪ {s}, disjointly.
+          apply Finset.add_sum_erase
+          exact hps
+
+        have S_poly_simp : ∀ pi ∈ p, ∀ pj ∈ p, S_polynomial m pi pj = ((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff pj)⁻¹) • pj := by
+          intro pi hpi pj hpj
+          unfold S_polynomial
+          have deg_sup : m.degree pi ⊔ m.degree pj = δ := by
+            simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left]
+          simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left, tsub_self,
+            monomial_zero', one_div]
+          rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
+
+        have expand_sum1 : ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps
+          = ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps) := by
+            apply Finset.sum_congr rfl
+            intro x hxp'; congr
+            apply S_poly_simp
+            · exact Finset.mem_of_mem_erase hxp'
+            · exact hps
+            -- apply S_poly_simp (by exact Finset.mem_of_mem_erase hxp') hps
+        have expand_sum2 : ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps)
+          = ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps) := by
+            apply Finset.sum_congr rfl
+            intro x hxp'; congr
+            rw [smul_sub, ←smul_assoc, ←smul_assoc]
+            simp
+            have : (m.leadingCoeff x * (m.leadingCoeff x)⁻¹) = 1 := by
+              refine IsUnit.mul_inv_cancel ?_
+              refine isUnit_leadingCoeff.mpr ?_
+              exact hp _ (by exact Finset.mem_of_mem_erase hxp')
+            rw [this]
+            simp only [one_smul]
+        have expand_sum3 : ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps)
+          = ∑ pi ∈ p', pi + ( - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹))) • ps := by
+            rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
+        have sum_lemma : - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) = 1 := by
+          rw [←add_zero (- ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)))]
+          have : (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ - (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ = 0 := by
+            exact sub_eq_zero.mpr rfl
+          rw [←this, sub_eq_neg_add, ←add_assoc]
+          dsimp [p']
+          rw [←neg_add]
+          rw [Finset.sum_erase_add p _ hps, ←Finset.sum_mul]
+          rw [sum_lead_coeffs]
+          simp only [zero_mul, neg_zero, zero_add, p']
+          refine IsUnit.mul_inv_cancel ?_
+          refine isUnit_leadingCoeff.mpr ?_
+          exact hp ps hps
+        simp only [sum_lemma, one_smul, p'] at expand_sum3 -- Finset.sum_sub_distrib
+        rw [Finset.sum_erase_add] at expand_sum3
+        clear sum_lemma
+        use ps
+        constructor
+        · exact hps
+        · constructor
+          · rw [expand_sum1, expand_sum2, expand_sum3]
+          · intro pi hpi pj hpj
+            rw [S_poly_simp pj hpj pi hpi]
+            have hi_unit : IsUnit (m.leadingCoeff pi) := (isUnit_leadingCoeff_iff_nonzero m pi).mpr (hp pi hpi)
+            have hj_unit : IsUnit (m.leadingCoeff pj) := (isUnit_leadingCoeff_iff_nonzero m pj).mpr (hp pj hpj)
+            have hji : m.degree pi ≤ m.degree pj := by
+              have h₁ : m.degree pj = δ := by exact hp_deg pj hpj
+              have h₂ : m.degree pi = δ := by exact hp_deg pi hpi
+              rw [h₂, h₁]
+            have : (m.toSyn 0 < m.toSyn δ) → δ ≠ 0 := by
+              contrapose
+              simp only [ne_eq, Decidable.not_not, map_zero, not_lt]
+              intro hδ_zero
+              rw [hδ_zero, ←m.eq_zero_iff]
+              exact AddEquiv.map_zero m.toSyn
+            have hj_deg_nz : m.degree pj ≠ 0 := by
+              rw [hp_deg pj hpj]
+              exact this hδ
+            clear this
+            have : IsRegular (m.leadingCoeff pj)⁻¹ := by
+              refine isRegular_iff_ne_zero.mpr ?_
+              exact inv_ne_zero (by exact leadingCoeff_ne_zero_iff.mpr (hp pj hpj))
+            have h1' : m.degree (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
+              = m.degree ((m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)) := by
+                rw [MonomialOrder.degree_smul this]
+            have h2' : (m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
+              = (m.leadingCoeff pj)⁻¹ • pj - (m.leadingCoeff pi)⁻¹ • pi := by
+                rw [smul_sub]
+                simp only [sub_right_inj]
+                rw [←smul_assoc]
+                simp only [smul_eq_mul, ←mul_assoc]
+                have : (m.leadingCoeff pj)⁻¹ * (m.leadingCoeff pj) = 1 := by
+                  exact IsUnit.inv_mul_cancel hj_unit
+                simp only [this, one_mul]
+            rw [←h2', ←h1']
+            have hi_deg_δ : m.degree pj = δ := by exact hp_deg pj hpj
+            have hj_deg_δ : m.degree pi = δ := by exact hp_deg pi hpi
+            have h3' : pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi
+              = m.reduce hi_unit pj := by
+              rw [reduce, hi_deg_δ, hj_deg_δ]
+              simp
+              rw [←MvPolynomial.C_mul, MvPolynomial.C_mul', mul_comm]
+            rw [h3']
+            have : m.degree pj = δ := by exact hp_deg pj hpj
+            rw [←hi_deg_δ]
+            apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
+        exact hps
+
+            -- intro c hc
+            -- have h : m.toSyn ((m.leadingCoeff pj)⁻¹ • pj - (m.leadingCoeff pi)⁻¹ • pi) < m.toSyn δ := by sorry
+            -- have h1 : c ∈ (m.subLTerm pj).support ∨ c ∈ (m.subLTerm pi).support := by sorry
+            -- have : (m.toSyn 0 < m.toSyn δ) → δ ≠ 0 := by
+            --   contrapose
+            --   simp only [ne_eq, Decidable.not_not, map_zero, not_lt]
+            --   intro hδ_zero
+            --   rw [hδ_zero, ←m.eq_zero_iff]
+            --   exact AddEquiv.map_zero m.toSyn
+            -- have h2 : m.toSyn (m.degree (m.subLTerm pj)) < m.toSyn (m.degree pj) := by
+            --   refine MonomialOrder.degree_sub_LTerm_lt ?_
+            --   rw [hp_deg pj hpj]
+            --   exact this hδ
+            -- rw [←hp_deg pj hpj]
+            -- apply @lt_of_le_of_lt _ _ _ (m.toSyn (m.degree (m.subLTerm pj))) _ _ h2
+            -- exact le_degree h1
+
+
+
+        -- -- Express ∑_{pi∈p'} d_i • S(pi,s) in expanded form:
+        -- have expand_sum : ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps = ∑ pi ∈ p, pi := by
+        --   calc
+        --     ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps
+        --       = ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps) := by
+        --         apply Finset.sum_congr rfl
+        --         intro x hxp'; congr
+        --         apply S_poly_simp (by exact Finset.mem_of_mem_erase hxp') hps
+        --       --_ = ∑ pi ∈ p', ((m.leadingCoeff pi * 1 / (m.leadingCoeff pi)) • pi - (m.leadingCoeff pi • 1 / (m.leadingCoeff ps)) • ps) := by sorry
+        --       _ = ∑ pi ∈ p, pi := by sorry
+        --     _ = ∑ pi ∈ p', ((m.leadingCoeff pi * 1 / (m.leadingCoeff pi)) • pi - (m.leadingCoeff pi • 1 / (m.leadingCoeff ps)) • ps) := by sorry -- apply mul_sub_left_distrib
+        --     _ = ∑ pi ∈ p', (pi - (m.leadingCoeff pi • 1 / (m.leadingCoeff ps)) • ps) := by sorry
+        --     _ = ∑ pi ∈ p', pi + ( - (∑ pi ∈ p', m.leadingCoeff pi) / (m.leadingCoeff ps)) • ps := by sorry
+        --     _ = ∑ pi ∈ p, pi := by sorry
+        -- let coeff : MvPolynomial σ k → MvPolynomial σ k → k := fun pj pi => if pi = ps ∧ pj ∈ p' then m.leadingCoeff pj else 0
+        -- sorry
+      · simp only [Finset.not_nonempty_iff_eq_empty] at hp_nonempty
+        rw [hp_nonempty]
+        simp
+        sorry
 /-
 Buchberger’s Criterion (Theorem 6) says:
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
@@ -865,3 +1114,58 @@ end MvPolynomial
 --         sorry
 --     · show ∀ (y : MvPolynomial σ k), (fun r ↦ (∃ g ∈ I, f = g + r) ∧ ∀ c ∈ r.support, ∀ gi ∈ G, ¬m.degree (leadingTerm m gi) ≤ c) y → y = r
 --       sorry
+
+-- /-- Single‐step "top" reduction by any `p ∈ P`. -/
+-- def Reduce_old (m : MonomialOrder σ)
+--   (P : Set (MvPolynomial σ R)) (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
+--   MvPolynomial σ R → MvPolynomial σ R → Prop
+-- | g, f => ∃ (p : MvPolynomial σ R) (hp : p ∈ P) (hpf : m.degree p ≤ m.degree f) (hf : m.degree f ≠ 0) , g = m.reduce (hP p hp) f
+
+-- /-- **Theorem 5.21.**  For any `P ⊆ K[X]`, the relation `→[P]` is a noetherian reduction. (top‐reduction case).-/
+-- theorem Reduce_old.noetherian
+--   (P : Set (MvPolynomial σ R))
+--   (hP : ∀ p ∈ P, IsUnit (m.leadingCoeff p)) :
+--   IsAsymm _ (m.Reduce_old P hP) ∧ WellFounded (m.Reduce_old P hP) := by
+--   constructor
+--   · -- asymmetry:
+--     refine { asymm := ?_ }
+--     intro f g hfg hgf
+--     simp only [Reduce_old] at hfg
+--     rcases hfg with ⟨p, hpP, hpg, hg_ne, hf_red_g⟩
+--     simp only [Reduce_old] at hgf
+--     rcases hgf with ⟨q, hqP, hqf, hf_ne, hg_red_f⟩
+
+--     have d1 : (m.degree g) ≺[m] (m.degree f) := by
+--       rw [hg_red_f]
+--       exact degree_reduce_lt (hP q hqP) hqf hf_ne
+--     have d2 : (m.degree f) ≺[m] (m.degree g) := by
+--       rw [hf_red_g]
+--       exact degree_reduce_lt (hP p hpP) hpg hg_ne
+--     let cyc : m.degree f ≺[m] m.degree f := by
+--       simpa using d2.trans d1
+--     exact (lt_self_iff_false (m.toSyn (m.degree f))).mp cyc
+
+--   · -- Well‐foundedness
+--     apply WellFounded.wellFounded_iff_no_descending_seq.mpr
+--     by_contra h
+--     simp at h
+--     obtain ⟨f_seq, h_step⟩ := h
+--     let u_seq : ℕ → (σ →₀ ℕ) := fun n => m.degree (f_seq n)
+--     have h_dec : ∀ n, u_seq (n+1) ≺[m] u_seq n := by
+--       intro n
+--       simp only [Reduce_old] at h_step
+--       obtain ⟨p, ⟨hp_mem, ⟨hpf, ⟨hf, f_red⟩⟩⟩⟩ := h_step n
+--       have : m.degree (m.reduce (hP p hp_mem) (f_seq n)) ≺[m] m.degree (f_seq n) := by
+--         apply degree_reduce_lt (hP p hp_mem) hpf hf
+--       simp only [f_red, gt_iff_lt, u_seq]
+--       exact this
+--     have m_wf : WellFounded (· ≺[m] ·) := by
+--       have : WellFounded (· < ·) := (m.wf.wf)
+--       exact WellFounded.onFun this
+--     -- convert to the subtype of strictly‐descending sequences
+--     let desc_sub : {u : ℕ → _ // ∀ n, (· ≺[m] ·) (u (n+1)) (u n)} :=
+--       ⟨u_seq, h_dec⟩
+--     have no_seq : IsEmpty { f : ℕ → (σ →₀ ℕ)// ∀ (n : ℕ), (· ≺[m] ·) (f (n + 1)) (f n) } := by
+--       rw [WellFounded.wellFounded_iff_no_descending_seq] at m_wf
+--       exact m_wf
+--     exact no_seq.elim desc_sub
