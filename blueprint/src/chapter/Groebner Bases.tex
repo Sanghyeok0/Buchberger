@@ -114,6 +114,7 @@
 \begin{lemma}\label{lem:exists_S_polynomial_syzygies} % [Cox] 85p Lemma 5
     \uses{thm:div_alg, def:S-polynomial}
     \lean{MvPolynomial.S_polynomial}
+    \leanok %확인 필요
     Suppose we have a sum $\sum_{i=1}^s p_i,$ where $\operatorname{multideg}(p_i)=\delta\in\mathbb Z_{\ge0}^n$ for all $i$.
     If $\operatorname{multideg}\Bigl(\sum_{i=1}^s p_i\Bigr)<\delta,$ then $\sum_{i=1}^s p_i$ is a linear combination, with coefficients in~$k$, of the $S$-polynomials $S(p_j,p_l)\quad\text{for }1\le j,\,l\le s$.
     Furthermore, each $S(p_j,p_l)$ has multidegree $<\delta$.
