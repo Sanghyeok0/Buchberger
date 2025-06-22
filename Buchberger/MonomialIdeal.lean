@@ -14,12 +14,14 @@ variable {m : MonomialOrder σ}
 
 namespace MvPolynomial
 
-def monomialIdeal' (s : Set (σ →₀ ℕ)) : Ideal (MvPolynomial σ R) :=
-  Ideal.span ((fun s => monomial s (1 : R)) '' s)
-
 variable (R) in
 def monomialIdeal (s : Set (σ →₀ ℕ)) : Ideal (MvPolynomial σ R) :=
   Ideal.span ((fun s => monomial s (1 : R)) '' s)
+
+end MvPolynomial
+
+namespace MonomialOrder
+open MvPolynomial
 
 variable (m) in
 /-- the leading coefficient of a multivariate polynomial with respect
@@ -125,7 +127,7 @@ lemma mem_monomialIdeal_iff_divisible {A : Set (σ →₀ ℕ)} {β : σ →₀ 
     subst hxi
     exact h
 
-/-이름 수정 필요-/
+/-이름 수정 필요-/ -- image_degree_eq_leading_monomial_image
 lemma Mvpoly_to_mono {I : Ideal (MvPolynomial σ R)} :
   { f | ∃ g ∈ I, g ≠ 0 ∧ monomial (m.degree g) (1 : R) = f } = (fun s
 => monomial s (1 : R)) '' LM_set m I := -- { d | ∃ g ∈ I, g ≠ 0 ∧ m.degree g = d } :=
