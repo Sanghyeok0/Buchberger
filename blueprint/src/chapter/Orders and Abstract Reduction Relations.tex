@@ -96,6 +96,9 @@
         \item A \textbf{well partial order}, or a wpo, is a wqo that is a proper ordering relation, i.e., it is antisymmetric.
     \end{enumerate}
 \end{definition}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
     
 \begin{proposition}\label{prop:wqoEquivalent} % [Becker-Weispfenning1993] 160p Proposition 4.42
     \uses{def:wqo, def:min–classes}
@@ -109,6 +112,9 @@
         \item \textit{For every nonempty subset $N$ of $M$, the number of min-classes in $N$ is finite and non-zero.}
     \end{enumerate}
 \end{proposition}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
     
 \begin{corollary}\label{cor:MinimalFiniteBasis} % [Becker-Weispfenning1993] 161p Corollary 4.43
     \uses{prop:wqoEquivalent}
@@ -129,6 +135,9 @@
     Let $\preceq$ be a well- quasi-order on $M$, and let $\{a_n\}_{n \in \mathbb{N}}$ be a sequence of elements of $M$.
     Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.
 \end{proposition}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
 
 \begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
     \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}
@@ -136,6 +145,9 @@
     Let $I = \langle x^\alpha \mid \alpha \in A \rangle$ be a monomial ideal.
     Then a monomial $x^\beta$ lies in $I$ if and only if $x^\beta$ is divisible by $x^\alpha$ for some $\alpha \in A$.
 \end{lemma}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
 
 \begin{theorem}\label{thm:Dickson} % [Becker-Weispfenning1993] 163p
     \uses{prop:wqoEquivalent, prop:wqoAscendingSubsequence}
@@ -148,11 +160,27 @@
     k_i \le m_i \quad \text{for } 1 \le i \le n.
     \]
 \end{theorem}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
+
+\begin{theorem}
+    \uses{thm:Dickson}
+    \leanok %확인 필요
+    Test
+\end{theorem}
 
 \begin{theorem}[Dickson's Lemma (MvPolynomial)]\label{thm:Dickson(MvPolynomial)}
     \uses{thm:Dickson}
     \lean{MonomialOrder.Dickson_lemma_MV}
     \leanok %확인 필요
-    Every subset $S \subseteq \mathbb{N}^n$ has only finitely many minimal elements with respect to the componentwise partial order. 
-    In particular, every monomial ideal in $k[x_1,\dots,x_n]$ is finitely generated.
+    % Every subset $S \subseteq \mathbb{N}^n$ has only finitely many minimal elements with respect to the componentwise partial order. 
+    % In particular, every monomial ideal in $k[x_1,\dots, x_n]$ is finitely generated.
+    Let $I = \langle x^{\alpha} | \alpha \in A \rangle \subseteq k[x_1, \ldots, x_n]$ be a monomial ideal.
+    Then $I$ can be written in the form $I = \langle x^{\alpha(1)}, \ldots , {\alpha(s)} \rangle$, where
+    $\alpha(1), \ldots, \alpha(s) \in A$.
+    In particular, $I$ has a finite basis.
 \end{theorem}
+\begin{proof}
+  \leanok %확인 필요
+\end{proof}
