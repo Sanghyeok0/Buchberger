@@ -4,7 +4,7 @@
 
 \begin{definition}\label{def:Orders}
     \lean{Preorder, LinearOrder}
-    \leanok
+    \mathlibok
     Let $r$ be a relation on $M$.
     Then $r$ is called
     \begin{enumerate}
@@ -33,7 +33,7 @@
     
 \begin{definition}\label{def:well-founded}
     \lean{WellFounded}
-    \leanok
+    \mathlibok
     \uses{def:Orders}
     Let $r$ be a relation on $M$ with strict part $r_s$, and let $N \subseteq M$.
     \begin{enumerate}
@@ -50,7 +50,7 @@
 \begin{definition}[The ``Antisymmetrization'' of $M$]\label{def:eq_rel}
     \uses{def:Orders}
     \lean{Antisymmetrization}
-    \leanok %확인 필요
+    \mathlibok %확인 필요
     Let $(M,\le)$ be a preordered set.  Define an equivalence relation
     \[
       \sim\;\colon\;M\times M\;\to\;\mathrm{Prop},

@@ -649,12 +649,109 @@ theorem grobner_basis_exists (I : Ideal (MvPolynomial σ k)) :
 
 variable [DecidableEq σ] in
 /--
-Proposition 1.  If `G` is a Gröbner basis for `I`, then every `f` admits
+Proposition.  If `G` is a Gröbner basis for `I`, then every `f` admits
 a unique decomposition `f = g + r` with
 1. `g ∈ I`, and
 2. no term of `r` is divisible by any `LT gᵢ`.
 -/
 theorem remainder_exists_unique
+  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
+  (hGB : IsGroebnerBasis m I G)
+  (f  : MvPolynomial σ k) :
+  -- restated with ExistsUnique
+  ExistsUnique (λ r : MvPolynomial σ k ↦
+    (∃ g, g ∈ I ∧ f = g + r)
+    ∧ ∀ c ∈ r.support, ∀ gi ∈ G, ¬ m.degree gi ≤ c) := by
+  -- 1) **Existence** via the division algorithm
+  have hGset : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi) := by
+    intro gi
+    intro gi_in_G
+    exact (isUnit_leadingCoeff_iff_nonzero m gi).mpr (hGB.1 gi gi_in_G)
+  obtain ⟨gcomb, r, ⟨hre, hdeg, hnil⟩⟩ := m.div_set hGset f
+
+  -- 2) set `g := ∑ b in gcomb.support, gcomb b • (b : MvPolynomial)`
+  let g : MvPolynomial σ k := gcomb.sum (fun b coeff => coeff • (b : MvPolynomial σ k))
+  have hgI : g ∈ I := by
+    simp [g, Finsupp.sum]
+    have h_support_mem : ∀ b ∈ gcomb.support, (b : MvPolynomial σ k) ∈ I :=
+      fun b hb => hGB.2.1 b.2
+    exact Submodule.sum_smul_mem I gcomb h_support_mem
+  use r
+  constructor
+  · simp
+    constructor
+    · show ∃ g ∈ I, f = g + r -- g ∈ I because each `b ∈ G` lies in `I` and `I` is an ideal
+      use g
+      constructor
+      · show g ∈ I
+        exact hgI
+      · show f = g + r
+        simpa only [g] using hre
+    · -- no term of `r` is divisible by any `LT gᵢ`
+      show ∀ (c : σ →₀ ℕ), ¬coeff c r = 0 → ∀ gi ∈ G, ¬m.degree gi ≤ c
+      intro c hc gi hgi
+      have : c ∈ r.support := (mem_support_iff.mpr hc)
+      have : ∀ b ∈ ↑G, ¬m.degree b ≤ c := by exact fun b a ↦ hnil c this b a
+      have : ¬m.degree gi ≤ c := by (expose_names; exact hnil c this_1 gi hgi)
+      have : m.degree gi = m.degree (leadingTerm m gi) := by exact Eq.symm (degree_leadingTerm gi)
+      (expose_names; exact hnil c this_1 gi hgi)
+
+  · -- **uniqueness**
+    -- Suppose `r'` also works; then `f = g' + r'` and `r'` has no divisible LT–terms.
+    clear hdeg
+    rintro r' ⟨⟨g', hg'I, hre'⟩, hnil'⟩
+    by_contra hdiff
+    have hne: ¬(r - r' = 0) := by exact sub_ne_zero_of_ne fun a ↦ hdiff (id (Eq.symm a))
+    have hrg : r - r' = g' - g := by
+      rw [eq_sub_of_add_eq' (id (Eq.symm hre)), eq_sub_of_add_eq' (id (Eq.symm hre'))]
+      exact sub_sub_sub_cancel_left g g' f
+    have dI : r - r' ∈ I := by
+      rw [hrg]
+      exact (Submodule.sub_mem_iff_left I hgI).mpr hg'I
+    have hlt_in : leadingTerm m (r - r') ∈ initialIdeal m I := by
+      dsimp [initialIdeal]
+      apply Ideal.subset_span
+      exact ⟨r - r', dI, hne, rfl⟩
+    have hlm_in : monomial (m.degree (r - r')) 1 ∈ initialIdeal m I := by
+      -- have hC : IsUnit (m.leadingCoeff (r - r')) := by
+      --   exact (isUnit_leadingCoeff_iff_nonzero m (r - r')).mpr hne
+      have h₁ : (monomial (m.degree (r - r')) (1 : k)) = C (m.leadingCoeff (r - r'))⁻¹ * (leadingTerm m (r - r')):= by
+        simp only [leadingTerm, C_mul_monomial, inv_mul_cancel₀ (MonomialOrder.leadingCoeff_ne_zero_iff.mpr hne)]
+      -- have h₁: leadingTerm m (r - r') = (MvPolynomial.C (m.leadingCoeff (r - r'))) * (monomial (m.degree (r - r')) (1 : k)) := by
+      --   simp [leadingTerm, C_mul_monomial]
+      rw [initialIdeal]
+
+      have : leadingTerm m (r - r') ∈ initialIdeal m I
+        → C (m.leadingCoeff (r - r'))⁻¹ * (leadingTerm m (r - r')) ∈ initialIdeal m I := by exact fun a ↦ Ideal.mul_mem_left (initialIdeal m I) (C (m.leadingCoeff (r - r'))⁻¹) hlt_in
+      rw [initialIdeal] at *
+      have : C (m.leadingCoeff (r - r'))⁻¹ * leadingTerm m (r - r') ∈ Ideal.span {f | ∃ g ∈ I, g ≠ 0 ∧ leadingTerm m g = f} := by exact this hlt_in
+      rw [h₁]
+      exact this
+    -- extract an exponent α dividing `m.degree d`
+    have hmono : monomial (m.degree (r - r')) 1 ∈ monomialIdeal k ↑(Finset.image (fun g ↦ m.degree g) G) := by
+      simp only [IsGroebnerBasis.initialIdeal_eq_monomialIdeal hGB, Finset.coe_image, g] at hlm_in
+      simp only [Finset.coe_image, hlm_in, g]
+    have : ∃ α ∈ (Finset.image (fun g ↦ m.degree g) G), α ≤ m.degree (r - r') := by
+      apply mem_monomialIdeal_iff_divisible.mp hmono
+    obtain ⟨α, hα⟩ := this
+    rw [Finset.mem_image] at hα
+    obtain ⟨gα, ⟨hgα_in_G, hgαlm, rfl⟩⟩ := hα.1
+    have hin : m.degree (r - r') ∈ r.support ∪ r'.support := by
+      apply Finsupp.support_sub
+      exact MonomialOrder.degree_mem_support hne
+    simp only [Finset.mem_union] at hin
+    cases hin with
+    | inl h => exact hnil (m.degree (r - r')) h gα hgα_in_G hα.2
+    | inr h => exact hnil' (m.degree (r - r')) h gα hgα_in_G hα.2
+
+variable [DecidableEq σ] in
+/--
+Proposition 1.  If `G` is a Gröbner basis for `I`, then every `f` admits
+a unique decomposition `f = g + r` with
+1. `g ∈ I`, and
+2. no term of `r` is divisible by any `LT gᵢ`.
+-/
+theorem remainder_exists_unique'
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB     : IsGroebnerBasis m I G)
   --(hG_unit : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi))
@@ -752,6 +849,8 @@ noncomputable def remainder
   (hGB : IsGroebnerBasis m I G)
   (f : MvPolynomial σ k) : MvPolynomial σ k :=
   Classical.choose (ExistsUnique.exists (remainder_exists_unique hGB f))
+
+
 
 variable [DecidableEq σ] in
 /--

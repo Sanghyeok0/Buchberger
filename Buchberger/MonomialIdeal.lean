@@ -287,58 +287,58 @@ theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
 -- Need Preorder instance for Finsupp (pointwise order)
 --instance {σ : Type*} : Preorder (σ →₀ ℕ) := by exact Finsupp.preorder
 
--- /--
--- Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
--- We split each function into its head coordinate and its tail via `succOrderEmb`.
--- -/
--- theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
---   intro n
---   induction n with
---   | zero =>
---     -- `Fin 0 → ℕ` is a singleton function space
---     apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
---     refine (wellQuasiOrderedLE_def (Fin 0 → ℕ)).mpr fun f => ⟨0,1,by simp, by simp⟩
---   | succ n ih =>
---     apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
---     refine (wellQuasiOrderedLE_def (Fin (n+1) → ℕ)).mpr fun f => by
---       -- 1) extract head sequence `ℕ → ℕ`
---       let f_headSeq : ℕ → ℕ := fun k => f k 0
---       -- ℕ is WQO since it's linear and well-founded
---       have wq_nat : @WellQuasiOrdered ℕ (· ≤ ·) := by
---         refine (wellQuasiOrderedLE_def ℕ).mp ?_
---         refine wellQuasiOrderedLE_iff_wellFoundedLT.mpr ?_
---         exact instWellFoundedLTNat
---       obtain ⟨g₁, hg₁⟩ := wq_nat.exists_monotone_subseq f_headSeq
+/--
+Dickson's lemma for `ℕ^n` (functions `Fin n → ℕ`).
+We split each function into its head coordinate and its tail via `succOrderEmb`.
+-/
+theorem Dickson_lemma_Fin : ∀ n, HasDicksonProperty (Fin n → ℕ) := by
+  intro n
+  induction n with
+  | zero =>
+    -- `Fin 0 → ℕ` is a singleton function space
+    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+    refine (wellQuasiOrderedLE_def (Fin 0 → ℕ)).mpr fun f => ⟨0,1,by simp, by simp⟩
+  | succ n ih =>
+    apply HasDicksonProperty_iff_WellQuasiOrderedLE.mpr
+    refine (wellQuasiOrderedLE_def (Fin (n+1) → ℕ)).mpr fun f => by
+      -- 1) extract head sequence `ℕ → ℕ`
+      let f_headSeq : ℕ → ℕ := fun k => f k 0
+      -- ℕ is WQO since it's linear and well-founded
+      have wq_nat : @WellQuasiOrdered ℕ (· ≤ ·) := by
+        refine (wellQuasiOrderedLE_def ℕ).mp ?_
+        refine wellQuasiOrderedLE_iff_wellFoundedLT.mpr ?_
+        exact instWellFoundedLTNat
+      obtain ⟨g₁, hg₁⟩ := wq_nat.exists_monotone_subseq f_headSeq
 
---       -- 2) build tail sequence on `Fin n → ℕ` by composing with `succOrderEmb`
---       let emb := Fin.succOrderEmb n -- Fin n ↪o Fin (n+1)
---       let f_tailSeq : ℕ → Fin n → ℕ := fun k => (f (g₁ k)) ∘ emb
+      -- 2) build tail sequence on `Fin n → ℕ` by composing with `succOrderEmb`
+      let emb := Fin.succOrderEmb n -- Fin n ↪o Fin (n+1)
+      let f_tailSeq : ℕ → Fin n → ℕ := fun k => (f (g₁ k)) ∘ emb
 
---       -- WQO for the tail by IH
---       have wq_tail : @WellQuasiOrdered (Fin n → ℕ) (· ≤ ·) := by
---         rw [HasDicksonProperty_iff_WellQuasiOrderedLE] at ih
---         exact (wellQuasiOrderedLE_def (Fin n → ℕ)).mp ih
---       obtain ⟨g₂, hg₂⟩ := wq_tail.exists_monotone_subseq f_tailSeq
+      -- WQO for the tail by IH
+      have wq_tail : @WellQuasiOrdered (Fin n → ℕ) (· ≤ ·) := by
+        rw [HasDicksonProperty_iff_WellQuasiOrderedLE] at ih
+        exact (wellQuasiOrderedLE_def (Fin n → ℕ)).mp ih
+      obtain ⟨g₂, hg₂⟩ := wq_tail.exists_monotone_subseq f_tailSeq
 
---       -- 3) combine the two subsequences
---       let i := g₁ (g₂ 0)
---       let j := g₁ (g₂ 1)
---       have hij : g₁ (g₂ 0) < g₁ (g₂ 1) := by
---         refine (OrderEmbedding.lt_iff_lt g₁).mpr ?_
---         refine (OrderEmbedding.lt_iff_lt g₂).mpr ?_
---         exact Nat.one_pos
---       have : i < j := by exact hij
---       use i, j, this
---       -- show `f i ≤ f j` pointwise
---       intro a
---       by_cases ha : a = 0
---       · -- at head index 0
---         subst ha; simp; apply hg₁; refine (OrderEmbedding.le_iff_le g₂).mpr ?_; exact
---           Nat.zero_le 1
---       · -- at tail indices >0
---         obtain ⟨k, rfl⟩ := Fin.eq_succ_of_ne_zero ha
---         simp only [Function.comp_apply]
---         apply hg₂ 0 1 (by decide)
+      -- 3) combine the two subsequences
+      let i := g₁ (g₂ 0)
+      let j := g₁ (g₂ 1)
+      have hij : g₁ (g₂ 0) < g₁ (g₂ 1) := by
+        refine (OrderEmbedding.lt_iff_lt g₁).mpr ?_
+        refine (OrderEmbedding.lt_iff_lt g₂).mpr ?_
+        exact Nat.one_pos
+      have : i < j := by exact hij
+      use i, j, this
+      -- show `f i ≤ f j` pointwise
+      intro a
+      by_cases ha : a = 0
+      · -- at head index 0
+        subst ha; simp; apply hg₁; refine (OrderEmbedding.le_iff_le g₂).mpr ?_; exact
+          Nat.zero_le 1
+      · -- at tail indices >0
+        obtain ⟨k, rfl⟩ := Fin.eq_succ_of_ne_zero ha
+        simp only [Function.comp_apply]
+        apply hg₂ 0 1 (by decide)
 
 -- /-- Dickson's lemma for `ℕ^n` (finitely supported functions on `Fin n`). -/
 -- theorem Dickson_lemma_Finsupp {n : ℕ} : HasDicksonProperty (Fin n →₀ ℕ) := by
@@ -407,3 +407,9 @@ theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
 --       use b_σ, b_σ_in_Bσ
 --       have : a_σ = (Finsupp.domCongr ↑hF).toFun a_fin := by simp [a_fin]; sorry
 --       sorry
+
+theorem Dickson_lemma_old {σ : Type*} [Fintype σ] [DecidableEq σ] : HasDicksonProperty (σ →₀ ℕ) := by
+  let n := Fintype.card σ
+  induction n with
+  | zero => sorry
+  | succ n hih => sorry
