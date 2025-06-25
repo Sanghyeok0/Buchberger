@@ -492,13 +492,13 @@ equals the leading term ideal of I.
 We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the
 Gröbner basis of the zero ideal.
 -/
-def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
+def IsGroebnerBasis' (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
   (∀ g ∈ G, g ≠ 0) ∧ G.toSet ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = initialIdeal m I
 
 variable [DecidableEq σ] in
-lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
+lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal'
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
-  (hGB : IsGroebnerBasis m I G) :
+  (hGB : IsGroebnerBasis' m I G) :
   initialIdeal m I = monomialIdeal k (G.image fun g => m.degree g) := by
   -- by hypothesis the leading‐term span equals the initial ideal
   have h_span : initialIdeal m I = Ideal.span (G.image fun g => leadingTerm m g) := by
@@ -558,7 +558,7 @@ Then $f \in I$ if and only if the remainder on division of $f$ by $G$ is zero.
 -/
 theorem mem_Ideal_iff_GB_normalForm_eq_zero'
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
-  (hGB : IsGroebnerBasis m I G)
+  (hGB : IsGroebnerBasis' m I G)
   (f : MvPolynomial σ k) :
   f ∈ I ↔ normalform_mod m (fun g hg =>
     (isUnit_leadingCoeff_iff_nonzero m g).mpr (hGB.1 g hg)) 0 f := by sorry
