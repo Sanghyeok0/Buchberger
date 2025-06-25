@@ -88,7 +88,8 @@ quad\chapter{Gr{\"o}bner Bases}
 
 \begin{corollary}\label{cor:GB_membership_test} % [Cox] 84p Corollary 2
     \uses{prop:GR_Unique_Remainder}
-    \lean{MvPolynomial.mem_ideal_iff_remainder_GB_eq_zero}
+    \lean{MvPolynomial.mem_Ideal_iff_GB_normalForm_eq_zero}
+    \leanok
     Let $G = \{g_1, \dots , g_t\}$ be a Gr{\"o}bner basis for an ideal $I \subseteq k[x_1, \dots , x_n]$
     (with respect to a given monomial order $>$) and let $f \in k[x_1, \dots , x_n]$.
     Then $f \in I$ if and only if the remainder on division of $f$ by the ordered list
