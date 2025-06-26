@@ -86,12 +86,12 @@ theorem division_algorithm_existence (m : MonomialOrder σ)
       f
 
 noncomputable def quotients (m : MonomialOrder σ)
-  (B : Set (MvPolynomial σ k)) (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
   B →₀ MvPolynomial σ k :=
   (division_algorithm_existence m hB f).choose
 
 noncomputable def normalForm (m : MonomialOrder σ)
-  (B : Set (MvPolynomial σ k)) (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
   MvPolynomial σ k :=
   (Exists.choose_spec (division_algorithm_existence m hB f)).choose
 
@@ -101,9 +101,9 @@ This lemma states that the `quotients` and `normalForm` functions satisfy the pr
 guaranteed by the division algorithm.
 -/
 lemma normalForm_spec (m : MonomialOrder σ)
-  (B : Set (MvPolynomial σ k)) (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
-  let q := quotients m B hB f
-  let r := normalForm m B hB f
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+  let q := quotients m hB f
+  let r := normalForm m hB f
   -- Property 1: The division equation
   f = (Finsupp.linearCombination _ (fun (b : B) ↦ (b : MvPolynomial σ k)) q) + r ∧
   -- Property 2: The degree condition
@@ -116,6 +116,40 @@ lemma normalForm_spec (m : MonomialOrder σ)
   let spec_r := Exists.choose_spec spec_q
   -- `spec_r` is exactly the goal of the lemma.
   exact spec_r
+
+omit [DecidableEq k] in
+/--
+This lemma states that the `quotients` and `normalForm` functions satisfy the properties
+guaranteed by the division algorithm.
+-/
+lemma normalForm_spec' (m : MonomialOrder σ)
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+  -- Property 1: The division equation
+  f = (Finsupp.linearCombination _ (fun (b : B) ↦ (b : MvPolynomial σ k)) (quotients m hB f)) + (normalForm m hB f) ∧
+  -- Property 2: The degree condition
+  (∀ (p : B), m.degree ((p : MvPolynomial σ k) * (quotients m hB f) p) ≼[m] m.degree f) ∧
+  -- Property 3: The remainder condition (irreducibility)
+  (∀ c ∈ (normalForm m hB f).support, ∀ b ∈ B, ¬ m.degree b ≤ c) := by
+  -- The proof is by applying `Exists.choose_spec` twice.
+  let H_exists := division_algorithm_existence m hB f
+  let spec_q := Exists.choose_spec H_exists
+  let spec_r := Exists.choose_spec spec_q
+  -- `spec_r` is exactly the goal of the lemma.
+  exact spec_r
+
+omit [DecidableEq k] in
+/--  If `normalForm m B hB f = 0`, then in fact
+    `f = ∑ (quotients m B hB f) • b`. -/
+theorem representation_of_f_of_normalForm_zero
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k)
+  (h0 : normalForm m hB f = 0) :
+  f = Finsupp.linearCombination _ (fun b : B ↦ (b : MvPolynomial σ k)) (quotients m hB f) := by
+  have : f = Finsupp.linearCombination _ (fun b : B ↦ (b : MvPolynomial σ k)) (quotients m hB f) + (normalForm m hB f) := by
+    apply (normalForm_spec m hB f).1
+  rw [h0, add_zero] at this
+  exact this
+
+
 
 variable (m) [DecidableEq σ] in
 /-- Definition 5. Groebner_basis
@@ -358,13 +392,11 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB : IsGroebnerBasis m I G)
   (f : MvPolynomial σ k) :
-  f ∈ I ↔ normalForm m G hGB.1 f = 0 := by
-  -- Let G_set be the set version of the Finset G
-  let G_set := G.toSet
+  f ∈ I ↔ normalForm m hGB.1 f = 0 := by
   -- The hypothesis that all elements of G are non-zero
-  have hG_nonzero : ∀ g ∈ G_set, g ≠ 0 := fun g hg => hGB.1 g hg
+  have hG_nonzero : ∀ g ∈ G.toSet, g ≠ 0 := fun g hg => hGB.1 g hg
   -- The hypothesis that all elements of G have unit leading coefficients
-  have hG_unit_lc : ∀ g ∈ G_set, IsUnit (m.leadingCoeff g) := fun g hg =>
+  have hG_unit_lc : ∀ g ∈ G.toSet, IsUnit (m.leadingCoeff g) := fun g hg =>
     (isUnit_leadingCoeff_iff_nonzero m g).mpr (hG_nonzero g hg)
 
   -- The uniqueness of the remainder is key.
@@ -388,13 +420,13 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
         simp
 
     -- 2: The decomposition given by the `normalForm` function.
-    let r_n := normalForm m G_set hG_nonzero f
+    let r_n := normalForm m hG_nonzero f
     have P_normal : (∃ g, g ∈ I ∧ f = g + r_n) ∧
         (∀ c ∈ r_n.support, ∀ gi ∈ G, ¬ m.degree gi ≤ c) := by
-      have spec := normalForm_spec m G_set hG_nonzero f
+      have spec := normalForm_spec m hG_nonzero f
       constructor
       · -- `f = g + r_n` with `g ∈ I`.
-        let q_n := quotients m G_set hG_nonzero f
+        let q_n := quotients m hG_nonzero f
         let g_n := q_n.sum fun i coeff => coeff • (i : MvPolynomial σ k)
         use g_n
         constructor
@@ -421,9 +453,9 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
   · -- Direction (←): Assume `normalForm m G hGB.1 f = 0`. We must show `f ∈ I`.
     intro h_norm_is_zero
 
-    have spec := normalForm_spec m G_set hG_nonzero f
-    let q := quotients m G_set hG_nonzero f
-    let r := normalForm m G_set hG_nonzero f
+    have spec := normalForm_spec m hG_nonzero f
+    let q := quotients m hG_nonzero f
+    let r := normalForm m hG_nonzero f
     let g := q.sum fun i coeff => coeff • (i : MvPolynomial σ k)
 
     -- The division equation is `f = g + r`.
@@ -580,15 +612,14 @@ lemma exists_S_polynomial_syzygies
         apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
       exact hps
 
-/-
-Buchberger’s Criterion (Theorem 6) says:
+variable (m) [Fintype σ] [DecidableEq σ] in
+/--
+**Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
 ideal.span G`).
-Then `G` is a Gröbner basis if and only if for all pairs of distinct polynomials
+Then `G` is a Gröbner basis if and only if for  all pairs of distinct polynomials
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
-
-variable (m) [Fintype σ] [DecidableEq σ] in
 theorem Buchberger_criterion
   {I : Ideal (MvPolynomial σ k)}
   {G : Finset (MvPolynomial σ k)}
@@ -598,8 +629,30 @@ theorem Buchberger_criterion
     (∀ (g₁ g₂ : MvPolynomial σ k),
       g₁ ∈ G →
       g₂ ∈ G →
-      g₁ ≠ g₂ → normalForm m G hG (S_polynomial m g₁ g₂) = 0) := by sorry
+      g₁ ≠ g₂ → normalForm m hG (S_polynomial m g₁ g₂) = 0) := by
+      constructor
+      · intro hGB g₁ g₂ hg₁ hg₂ hneq
+        apply (mem_Ideal_iff_GB_normalForm_eq_zero hGB _).mp
+        rw [S_polynomial]
+        have hG_sub_I : G.toSet ⊆ I := by rw [hGI]; exact Ideal.subset_span
+        exact sub_mem (Ideal.mul_mem_left _ _ (hG_sub_I hg₁)) (Ideal.mul_mem_left _ _ (hG_sub_I hg₂))
+      · intro hS_poly
+        rw [IsGroebnerBasis]
+        constructor
+        · exact hG
+        · constructor
+          · rw [hGI]; exact Ideal.subset_span
+          · ext LTf
+            constructor
+            · sorry
+            · intro h_LTf_inI
+              rw [initialIdeal] at h_LTf_inI
+              have : ∃ f ∈ I, m.leadingTerm f = LTf := by sorry
+              obtain  ⟨f, hfI, h_LTf⟩ := this
+              obtain ⟨c, hc, hsum⟩ := Submodule.mem_span_set.mp (by rw [hGI] at hfI; apply hfI)
+              sorry
 
+-- and now `f = ∑ q b • b` is exactly the representation you need.
 -- /-forward 증명이 지저분-/
 -- variable (m) [Fintype σ] [DecidableEq σ] in
 -- theorem Buchberger_criterion_old
