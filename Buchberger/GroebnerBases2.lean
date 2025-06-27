@@ -16,6 +16,10 @@ set_option maxHeartbeats 0
 
 /-
 ## Reference : [Becker-Weispfenning1993] [Cox, Little, and O'Shea 1997]
+Following [Becker–Weispfenning 1993], we intend to define a more general normal form.
+To this end, we imported the Order2 file.
+
+Trying to define normalform
 -/
 
 section Semiring
