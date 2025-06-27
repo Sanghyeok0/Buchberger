@@ -631,12 +631,14 @@ theorem Buchberger_criterion
       g₂ ∈ G →
       g₁ ≠ g₂ → normalForm m hG (S_polynomial m g₁ g₂) = 0) := by
       constructor
-      · intro hGB g₁ g₂ hg₁ hg₂ hneq
+      · -- (⇒)
+        intro hGB g₁ g₂ hg₁ hg₂ hneq
         apply (mem_Ideal_iff_GB_normalForm_eq_zero hGB _).mp
         rw [S_polynomial]
         have hG_sub_I : G.toSet ⊆ I := by rw [hGI]; exact Ideal.subset_span
         exact sub_mem (Ideal.mul_mem_left _ _ (hG_sub_I hg₁)) (Ideal.mul_mem_left _ _ (hG_sub_I hg₂))
-      · intro hS_poly
+      · -- (⇐)
+        intro hS_poly
         rw [IsGroebnerBasis]
         constructor
         · exact hG
