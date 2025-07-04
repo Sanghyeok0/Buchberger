@@ -139,6 +139,18 @@
   \leanok %확인 필요
 \end{proof}
 
+\begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
+  \lean{MonomialOrder.degree_sum_le}
+  \leanok %확인 필요
+  Let $f, g \in k[x_1, \dots, x_n]$ be nonzero polynomials. Then:
+  \upshape 
+  \begin{enumerate}[label=(\roman*)]
+      \item $\operatorname{multideg}(fg) = \operatorname{multideg}(f) + \operatorname{multideg}(g)$.
+      \item If $f + g \neq 0$, then $\operatorname{multideg}(f + g) \le \max(\operatorname{multideg}(f), \operatorname{multideg}(g))$. 
+        If, in \textit{addition}, $\operatorname{multideg}(f) \neq \operatorname{multideg}(g)$, then \textit{equality occurs}.
+  \end{enumerate}
+\end{lemma}
+
 \begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
     \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}
     \leanok %확인 필요
