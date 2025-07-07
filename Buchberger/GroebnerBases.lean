@@ -644,6 +644,44 @@ lemma exists_S_polynomial_syzygies
         apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
       exact hps
 
+variable (m) [Fintype σ] [DecidableEq σ] in
+lemma leadingTerm_sum_of_max_degree'
+  {f : MvPolynomial σ k}
+  (H : MvPolynomial σ k → MvPolynomial σ k) (G : Finset (MvPolynomial σ k))
+  (h_repr : f = ∑ g ∈ G, H g * g)
+  (h_deg_eq_max : m.degree f = G.sup (fun g => m.degree (H g * g))) :
+  leadingTerm m f = ∑ g ∈ G.filter (fun g => m.degree (H g * g) = m.degree f), leadingTerm m (H g * g) := by
+    calc
+    m.leadingTerm f = monomial (m.degree f) (m.leadingCoeff f) := by rw [leadingTerm]
+    _ = monomial (G.sup (fun g => m.degree (H g * g))) (m.leadingCoeff (∑ g ∈ G, H g * g)) := by rw [h_deg_eq_max, h_repr]
+    _ = ∑ g ∈ G.filter (fun g => m.degree (H g * g) = m.degree f), leadingTerm m (H g * g) := by sorry
+
+  -- rw [leadingTerm, Finset.sum_filter]
+
+
+  -- | empty => contradiction
+  -- | insert a s ha ih =>
+  --   rw [Finset.sup_insert]
+  --   -- The sup is max (a, s.sup id).
+  --   -- If s is empty, sup is just a.
+  --   by_cases hs_empty : s = ∅
+  --   · subst hs_empty
+  --     simp
+  --   · -- If s is not empty, we can use induction.
+  --     have s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty hs_empty
+  --     specialize ih s_nonempty
+  --     -- The sup is max(a, s.sup id).
+  --     -- `ih` tells us `s.sup id ∈ s`.
+  --     -- We need to show `max(a, s.sup id)` is in `insert a s`.
+  --     cases le_total a (s.sup id) with
+  --     | inl h_le => -- max is s.sup id
+  --       rw [max_eq_right h_le]
+  --       apply Finset.mem_insert_of_mem
+  --       exact ih
+  --     | inr h_ge => -- max is a
+  --       rw [max_eq_left h_ge]
+  --       apply Finset.mem_insert_self
+
 
 variable (m) [Fintype σ] [DecidableEq σ] in
 /--
@@ -688,44 +726,146 @@ theorem Buchberger_criterion
           exact ⟨by exact hG_sub_I hg_in_G, by exact hG g hg_in_G, rfl⟩
 
         -- The difficult inclusion: `initialIdeal m I ⊆ Ideal.span (LT(G))`.
-        -- This means for any non-zero `f ∈ I`, we must show `LT(f) ∈ <LT(G)>`.
+        -- This means for any non-zero `f ∈ I`, we must show `LT(f) ∈ ⟨LT(G)⟩`.
         rw [initialIdeal, Ideal.span_le]
         rw [Set.subset_def]
         intro LTf h_LTf_in_initI
         obtain ⟨f, hfI, hf_ne, hLTf⟩ := h_LTf_in_initI
+        rw [←hLTf]; clear hLTf; clear LTf
         by_cases hG_empty : G = ∅
         · simp [hG_empty] at hGI
           simp [hGI] at hfI
           exact False.elim (hf_ne hfI)
         rw [hGI] at hfI
         rw [Ideal.span, Submodule.mem_span_finset] at hfI
-        obtain ⟨H, f_reps⟩ := hfI
-        have : Finset.image (fun g ↦ m.degree (H g * g)) G ≠ ∅ := by
-          apply Finset.nonempty_iff_ne_empty.mp
+        -- have h_image_ne_empty :
+        --   ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
+        --     (Function.support H' ⊆ G ∧ f = (∑ g ∈ G, H' g * g)) →
+        --   Finset.image (fun g ↦ m.degree (H' g * g)) G ≠ ∅ := by
+        --   intro H' f_repr
+        --   apply Finset.nonempty_iff_ne_empty.mp
+        --   rw [Finset.image_nonempty]
+        --   exact Finset.nonempty_iff_ne_empty.mpr hG_empty
+        -- have h_deg_ineq :
+        --   ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
+        --     (Function.support H' ⊆ G ∧ f = (∑ g ∈ G, H' g * g)) →
+        --     m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (Finset.nonempty_of_ne_empty ?_) id := by
+        --     intro H' f_repr
+        --     rw [f_repr.2]
+        --     apply le_trans (m.degree_sum_le G (fun g => H' g * g))
+        --     apply m.toSyn_monotone
+        --     apply le_of_eq
+        --     let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
+        --     have h_s'_nonempty : s'.Nonempty := by
+        --       rw [Finset.image_nonempty]
+        --       exact Finset.nonempty_iff_ne_empty.mpr hG_empty
+        --     rw [Finset.sup'_eq_sup h_s'_nonempty id]
+        --     rw [Finset.sup_image]
+        --     simp only [CompTriple.comp_eq]
+        --     show Finset.image (fun g ↦ m.degree (H' g * g)) G ≠ ∅
+        --     sorry
+        have h_image_nonempty_of_repr (H' : MvPolynomial σ k → MvPolynomial σ k) :
+            (Finset.image (fun g ↦ m.degree (H' g * g)) G).Nonempty := by
           rw [Finset.image_nonempty]
-          exact Finset.nonempty_iff_ne_empty.mpr hG_empty
-        have h_deg_ineq : m.degree f ≼[m] (G.image (fun g => m.degree (H g * g))).sup' (Finset.nonempty_of_ne_empty this) id := by
-          rw [←f_reps.2]
-          apply le_trans (m.degree_sum_le G (fun g => H g * g))
-          apply m.toSyn_monotone
-          apply le_of_eq
-          let s' := Finset.image (fun g ↦ m.degree (H g * g)) G
-          have h_s'_nonempty : s'.Nonempty := by
-            rw [Finset.image_nonempty]
-            exact Finset.nonempty_iff_ne_empty.mpr hG_empty
-          rw [Finset.sup'_eq_sup h_s'_nonempty]
-          rw [Finset.sup_image]
-          simp only [CompTriple.comp_eq]
+          exact Finset.nonempty_of_ne_empty hG_empty
 
-        -- Let δ be the maximal degree in our given representation.
-        let δ := G.sup (fun g => m.degree (H g * g))
-        let P (δ' : σ →₀ ℕ) : Prop :=
-          ∀ (f' : MvPolynomial σ k) (h' : MvPolynomial σ k → MvPolynomial σ k),
-            -- Given f' and a representation h'
-            (f' ∈ I ∧ f' ≠ 0 ∧ Function.support h' ⊆ G ∧ f' = ∑ g ∈ G, h' g * g) →
-            -- such that the maximal degree of the representation is δ'
-            (G.sup (fun g => m.degree (h' g * g)) = δ') →
-              leadingTerm m f' ∈ Ideal.span (G.image (fun g => leadingTerm m g))
+        -- Now, let's prove the inequality holds for any representation.
+        have h_deg_ineq_for_any_repr :
+          ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
+            (f = (∑ g ∈ G, H' g * g)) →
+            m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (h_image_nonempty_of_repr H') id := by
+            intro H' h_f_repr
+            rw [h_f_repr]
+            apply le_trans (m.degree_sum_le G (fun g => H' g * g))
+            apply m.toSyn_monotone
+            apply le_of_eq
+            let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
+            rw [Finset.sup'_eq_sup (h_image_nonempty_of_repr H') id]
+            rw [Finset.sup_image]
+            simp only [CompTriple.comp_eq]
+
+
+        -- have h_deg_ineq' : (∃ (H' : MvPolynomial σ k → MvPolynomial σ k),
+        --   Function.support H ⊆ G ∧ f = (∑ g ∈ G, H g * g)) →
+        --   m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (Finset.nonempty_of_ne_empty ?_) id := by
+        --   intro f_repr
+        --   obtain ⟨H', f_reps'⟩ := f_repr
+        --   rw [f_reps'.2]
+        --   apply le_trans (m.degree_sum_le G (fun g => H' g * g))
+        --   apply m.toSyn_monotone
+        --   apply le_of_eq
+        --   let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
+        --   have h_s'_nonempty : s'.Nonempty := by
+        --     rw [Finset.image_nonempty]
+        --     exact Finset.nonempty_iff_ne_empty.mpr hG_empty
+        --   · rw [Finset.sup'_eq_sup h_s'_nonempty id]
+        --   rw [Finset.sup_image]
+        --   --simp only [CompTriple.comp_eq]
+        --   have : (∃ H, Function.support H ⊆ ↑G ∧ f = ∑ g ∈ G, H g * g) := by
+        --     use H'
+        --   sorry
+
+
+        let RepDegrees (f : MvPolynomial σ k) : Set (σ →₀ ℕ) :=
+          { δ | ∃ (H : MvPolynomial σ k → MvPolynomial σ k),
+              Function.support H ⊆ G ∧
+              f = (∑ g ∈ G, H g * g) ∧
+              δ = G.sup (fun g => m.degree (H g * g)) }
+
+        obtain ⟨H, f_reps⟩ := hfI
+        -- need one representation H and f_reps here so that makes RepDegrees nonempty.
+
+        have h_RepDegrees_nonempty : (RepDegrees f).Nonempty := by
+          use G.sup (fun g => m.degree (H g * g))
+          use H
+          exact ⟨f_reps.1, f_reps.2.symm, rfl⟩
+        clear f_reps; clear H
+
+
+
+        let RepDegreesSyn : Set m.syn := m.toSyn '' (RepDegrees f)
+
+        have h_RepDegreesSyn_nonempty : RepDegreesSyn.Nonempty := by
+          exact Set.image_nonempty.mpr h_RepDegrees_nonempty
+
+        let δ_syn_min := WellFounded.min (by exact wellFounded_lt) RepDegreesSyn h_RepDegreesSyn_nonempty
+        let δ_min := m.toSyn.symm δ_syn_min
+        have h_δ_min_in_RepDegrees : δ_min ∈ RepDegrees f := by
+          dsimp [δ_min]
+          have : δ_syn_min ∈ RepDegreesSyn := by
+            exact WellFounded.min_mem wellFounded_lt RepDegreesSyn h_RepDegreesSyn_nonempty
+          rw [Set.mem_image m.toSyn (RepDegrees f)] at this
+          obtain ⟨x, hx_in_Rep, hx_maps_to_min⟩ := this
+          rw [← hx_maps_to_min]
+          rw [m.toSyn.symm_apply_apply]
+          exact hx_in_Rep
+
+
+        have f_deg_le : m.degree f ≼[m] δ_min := by
+          obtain ⟨h_min, h_supp_min, h_f_eq_min, h_δ_min_eq_repr⟩ := h_δ_min_in_RepDegrees
+          rw [h_f_eq_min]
+          apply le_trans (m.degree_sum_le G (fun g => h_min g * g))
+          rw [h_δ_min_eq_repr]
+
+        by_cases h_deg_eq_δ : m.degree f = δ_min
+        obtain ⟨H_min, H_supp_min, h_f_eq_min, h_δ_min_eq_repr⟩ := h_δ_min_in_RepDegrees
+
+        have h_sup_is_achieved : ∃ g ∈ G, m.degree (H_min g * g) = δ_min := by
+          by_contra h_not_achieved
+
+          -- Our assumption is that for all `g`, the degree is not equal to the sup.
+          push_neg at h_not_achieved
+
+          -- Let `d g := m.degree (h_min g * g)`.
+          let d := fun g => m.degree (H_min g * g)
+          -- We know `δ_min = G.sup d`.
+          rw [h_δ_min_eq_repr] at h_not_achieved
+
+          -- We also know that for any `g`, `d g ≤ G.sup d`.
+          have h_le_sup : ∀ g ∈ G, d g ≼[m] G.sup d := by
+            sorry
+          sorry
+        sorry
         sorry
 
 
