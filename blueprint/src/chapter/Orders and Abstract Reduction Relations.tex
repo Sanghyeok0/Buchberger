@@ -150,6 +150,17 @@
   \end{enumerate}
 \end{lemma}
 
+\begin{lemma}\label{lem:degree_sum_le_syn}
+  \lean{MonomialOrder.degree_sum_le_syn}
+  \leanok %확인 필요
+  Let $\iota$ be an index set and $s \subset \iota$ a finite subset. For each $i \in s$, let $h_i \in k[x_1,\dots,x_n]$. 
+  Then the following inequality holds:
+  \[
+  \operatorname{multideg}\left(\sum_{i \in s} h_i\right) \le \max_{i \in s} \left\{ \operatorname{multideg}(h_i) \right\}
+  \]
+  where the $\max$ is taken with respect to the monomial order.
+\end{lemma}
+
 \begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
     \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}
     \leanok %확인 필요
