@@ -22,22 +22,6 @@ To this end, we imported the Order2 file.
 Trying to define normalform
 -/
 
-section Semiring
-
-variable {R : Type*} [CommSemiring R]
-
-/-- The multidegree of the leading term `LT(f)` is equal to the degree of `f`. -/
-lemma degree_leadingTerm (f : MvPolynomial σ R) :
-    m.degree (leadingTerm m f) = m.degree f := by
-  have : Decidable (m.leadingCoeff f = 0) := by exact Classical.propDecidable (m.leadingCoeff f = 0)
-  rw [leadingTerm, m.degree_monomial]
-  split_ifs with h_coeff_zero
-  · rw [m.leadingCoeff_eq_zero_iff] at h_coeff_zero
-    rw [h_coeff_zero, m.degree_zero]
-  · rfl
-
-end Semiring
-
 section CommRing
 
 variable {R : Type*} [CommRing R]
