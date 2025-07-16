@@ -1,5 +1,7 @@
 import Mathlib.RingTheory.MvPolynomial.Groebner
 import Mathlib.RingTheory.Noetherian.Defs
+import Mathlib.RingTheory.Ideal.Operations
+import Mathlib.LinearAlgebra.Span.Defs
 -- import Mathlib.RingTheory.Polynomial.Basic
 -- import Mathlib.Algebra.Ring.Defs
 import Buchberger.MonomialIdeal
@@ -22,27 +24,13 @@ section Semiring
 
 variable {R : Type*} [CommSemiring R]
 
-/-- The multidegree of the leading term `LT(f)` is equal to the degree of `f`. -/
-lemma degree_leadingTerm (f : MvPolynomial σ R) :
-    m.degree (leadingTerm m f) = m.degree f := by
-  have : Decidable (m.leadingCoeff f = 0) := by exact Classical.propDecidable (m.leadingCoeff f = 0)
-  rw [leadingTerm, m.degree_monomial]
-  split_ifs with h_coeff_zero
-  · rw [m.leadingCoeff_eq_zero_iff] at h_coeff_zero
-    rw [h_coeff_zero, m.degree_zero]
-  · rfl
-
 variable {ι : Type*} [DecidableEq ι] [LinearOrder ι] [OrderBot ι] in
 lemma degree_sum_le_max (s : Finset ι) (hs : s.Nonempty) (f : ι → MvPolynomial σ R) :
     ∑ i ∈ s, (f i).support.sup m.toSyn ≤ (s.image (fun i => (f i).support.sup m.toSyn)).max' (by apply Finset.image_nonempty.mpr hs) := by
   -- We proceed by induction on the finset `s`.
   induction s using  Finset.induction_on with
   | empty =>
-    simp [m.degree_zero]
-    rw [←m.bot_eq_zero]
-    exact
-      StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl
-      ((∅ : Finset m.syn).max' (id (Eq.refl (∅ : Finset m.syn)) ▸ (@Finset.image_nonempty _ _ _ (fun i => (f i).support.sup m.toSyn) ∅).mpr hs))
+    simp only [Finset.sum_empty, Finset.image_empty, zero_le]
   | insert i s hi_not_in_s ih =>
     by_cases h_s_empty : s = ∅
     · -- If s is empty, then `insert i s` is just `{i}`.
@@ -103,8 +91,8 @@ theorem toSyn_degree_eq_sup_support (f : MvPolynomial σ R) :
   exact AddEquiv.apply_symm_apply m.toSyn (f.support.sup ⇑m.toSyn)
 
 
-variable {ι : Type*} in
-lemma degree_sum_le_syn (s : Finset ι) (h : ι → MvPolynomial σ R) :
+variable (m) in
+lemma degree_sum_le_syn {ι : Type*} (s : Finset ι) (h : ι → MvPolynomial σ R) :
     m.toSyn (m.degree (∑ i ∈ s, h i)) ≤ s.sup (fun i => m.toSyn (m.degree (h i))) := by
   have : s.sup (fun i => m.toSyn (m.degree (h i))) = m.toSyn (m.toSyn.symm (s.sup fun i ↦ m.toSyn (m.degree (h i)))) := by
     exact Eq.symm (AddEquiv.apply_symm_apply m.toSyn (s.sup fun i ↦ m.toSyn (m.degree (h i))))
@@ -124,8 +112,8 @@ lemma degree_sum_le (s : Finset ι) (f : ι → MvPolynomial σ R) :
   -- We proceed by induction on the finset `s`.
   induction s using Finset.induction_on with
   | empty =>
-    simp [m.degree_zero]
-    exact StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl (m.toSyn ⊥)
+    simp only [Finset.sum_empty, m.degree_zero, map_zero, Finset.sup_empty, zero_le]
+    --exact StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl (m.toSyn ⊥)
   | insert i s hi_not_in_s ih =>
     by_cases h_s_empty : s = ∅
     · -- If s is empty, then `insert i s` is just `{i}`.
@@ -770,7 +758,7 @@ lemma leadingTerm_sum_of_max_degree'
 
 variable (m) [Fintype σ] [DecidableEq σ] in
 /--
-**Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
+**(Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
 ideal.span G`).
 Then `G` is a Gröbner basis if and only if for  all pairs of distinct polynomials
@@ -819,42 +807,12 @@ theorem Buchberger_criterion'
         intro LTf h_LTf_in_initI
         obtain ⟨f, hfI, hf_ne, hLTf⟩ := h_LTf_in_initI
         rw [←hLTf]; clear hLTf; clear LTf
-
+        have hf_in_I := hfI
         rw [hGI, Ideal.span, Submodule.mem_span_finset] at hfI
         have h_image_nonempty_of_repr (H' : MvPolynomial σ k → MvPolynomial σ k) :
             (Finset.image (fun g ↦ m.degree (H' g * g)) G).Nonempty := by
           rw [Finset.image_nonempty]
           exact Finset.nonempty_of_ne_empty hG_empty
---(f.support.sup m.toSyn)
-        -- Now, let's prove the inequality holds for any representation.
-        -- have h_deg_ineq_for_any_repr :
-        --   ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
-        --     (f = (∑ g ∈ G, H' g * g)) →
-        --     f.support.sup m.toSyn ≤ (G.image (fun g => (H' g * g).support.sup m.toSyn)).max' (h_image_nonempty_of_repr H') := by
-        --     intro H' h_f_repr
-        --     rw [h_f_repr]
-        --     sorry
-        --     -- apply le_trans (m.degree_sum_le G (fun g => H' g * g))
-        --     -- apply m.toSyn_monotone
-        --     -- apply le_of_eq
-        --     -- let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
-        --     -- rw [Finset.sup'_eq_sup (h_image_nonempty_of_repr H') id]
-        --     -- rw [Finset.sup_image]
-        --     -- simp only [CompTriple.comp_eq]
-        -- Now, let's prove the inequality holds for any representation.
-        -- have h_deg_ineq_for_any_repr :
-        --   ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
-        --     (f = (∑ g ∈ G, H' g * g)) →
-        --     m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (h_image_nonempty_of_repr H') id := by
-        --     intro H' h_f_repr
-        --     rw [h_f_repr]
-        --     apply le_trans (m.degree_sum_le G (fun g => H' g * g))
-        --     apply m.toSyn_monotone
-        --     apply le_of_eq
-        --     let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
-        --     rw [Finset.sup'_eq_sup (h_image_nonempty_of_repr H') id]
-        --     rw [Finset.sup_image]
-        --     simp only [CompTriple.comp_eq]
 
         obtain ⟨H, h_H_supp, h_f_eq⟩ := hfI
 
@@ -897,16 +855,169 @@ theorem Buchberger_criterion'
           refine le_of_eq ?_
           rw [eq_comm]
           apply Finset.sup_image
+        by_cases h_min_le_bot : m.toSyn δ_min ≤ ⊥
+        · have h_min_eq_bot : m.toSyn δ_min = ⊥ := by exact le_bot_iff.mp h_min_le_bot
+          have : m.toSyn (m.degree f) = ⊥ := by
+            rw [h_min_eq_bot] at f_deg_le
+            exact le_bot_iff.mp f_deg_le
+          have f_deg_0 : (m.degree f) = 0 := by exact (AddEquiv.map_eq_zero_iff m.toSyn).mp this
+          rw [leadingTerm, f_deg_0]
+          have h_f_is_const : f = C (m.leadingCoeff f) := eq_C_of_degree_eq_zero f_deg_0
+          simp
+          --MonomialOrder.eq_C_of_degree_eq_zero f_deg_0
 
-        by_cases h_deg_eq_δ : m.degree f = δ_min
-        have h_sup_is_achieved : ∃ g ∈ G, m.degree (h_min g * g) = δ_min := by
+          have h_I_is_top : I = ⊤ := by
+            have hf_unit : IsUnit f := by
+              rw [h_f_is_const]
+              refine IsUnit.map C (by exact isUnit_leadingCoeff.mpr hf_ne)
+            rw [Ideal.eq_top_of_isUnit_mem I hf_in_I hf_unit]
+          have h_exists_const_in_G : ∃ g₀ ∈ G, IsUnit g₀ := by
+            by_contra h_all_non_units
+            push_neg at h_all_non_units
+            have h_span_proper : Ideal.span (G : Set (MvPolynomial σ k)) ≠ ⊤ := by sorry
+
+            -- have I_unit : IsUnit I := Ideal.isUnit_iff.mpr h_I_is_top
+            -- dsimp [IsUnit] at I_unit
+            -- obtain ⟨u,hu⟩ := I_unit
+            sorry
+            -- rw [hGI, Ideal.eq_top_iff_one, Ideal.span, Submodule.mem_span_finset] at h_I_is_top
+            -- obtain ⟨h_unit, h_supp_unit, h_1_eq_unit⟩ := h_I_is_top
           sorry
-        sorry
-        sorry
+        push_neg at h_min_le_bot
+        by_cases h_deg_eq_δ_syn : m.toSyn (m.degree f) = (m.toSyn δ_min)
+        · have h_sup_is_achieved : ∃ g ∈ G, (m.toSyn (m.degree (h_min g * g))) = (m.toSyn δ_min) := by
+            by_contra h_not_achieved
+            push_neg at h_not_achieved
+            have h_g_lt_δ : ∀ g ∈ G, m.degree (h_min g * g) ≺[m] δ_min := by
+              intro g hg
+              apply lt_of_le_of_ne ?_ (h_not_achieved g hg)
+              dsimp [δ_min]
+              rw [h_δ_syn_min_eq]
+              simp only [Finset.sup_image, CompTriple.comp_eq, AddEquiv.apply_symm_apply]
+              exact @Finset.le_sup _ _ _ _ G (m.toSyn ∘ fun g ↦ m.degree (h_min g * g)) _ hg
+            clear h_not_achieved
+            rw [h_f_eq_min] at h_deg_eq_δ_syn
+            have h_deg_lt_δ : m.degree (∑ g ∈ G, h_min g * g) ≺[m] δ_min := by
+              apply LE.le.trans_lt (m.degree_sum_le_syn G (fun i ↦ (h_min i) * i))
+              rw [@Finset.sup_lt_iff _ _ _ _ G (fun i ↦ m.toSyn (m.degree (h_min i * i))) (m.toSyn δ_min) h_min_le_bot]
+              exact h_g_lt_δ
+            exact (Eq.not_lt h_deg_eq_δ_syn) h_deg_lt_δ
+          obtain ⟨gᵢ,⟨hgᵢG, hgᵢ_δ_min_syn⟩⟩ := h_sup_is_achieved
+          · have hgᵢ_δ_min : (m.degree (h_min gᵢ * gᵢ)) =  δ_min := by apply m.toSyn.injective; exact hgᵢ_δ_min_syn
+            have h_deg_eq_δ : (m.degree f) = δ_min := by apply m.toSyn.injective; exact h_deg_eq_δ_syn
+            have h_nzero_h_min_gᵢ : h_min gᵢ ≠ 0 := by
+              by_contra h_zero_h_min_gᵢ
+              rw [h_zero_h_min_gᵢ] at hgᵢ_δ_min_syn
+              simp only [zero_mul, degree_zero, map_zero] at hgᵢ_δ_min_syn
+              rw [←hgᵢ_δ_min_syn] at h_min_le_bot
+              simp only [MonomialOrder.bot_eq_zero, lt_self_iff_false] at h_min_le_bot
+            have : m.leadingTerm f = m.leadingTerm (h_min gᵢ * gᵢ) * C ((m.leadingCoeff f) * (m.leadingCoeff (h_min gᵢ * gᵢ))⁻¹):= by
+              rw [leadingTerm, leadingTerm, h_deg_eq_δ, hgᵢ_δ_min, mul_comm]
+              rw [MvPolynomial.C_mul_monomial, mul_assoc]
+              --nth_rw 2 [mul_comm]
+              rw [leadingCoeff_mul h_nzero_h_min_gᵢ (hG gᵢ hgᵢG), mul_inv_rev, mul_assoc]
+              nth_rw 3 [←mul_assoc]
+
+              rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr h_nzero_h_min_gᵢ), one_mul]
+              rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr (hG gᵢ hgᵢG)), mul_one]
+            rw [this]
+            apply Ideal.mul_mem_right
+            rw [leadingTerm_mul (h_nzero_h_min_gᵢ) (hG gᵢ hgᵢG)]
+            apply Ideal.mul_mem_left
+            apply Submodule.mem_span_of_mem
+            apply Finset.mem_image_of_mem _ hgᵢG
+        · have f_deg_lt : m.toSyn (m.degree f) < m.toSyn δ_min := by
+            apply (LE.le.lt_iff_ne' f_deg_le).mpr (by exact fun a ↦ h_deg_eq_δ_syn (id (Eq.symm a)))
+          clear f_deg_le; clear h_deg_eq_δ_syn
+          let G_δ := G.filter (fun g => m.toSyn (m.degree (h_min g * g)) = δ_syn_min)
+          have h_f_split : f = (∑ g ∈ G_δ, h_min g * g) + (∑ g ∈ G \ G_δ, h_min g * g) := by
+            rw [h_f_eq_min]
+            have : G = G_δ ∪ (G \ G_δ) := by
+              refine Eq.symm (Finset.union_sdiff_of_subset ?_)
+              exact Finset.filter_subset (fun g ↦ m.toSyn (m.degree (h_min g * g)) = δ_syn_min) G
+            nth_rw 1 [this]
+            rw [Finset.sum_union (by exact Finset.disjoint_sdiff)]
+          have : G \ G_δ = G.filter (fun g => m.toSyn (m.degree (h_min g * g)) < δ_syn_min) := by
+            dsimp [G_δ]
+            -- We also know `m.degree (h_min g * g) ≼[m] δ_min` because δ_min is the maximum.
+            have h_le : ∀ g ∈ G, m.toSyn (m.degree (h_min g * g)) ≤ δ_syn_min := by
+              intro h hg
+              rw [h_δ_syn_min_eq]
+              rw [Finset.sup_image]
+              simp only [CompTriple.comp_eq]
+              exact @Finset.le_sup _ _ _ _ _ (m.toSyn ∘ fun g ↦ m.degree (h_min g * g)) _ (hg)
+            ext g
+            -- We use `Finset.mem_filter` and `Finset.mem_sdiff` to simplify the goal.
+            simp only [Finset.mem_filter, Finset.mem_sdiff]
+            constructor
+            · -- Direction (→): Assume `g ∈ G \ G_δ`.
+              intro h_left
+              -- `h_left` is `⟨g ∈ G, g ∉ G_δ⟩`.
+              -- We need to prove `g ∈ G` (which is `h_left.1`) and `m.toSyn (d g) < δ_syn_min`.
+              refine ⟨h_left.1, ?_⟩
+
+              -- We know `g ∉ G_δ`, which means `¬(m.toSyn (d g) = δ_syn_min)`.
+              have h_ne : ¬ (m.toSyn (m.degree (h_min g * g)) = δ_syn_min) := by
+                simp only [not_and] at h_left
+                apply h_left.2 h_left.1
+
+              -- `a ≤ b` and `a ≠ b` implies `a < b` for a linear order.
+              exact lt_of_le_of_ne (h_le g h_left.1) h_ne
+
+            · -- Direction (←): Assume `g ∈ G.filter (...)`.
+              intro h_right
+              -- `h_right` is `⟨g ∈ G, m.toSyn (d g) < δ_syn_min⟩`.
+              -- We need to prove `g ∈ G \ G_δ`, which is `g ∈ G` and `g ∉ G_δ`.
+              refine ⟨h_right.1, ?_⟩
+
+              -- To show `g ∉ G_δ`, we need to show `¬(m.toSyn (d g) = δ_syn_min)`.
+              -- This follows directly from `m.toSyn (d g) < δ_syn_min`.
+              simp only [not_and]
+              intro hg
+              exact ne_of_lt h_right.2
+
+          have h_h_min_decomp : ∀ g, h_min g = leadingTerm m (h_min g) + (h_min g - leadingTerm m (h_min g)) := by
+            intro g
+            exact (add_sub_cancel _ _).symm
+
+          let P₁ := ∑ g ∈ G_δ, leadingTerm m (h_min g) * g
+          let P₂ := ∑ g ∈ G_δ, (h_min g - leadingTerm m (h_min g)) * g
+          let P₃ := ∑ g ∈ G \ G_δ, h_min g * g
+
+          have h_f_is_P123 : f = P₁ + P₂ + P₃ := by
+            -- Start with the split sum for f.
+            rw [h_f_split]
+            -- Unfold S_δ.
+            -- Rewrite the first sum using its decomposition.
+            -- Unfold the definitions of P₁, P₂, P₃.
+            dsimp [P₁, P₂, P₃]
+            -- The goal is now `(a + b) + c = a + b + c`, which is true by associativity.
+            rw [add_left_inj]
+            rw [←Finset.sum_add_distrib]
+            apply Finset.sum_congr rfl
+            intro x
+            rw [sub_mul]
+            exact fun a ↦ Eq.symm (add_sub_cancel (m.leadingTerm (h_min x) * x) (h_min x * x))
+
+          let p : MvPolynomial σ k → MvPolynomial σ k := fun g ↦ leadingTerm m (h_min g) * g
+
+          -- We need to verify the hypotheses for `exists_S_polynomial_syzygies`.
+          have hp_deg : ∀ g ∈ G_δ, m.toSyn (m.degree (p g)) = m.toSyn δ_min := by
+            intro g hg
+            dsimp [p]
+            simp only [δ_min, AddEquiv.apply_symm_apply]
+            dsimp [G_δ] at hg
+            sorry
+          have hp_sum_deg_lt : m.degree P₁ < δ_min := by
+            sorry
+
+          sorry
+
+
 
 variable (m) [Fintype σ] [DecidableEq σ] in
 /--
-**Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
+**(Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
 ideal.span G`).
 Then `G` is a Gröbner basis if and only if for  all pairs of distinct polynomials
