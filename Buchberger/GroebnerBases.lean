@@ -591,47 +591,150 @@ noncomputable def S_polynomial (f g : MvPolynomial σ k) : MvPolynomial σ k :=
   monomial (m.degree f ⊔ m.degree g - m.degree f) ((m.leadingCoeff f)⁻¹ : k) * f
   - monomial (m.degree f ⊔ m.degree g - m.degree g) (( m.leadingCoeff g)⁻¹ : k) * g
 
-lemma exists_S_polynomial_syzygies_indexed
-    {ι : Type*} [DecidableEq ι]
-    (δ : σ →₀ ℕ)
-    (hδ : 0 ≺[m] δ)
-    (I : Finset ι) (p : ι → MvPolynomial σ k) -- An indexed family
-    (hp_deg : ∀ i ∈ I, m.degree (p i) = δ)
-    (hsum   : m.degree (∑ i ∈ I, p i) ≺[m] δ)
-    : ∃ (c : ι × ι → k),
-      ∑ i ∈ I, p i = ∑ ij ∈ I.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
-    by_cases h_empty : I = ∅
-    · rw [h_empty]
-      simp only [Finset.sum_empty, Finset.offDiag_empty, exists_const]
-    let I_list := I.toList
-    have : I.toList ≠ [] := by apply Finset.Nonempty.toList_ne_nil (Finset.nonempty_iff_ne_empty.mpr h_empty)
-    let s := I_list.getLast this
-    -- have : Membership (List ι) (List ι) := by apply?
-    have : s ∈ I_list := by exact List.getLast_mem this
-    sorry
-
-lemma exists_S_polynomial_syzygies_indexed₀
+omit [DecidableEq k] in
+/--
+**Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Lemma 5): Cancellation Lemma**
+Suppose we have a sum P = ∑ pᵢ where all pᵢ have the same multidegree δ.
+If m.degree P < δ, then P is a linear combination of the S-polynomials S(pⱼ, pₗ),
+and each S(pⱼ, pₗ) has multidegree less than δ.
+-/
+lemma Spolynomial_syzygy_of_degree_cancellation
     {ι : Type*} [DecidableEq ι]
     (m : MonomialOrder σ)
     (δ : σ →₀ ℕ)
-    (hδ : 0 ≺[m] δ)
-    (I : Finset ι) (p : ι → MvPolynomial σ k) -- An indexed family
-    (hp_ne_zero : ∀ i ∈ I, p i ≠ 0)
-    (hp_deg : ∀ i ∈ I, m.degree (p i) = δ)
-    (hsum   : m.degree (∑ i in I, p i) ≺[m] δ)
+    -- (hδ : 0 ≺[m] δ)
+    (p : ι →₀ MvPolynomial σ k) -- An indexed family with finite support
+    (hp_ne_zero : ∀ i ∈ p.support, p i ≠ 0)
+    (hp_deg : ∀ i ∈ p.support, m.degree (p i) = δ)
+    (hsum   : m.degree (∑ i ∈ p.support, p i) ≺[m] δ)
     : ∃ (c : ι × ι → k),
-      ∑ i ∈ I, p i = ∑ ij ∈ I.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
+      ∑ i ∈ p.support, p i = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
 
-  -- The case where I is empty is trivial.
-  by_cases hI_empty : I = ∅
-  · subst hI_empty; simp [exists_const]
+  -- The case where the support is empty is trivial, as the sum is zero.
+  by_cases h_supp_empty : p.support = ∅
+  · rw [h_supp_empty]
+    simp only [Finset.sum_empty, Finset.offDiag_empty, exists_const]
 
-  -- Since I is not empty, we can pick an element.
-  let s := (Finset.nonempty_of_ne_empty hI_empty).choose
-  have hs : s ∈ I := (Finset.nonempty_of_ne_empty hI_empty).choose_spec
-  sorry
+  -- Since the support is not empty, we can pick an element `s` to be our pivot,
+  -- just like `pₛ` in the textbook's proof.
+  let s := (Finset.nonempty_of_ne_empty h_supp_empty).choose
+  have hs : s ∈ p.support := (Finset.nonempty_of_ne_empty h_supp_empty).choose_spec
 
+  -- Let d i := LC(p i) be the leading coefficient of p i.
+  let d : ι → k := fun i => m.leadingCoeff (p i)
 
+  -- As in the textbook, the sum of these leading coefficients must be zero
+  -- because the degree of the sum dropped.
+  have h_sum_lc_zero : ∑ i ∈ p.support, d i = 0 := by
+    have h_coeff_sum_zero : MvPolynomial.coeff δ (∑ i ∈ p.support, p i) = 0 :=
+      m.coeff_eq_zero_of_lt hsum
+
+    rw [MvPolynomial.coeff_sum] at h_coeff_sum_zero
+
+    have h_coeff_eq_lc : ∀ i ∈ p.support, MvPolynomial.coeff δ (p i) = d i := by
+      intro i hi
+      dsimp [d]
+      rw [leadingCoeff, hp_deg i hi]
+
+    rwa [Finset.sum_congr rfl h_coeff_eq_lc] at h_coeff_sum_zero
+
+  -- Since all `p i` have the same degree `δ`, their S-polynomial simplifies.
+  have h_S_poly_simple : ∀ i ∈ p.support, ∀ j ∈ p.support, S_polynomial m (p i) (p j) = (d i)⁻¹ • p i - (d j)⁻¹ • p j := by
+    intro i hi j hj
+    unfold S_polynomial
+    -- The sup of the degrees is δ.
+    have h_deg_sup : m.degree (p i) ⊔ m.degree (p j) = δ := by
+      simp [hp_deg i hi, hp_deg j hj]
+    simp_rw [h_deg_sup, hp_deg i hi, hp_deg j hj, tsub_self, monomial_zero']
+    dsimp [d]
+    rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
+
+  -- The textbook shows that `∑ pᵢ` can be rewritten using S-polynomials involving `pₛ`.
+  have h_sum_reduces : ∑ i ∈ p.support, p i = ∑ i ∈ (p.support.erase s), d i • S_polynomial m (p i) (p s) := by
+    -- We expand the RHS and show it equals the LHS.
+    have h_d_ne_zero : ∀ i ∈ p.support, d i ≠ 0 := fun i hi => leadingCoeff_ne_zero_iff.mpr (hp_ne_zero i hi)
+    -- Expand S-polynomials: `∑ dᵢ • ((1/dᵢ)pᵢ - (1/dₛ)pₛ)`
+
+    have expand_sum1 : ∑ i ∈ p.support.erase s, d i • S_polynomial m (p i) (p s)
+      = ∑ i ∈ p.support.erase s, (p i - ((d i) * (d s)⁻¹) • p s) := by
+        apply Finset.sum_congr rfl
+        intro x hx
+        have : x ∈ p.support := by exact Finset.mem_of_mem_erase hx
+        rw [h_S_poly_simple x (Finset.mem_of_mem_erase hx) s hs]
+        rw [MvPolynomial.smul_eq_C_mul]
+        rw [mul_sub_left_distrib]
+        rw [MvPolynomial.smul_eq_C_mul, ←mul_assoc]
+        rw [←MvPolynomial.C_mul]
+        have : d x * (d x)⁻¹ = 1 := by exact
+          CommGroupWithZero.mul_inv_cancel (d x) (h_d_ne_zero x this)
+        rw [this]
+        simp only [C_1, one_mul, sub_right_inj]
+        rw [MvPolynomial.smul_eq_C_mul, ←mul_assoc]
+        rw [←MvPolynomial.C_mul]
+        exact C_mul'
+
+    have expand_sum2 : ∑ i ∈ p.support.erase s, (p i - ((d i) * (d s)⁻¹) • p s)
+        = ∑ i ∈ p.support.erase s, p i + ( - ∑ i ∈ p.support.erase s, (d i * ((d s)⁻¹))) • p s := by
+          rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
+
+    rw [expand_sum1, expand_sum2]
+    have h_coeff_ps : - ∑ i ∈ p.support.erase s, d i * (d s)⁻¹ = 1 := by
+      -- Factor out the constant `(d s)⁻¹`.
+      rw [← Finset.sum_mul]
+      have h_sum_erase : ∑ i ∈ p.support.erase s, d i = - (d s) := by
+        rw [← add_right_inj (d s), add_comm, Finset.sum_erase_add p.support d hs, h_sum_lc_zero, add_neg_cancel]
+
+      rw [h_sum_erase]
+      rw [neg_mul, neg_neg]
+      apply mul_inv_cancel₀
+      -- We need to prove `d s ≠ 0`.
+      exact leadingCoeff_ne_zero_iff.mpr (hp_ne_zero s hs)
+    rw [h_coeff_ps, one_smul]
+    exact Eq.symm (Finset.sum_erase_add p.support (⇑p) hs)
+
+  -- Now, we construct the coefficient function `c` for the existential goal.
+  -- The sum we proved is over `i` paired with a fixed `s`. The goal is a sum over all pairs `ij`.
+  -- We define `c ij` to be `d i` if `j=s` and `i≠s`, and 0 otherwise.
+  let c (ij : ι × ι) : k := if ij.2 = s ∧ ij.1 ∈ p.support.erase s then d ij.1 else 0
+  use c
+  dsimp [c]
+  simp only [Finset.mem_erase, ne_eq, Finsupp.mem_support_iff, ite_smul, zero_smul]
+  show ∑ i ∈ p.support, p i =
+  ∑ x ∈ p.support.offDiag, if x.2 = s ∧ x.1 ∈ p.support.erase s then d x.1 • S_polynomial m (p x.1) (p x.2) else 0
+  rw [h_sum_reduces]
+  rw [← Finset.sum_filter]
+  have h_filter_eq : (p.support.offDiag).filter (fun x => x.2 = s ∧ x.1 ∈ p.support.erase s) =
+    (p.support.erase s).image (fun i => (i, s)) := by
+    ext ij
+    -- We need to prove `ij ∈ filter ↔ ij ∈ image`.
+    -- simp only [Finset.mem_erase, Finsupp.mem_support_iff, Finset.mem_filter,
+    --   Finset.mem_offDiag, Finset.mem_image]
+    simp only [Finset.mem_filter, Finset.mem_image, Finset.mem_offDiag]
+    constructor
+    · intro h
+      use ij.1
+      refine ⟨h.2.2, ?_⟩
+      apply Prod.ext
+      · rfl
+      · rw [h.2.1]
+    · intro h
+      obtain ⟨i, hi_in_erase, h_ij_eq⟩ := h
+      rw [←h_ij_eq]
+      refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+      · -- `i ∈ p.support`
+        exact Finset.mem_of_mem_erase hi_in_erase
+      · -- `s ∈ p.support`
+        exact hs
+      · -- `i ≠ s`
+        exact (Finset.mem_erase.mp hi_in_erase).1
+      · -- Second, `ij.2 = s ∧ ij.1 ∈ p.support.erase s`.
+        exact ⟨rfl, hi_in_erase⟩
+  rw [h_filter_eq]
+  have h_inj : (p.support.erase s).toSet.InjOn (fun i => (i, s))  := by
+    intro x _ y _ h_eq
+    -- `(x, s) = (y, s)` implies `x = y`.
+    exact (Prod.ext_iff.mp h_eq).1
+  rw [Finset.sum_image h_inj]
 
 variable (m) [DecidableEq σ] in
 /--
