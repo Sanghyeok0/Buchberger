@@ -57,6 +57,33 @@ lemma leadingTerm_eq_zero_imp_eq_zero
   exact m.leadingCoeff_eq_zero_iff.mp h_lc_zero
 
 variable (m) in
+@[simp]
+lemma leadingTerm_zero : m.leadingTerm (0 : MvPolynomial σ k) = 0 := by
+  rw [leadingTerm, degree_zero, leadingCoeff_zero, monomial_zero]
+
+variable (m) in
+@[simp]
+lemma leadingTerm_ne_zero_iff {f : MvPolynomial σ k} :
+    m.leadingTerm f ≠ 0 ↔ f ≠ 0 := by
+  -- An iff is proven by splitting it into two implications.
+  constructor
+
+  · -- Direction 1: `m.leadingTerm f ≠ 0 → f ≠ 0`
+    -- We prove the contrapositive: `f = 0 → m.leadingTerm f = 0`.
+    intro h_lt_ne_zero
+    contrapose! h_lt_ne_zero
+    -- Now the goal is `m.leadingTerm f = 0`, with the hypothesis `f = 0`.
+    rw [h_lt_ne_zero, leadingTerm_zero] -- We need a `leadingTerm_zero` helper.
+
+  · -- Direction 2: `f ≠ 0 → m.leadingTerm f ≠ 0`
+    -- We prove the contrapositive: `m.leadingTerm f = 0 → f = 0`.
+    intro h_f_ne_zero
+    contrapose! h_f_ne_zero
+    -- The goal is now `f = 0` with hypothesis `m.leadingTerm f = 0`.
+    -- This is exactly your existing lemma.
+    exact m.leadingTerm_eq_zero_imp_eq_zero h_f_ne_zero
+
+variable (m) in
 lemma eq_leadingTerm_of_degree_zero
   {f : MvPolynomial σ R} (h_deg : m.degree f = 0 ) :
     f = m.leadingTerm f := by
