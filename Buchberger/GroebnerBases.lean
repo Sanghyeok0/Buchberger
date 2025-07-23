@@ -1365,8 +1365,8 @@ theorem Buchberger_criterion'
           let ι := ↥G_δ
           let p_fun (g : ι) : MvPolynomial σ k := leadingTerm m (h_min g.val) * g.val
           let p : ι →₀ MvPolynomial σ k := (Finsupp.equivFunOnFinite).symm p_fun
-          have LT_h_min_i_ne_zero : ∀ i ∈ p.support, m.leadingTerm (h_min i.1) * i.1 ≠ 0 := by
-            intro i hi_mem_psupp
+          have LT_hᵢi_ne_zero : ∀ i : ι, m.leadingTerm (h_min i.1) * i.1 ≠ 0 := by
+            intro i
             apply mul_ne_zero
             · -- First goal: `leadingTerm m (h_min i.val) ≠ 0`.
               -- This is equivalent to `h_min i.val ≠ 0`.
@@ -1400,29 +1400,7 @@ theorem Buchberger_criterion'
 
             -- The goal is now `p_fun i ≠ 0`.
             dsimp [p_fun]
-            apply mul_ne_zero
-            · -- First goal: `leadingTerm m (h_min i.val) ≠ 0`.
-              -- This is equivalent to `h_min i.val ≠ 0`.
-              intro LT_h_min_i_ne_zero
-              have : (h_min ↑i) = 0 := by exact leadingTerm_eq_zero_imp_eq_zero m LT_h_min_i_ne_zero
-              unfold Subtype.val at this
-              have hi_in_G_δ : i.1 ∈ G_δ := by exact Finset.coe_mem i
-
-              -- By definition of `G_δ`, `m.toSyn (m.degree (h_min i.val * i.val)) = δ_syn_min`.
-              have h_deg_is_δ := (Finset.mem_filter.mp hi_in_G_δ).2
-
-              -- Substitute `h_min i.val = 0` into this.
-              rw [this, zero_mul, degree_zero, map_zero] at h_deg_is_δ
-
-              -- Now we have `δ_syn_min = 0`.
-              -- This contradicts `h_min_le_bot : ⊥ < δ_syn_min`.
-              exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
-
-            · -- Second goal: `i.val ≠ 0`.
-              -- This is true because `i.val ∈ G_δ ⊆ G`.
-              have hi_in_G : i.val ∈ G := (Finset.mem_filter.mp i.property).1
-              exact hG i.val hi_in_G
-          -- We now need to show that `P₁` is equal to the sum over the support of `p`.
+            exact LT_hᵢi_ne_zero i
 
           have h_P₁_eq_sum_p : P₁ = ∑ i ∈ p.support, p_fun i := by
             -- First, use the fact that the support is the whole set of indices.
@@ -1441,29 +1419,7 @@ theorem Buchberger_criterion'
             intro i _ -- i is `Finset.mem_univ`
             dsimp [p]
             dsimp [p_fun]
-            -- This is the `mul_ne_zero` proof you already completed.
-            apply mul_ne_zero
-            · -- First goal: `leadingTerm m (h_min i.val) ≠ 0`.
-              -- This is equivalent to `h_min i.val ≠ 0`.
-              intro LT_h_min_i_ne_zero
-              have : (h_min ↑i) = 0 := by exact leadingTerm_eq_zero_imp_eq_zero m LT_h_min_i_ne_zero
-              unfold Subtype.val at this
-              have hi_in_G_δ : i.1 ∈ G_δ := by exact Finset.coe_mem i
-
-              -- By definition of `G_δ`, `m.toSyn (m.degree (h_min i.val * i.val)) = δ_syn_min`.
-              have h_deg_is_δ := (Finset.mem_filter.mp hi_in_G_δ).2
-
-              -- Substitute `h_min i.val = 0` into this.
-              rw [this, zero_mul, degree_zero, map_zero] at h_deg_is_δ
-
-              -- Now we have `δ_syn_min = 0`.
-              -- This contradicts `h_min_le_bot : ⊥ < δ_syn_min`.
-              exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
-
-            · -- Second goal: `i.val ≠ 0`.
-              -- This is true because `i.val ∈ G_δ ⊆ G`.
-              have hi_in_G : i.val ∈ G := (Finset.mem_filter.mp i.property).1
-              exact hG i.val hi_in_G
+            exact LT_hᵢi_ne_zero i
 
           -- Hypothesis 2: All polynomials in the family have degree `δ_min`.
           have hp_deg : ∀ i ∈ p.support, m.degree (p i) = δ_min := by
@@ -1481,26 +1437,32 @@ theorem Buchberger_criterion'
                 rw [h_h_min_i_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
                 exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
               rw [m.degree_mul _ (hG i.val hi_in_G), degree_leadingTerm, m.degree_mul h_h_min_i_ne_zero (hG i.val hi_in_G)]
-              sorry
-
+              contrapose! LT_hᵢi_ne_zero
+              use i; apply mul_eq_zero_of_left LT_hᵢi_ne_zero
             rw [h_deg_eq]
             apply m.toSyn.injective
-            sorry
+            rw [AddEquiv.apply_symm_apply]
+            have hi_in_G_δ : i.val ∈ G_δ := i.property
+            exact (Finset.mem_filter.mp hi_in_G_δ).2
 
           -- Hypothesis 3: The degree of the sum has dropped.
           have hsum : m.degree (∑ i ∈ p.support, p i) ≺[m] δ_min := by
             -- We know `∑ i in p.support, p i` is `P₁`.
             have h_sum_p_eq_P₁ : (∑ i ∈ p.support, p i) = P₁ := by
               rw [h_p_support, ← Finset.attach_eq_univ]
-              dsimp [P₁, p]
-              sorry
+              dsimp [P₁, p, p_fun]
+              exact Finset.sum_attach G_δ (fun i ↦ m.leadingTerm (h_min i) * i)
             rw [h_sum_p_eq_P₁]
-            sorry
+            rw [AddEquiv.apply_symm_apply]
+            exact hP₁_deg_lt
 
           have h_syzygy_result :=
             by exact Spolynomial_syzygy_of_degree_cancellation m δ_min p hp_ne_zero hp_deg hsum
 
-          rcases h_syzygy_result.1 with ⟨c, hc⟩
+          rcases h_syzygy_result.1 with ⟨c, hP₁_rw⟩
+          have : P₁ = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
+            convert hP₁_rw
+
 
           -- obtain ⟨c, h_P₁_rw⟩ := h_exists_c
 
