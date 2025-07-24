@@ -968,6 +968,86 @@ lemma leadingTerm_sum_of_max_degree'
   --       rw [max_eq_left h_ge]
   --       apply Finset.mem_insert_self
 
+variable (m) in
+lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
+  (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ_ne_zero : gᵢ ≠ 0) (hgⱼ_ne_zero : gⱼ ≠ 0)
+  (aᵢ aⱼ : σ →₀ ℕ) (cᵢ cⱼ : k) (hcᵢ_ne_zero : cᵢ ≠ 0) (hcⱼ_ne_zero : cⱼ ≠ 0)
+  (h_deg_eq : aᵢ + m.degree gᵢ = aⱼ + m.degree gⱼ) :
+  let pᵢ := monomial aᵢ cᵢ * gᵢ
+  let pⱼ := monomial aⱼ cⱼ * gⱼ
+  S_polynomial m pᵢ pⱼ = monomial (aᵢ + m.degree gᵢ - (m.degree gᵢ ⊔ m.degree gⱼ)) 1 * S_polynomial m gᵢ gⱼ := by
+    let δ := aᵢ + m.degree gᵢ
+    let γ := m.degree gᵢ ⊔ m.degree gⱼ
+    let lc_gᵢ := m.leadingCoeff gᵢ
+    let lc_gⱼ := m.leadingCoeff gⱼ
+    have hᵢ_ne_zero : monomial aᵢ cᵢ ≠ 0 := by
+      contrapose hcᵢ_ne_zero
+      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      exact hcᵢ_ne_zero
+    have hᵢ_degree : m.degree ((monomial aᵢ) cᵢ) = aᵢ := by
+      rw [m.degree_monomial cᵢ]
+      exact if_neg hcᵢ_ne_zero
+    have h_δ_eq_pᵢ : m.degree (monomial aᵢ cᵢ * gᵢ) = δ := by
+      rw [m.degree_mul hᵢ_ne_zero hgᵢ_ne_zero, hᵢ_degree]
+    have hⱼ_ne_zero : monomial aⱼ cⱼ ≠ 0 := by
+      contrapose hcⱼ_ne_zero
+      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      exact hcⱼ_ne_zero
+    have hⱼ_degree : m.degree ((monomial aⱼ) cⱼ) = aⱼ := by
+      rw [m.degree_monomial cⱼ]
+      exact if_neg hcⱼ_ne_zero
+    have h_δ_eq_pⱼ : m.degree (monomial aⱼ cⱼ * gⱼ) = δ := by
+      rw [m.degree_mul hⱼ_ne_zero hgⱼ_ne_zero, hⱼ_degree, ←h_deg_eq]
+
+
+    have lhs_simplified : S_polynomial m (monomial aᵢ cᵢ * gᵢ) (monomial aⱼ cⱼ * gⱼ) =
+      (m.leadingCoeff (monomial aᵢ cᵢ * gᵢ))⁻¹ • (monomial aᵢ cᵢ * gᵢ) -
+      (m.leadingCoeff (monomial aⱼ cⱼ * gⱼ))⁻¹ • (monomial aⱼ cⱼ * gⱼ) := by
+      unfold S_polynomial
+      rw [h_δ_eq_pᵢ, h_δ_eq_pⱼ, sup_idem, tsub_self, monomial_zero']
+      simp only [C_eq_smul_one, Algebra.smul_mul_assoc, one_mul]
+    simp only
+    rw [lhs_simplified]
+    rw [m.leadingCoeff_mul hᵢ_ne_zero hgᵢ_ne_zero,
+      m.leadingCoeff_mul hⱼ_ne_zero hgⱼ_ne_zero,
+      m.leadingCoeff_monomial cᵢ, m.leadingCoeff_monomial cⱼ]
+    rw [←C_mul', ←mul_assoc, C_mul_monomial, ←C_mul', ←mul_assoc, C_mul_monomial]
+    simp only [mul_inv_rev, mul_assoc]
+    rw [inv_mul_cancel₀ hcᵢ_ne_zero, inv_mul_cancel₀ hcⱼ_ne_zero, mul_one, mul_one]
+    -- The fully simplified LHS is: `lc_gᵢ⁻¹ • (monomial aᵢ 1 * gᵢ) - lc_gⱼ⁻¹ • (monomial aⱼ 1 * gⱼ)`
+
+    -- Part 2: Simplify the RHS `monomial (δ - γ) 1 * S(gᵢ, gⱼ)`.
+    unfold S_polynomial
+    rw [mul_sub_left_distrib]
+    -- We now have two terms on the RHS. Let's simplify them one by one.
+    congr 1
+    · -- First term of the subtraction.
+      -- `(monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) (lc_gᵢ⁻¹) * gᵢ)`
+      rw [← mul_assoc] -- Group the monomials together
+
+      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
+      rw [monomial_mul, one_mul]
+      congr 1
+      · rw [tsub_add_tsub_cancel]
+        · simp only [add_tsub_cancel_right]
+        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
+        · exact le_sup_left
+
+    · rw [← mul_assoc] -- Group the monomials together
+
+      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
+      rw [monomial_mul, one_mul]
+      congr 1
+      · -- Exponents: `aᵢ = (δ - γ) + (γ - m.degree gᵢ)`.
+        -- `γ = m.degree gᵢ ⊔ m.degree gⱼ`.
+        -- Since `m.degree gᵢ ≤ γ`, we can use `add_tsub_cancel_of_le`.
+        -- have hᵢ_le : m.degree gᵢ ≤ aᵢ + m.degree gᵢ := by exact le_add_self
+        -- have hⱼ_le : m.degree gⱼ ≤ aᵢ + m.degree gᵢ := by rw [h_deg_eq]; exact le_add_self
+        rw [tsub_add_tsub_cancel]
+        · simp only [h_deg_eq, add_tsub_cancel_right]
+        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
+        · exact le_sup_right
+
 variable (m) [Fintype σ] [DecidableEq σ] in
 /--
 **(Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
@@ -976,7 +1056,7 @@ ideal.span G`).
 Then `G` is a Gröbner basis if and only if for  all pairs of distinct polynomials
 `g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
 -/
-theorem Buchberger_criterion'
+theorem Buchberger_criterion
   {I : Ideal (MvPolynomial σ k)}
   {G : Finset (MvPolynomial σ k)}
   (hG : ∀ g ∈ G, g ≠ 0)
@@ -1462,7 +1542,20 @@ theorem Buchberger_criterion'
           rcases h_syzygy_result.1 with ⟨c, hP₁_rw⟩
           have : P₁ = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
             convert hP₁_rw
+          -- We now have `P₁ = ∑ ij ∈ p.support.offDiag, c ij • S(p ij.1, p ij.2)`.
+          -- And `h_S_deg_lt` tells us the degree of each S-polynomial is `< δ_min`.
+          -- Let's call the `p ij` terms `p_i` for clarity. `p_i = LT(h_min i) * i`.
 
+          -- Step 1: Relate `S(p_i, p_j)` back to `S(i, j)`.
+          have h_S_relation : ∀ (ij : ι × ι), ij ∈ p.support.offDiag →
+              S_polynomial m (p ij.1) (p ij.2) =
+              monomial (δ_min - (m.degree ij.1.val ⊔ m.degree ij.2.val)) 1 * S_polynomial m ij.1.val ij.2.val := by
+            intro ij hij
+
+            let gᵢ := ij.1.val; let gⱼ := ij.2.val
+            let hᵢ := h_min gᵢ; let hⱼ := h_min gⱼ
+
+            sorry
 
 
           -- obtain ⟨c, h_P₁_rw⟩ := h_exists_c
@@ -1479,547 +1572,6 @@ theorem Buchberger_criterion'
       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)-/
 
           sorry
-
-variable (m) in
-lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
-  (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ_ne_zero : gᵢ ≠ 0) (hgⱼ_ne_zero : gⱼ ≠ 0)
-  (aᵢ aⱼ : σ →₀ ℕ) (cᵢ cⱼ : k) (hcᵢ_ne_zero : cᵢ ≠ 0) (hcⱼ_ne_zero : cⱼ ≠ 0)
-  (h_deg_eq : aᵢ + m.degree gᵢ = aⱼ + m.degree gⱼ) :
-  let pᵢ := monomial aᵢ cᵢ * gᵢ
-  let pⱼ := monomial aⱼ cⱼ * gⱼ
-  S_polynomial m pᵢ pⱼ = monomial (aᵢ + m.degree gᵢ - (m.degree gᵢ ⊔ m.degree gⱼ)) 1 * S_polynomial m gᵢ gⱼ := by
-    let δ := aᵢ + m.degree gᵢ
-    let γ := m.degree gᵢ ⊔ m.degree gⱼ
-    let lc_gᵢ := m.leadingCoeff gᵢ
-    let lc_gⱼ := m.leadingCoeff gⱼ
-    have hᵢ_ne_zero : monomial aᵢ cᵢ ≠ 0 := by
-      contrapose hcᵢ_ne_zero
-      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
-      exact hcᵢ_ne_zero
-    have hᵢ_degree : m.degree ((monomial aᵢ) cᵢ) = aᵢ := by
-      rw [m.degree_monomial cᵢ]
-      exact if_neg hcᵢ_ne_zero
-    have h_δ_eq_pᵢ : m.degree (monomial aᵢ cᵢ * gᵢ) = δ := by
-      rw [m.degree_mul hᵢ_ne_zero hgᵢ_ne_zero, hᵢ_degree]
-    have hⱼ_ne_zero : monomial aⱼ cⱼ ≠ 0 := by
-      contrapose hcⱼ_ne_zero
-      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
-      exact hcⱼ_ne_zero
-    have hⱼ_degree : m.degree ((monomial aⱼ) cⱼ) = aⱼ := by
-      rw [m.degree_monomial cⱼ]
-      exact if_neg hcⱼ_ne_zero
-    have h_δ_eq_pⱼ : m.degree (monomial aⱼ cⱼ * gⱼ) = δ := by
-      rw [m.degree_mul hⱼ_ne_zero hgⱼ_ne_zero, hⱼ_degree, ←h_deg_eq]
-
-
-    have lhs_simplified : S_polynomial m (monomial aᵢ cᵢ * gᵢ) (monomial aⱼ cⱼ * gⱼ) =
-      (m.leadingCoeff (monomial aᵢ cᵢ * gᵢ))⁻¹ • (monomial aᵢ cᵢ * gᵢ) -
-      (m.leadingCoeff (monomial aⱼ cⱼ * gⱼ))⁻¹ • (monomial aⱼ cⱼ * gⱼ) := by
-      unfold S_polynomial
-      rw [h_δ_eq_pᵢ, h_δ_eq_pⱼ, sup_idem, tsub_self, monomial_zero']
-      simp only [C_eq_smul_one, Algebra.smul_mul_assoc, one_mul]
-    simp only
-    rw [lhs_simplified]
-    rw [m.leadingCoeff_mul hᵢ_ne_zero hgᵢ_ne_zero,
-      m.leadingCoeff_mul hⱼ_ne_zero hgⱼ_ne_zero,
-      m.leadingCoeff_monomial cᵢ, m.leadingCoeff_monomial cⱼ]
-    rw [←C_mul', ←mul_assoc, C_mul_monomial, ←C_mul', ←mul_assoc, C_mul_monomial]
-    simp only [mul_inv_rev, mul_assoc]
-    rw [inv_mul_cancel₀ hcᵢ_ne_zero, inv_mul_cancel₀ hcⱼ_ne_zero, mul_one, mul_one]
-    -- The fully simplified LHS is: `lc_gᵢ⁻¹ • (monomial aᵢ 1 * gᵢ) - lc_gⱼ⁻¹ • (monomial aⱼ 1 * gⱼ)`
-
-    -- Part 2: Simplify the RHS `monomial (δ - γ) 1 * S(gᵢ, gⱼ)`.
-    unfold S_polynomial
-    rw [mul_sub_left_distrib]
-    -- We now have two terms on the RHS. Let's simplify them one by one.
-    congr 1
-    · -- First term of the subtraction.
-      -- `(monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) (lc_gᵢ⁻¹) * gᵢ)`
-      rw [← mul_assoc] -- Group the monomials together
-
-      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
-      rw [monomial_mul, one_mul]
-      congr 1
-      · rw [tsub_add_tsub_cancel]
-        · simp only [add_tsub_cancel_right]
-        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
-        · exact le_sup_left
-
-    · rw [← mul_assoc] -- Group the monomials together
-
-      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
-      rw [monomial_mul, one_mul]
-      congr 1
-      · -- Exponents: `aᵢ = (δ - γ) + (γ - m.degree gᵢ)`.
-        -- `γ = m.degree gᵢ ⊔ m.degree gⱼ`.
-        -- Since `m.degree gᵢ ≤ γ`, we can use `add_tsub_cancel_of_le`.
-        -- have hᵢ_le : m.degree gᵢ ≤ aᵢ + m.degree gᵢ := by exact le_add_self
-        -- have hⱼ_le : m.degree gⱼ ≤ aᵢ + m.degree gᵢ := by rw [h_deg_eq]; exact le_add_self
-        rw [tsub_add_tsub_cancel]
-        · simp only [h_deg_eq, add_tsub_cancel_right]
-        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
-        · exact le_sup_right
-
-variable (m) [Fintype σ] [DecidableEq σ] in
-/--
-**(Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
-Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
-ideal.span G`).
-Then `G` is a Gröbner basis if and only if for  all pairs of distinct polynomials
-`g₁, g₂ ∈ G`, the remainder on division of `S_polynomial g₁ g₂` by `G` is zero.
--/
-theorem Buchberger_criterion
-  {I : Ideal (MvPolynomial σ k)}
-  {G : Finset (MvPolynomial σ k)}
-  (hG : ∀ g ∈ G, g ≠ 0)
-  (hGI : I = Ideal.span G) :
-  IsGroebnerBasis m I G ↔
-    (∀ (g₁ g₂ : MvPolynomial σ k),
-      g₁ ∈ G →
-      g₂ ∈ G →
-      g₁ ≠ g₂ → normalForm m hG (S_polynomial m g₁ g₂) = 0) := by
-      constructor
-      · -- (⇒)
-        intro hGB g₁ g₂ hg₁ hg₂ hneq
-        apply (mem_Ideal_iff_GB_normalForm_eq_zero hGB _).mp
-        rw [S_polynomial]
-        have hG_sub_I : G.toSet ⊆ I := by rw [hGI]; exact Ideal.subset_span
-        exact sub_mem (Ideal.mul_mem_left _ _ (hG_sub_I hg₁)) (Ideal.mul_mem_left _ _ (hG_sub_I hg₂))
-      · -- (⇐) If all S-polynomials reduce to 0, then G is a Gröbner basis.
-        intro hS_poly
-        rw [IsGroebnerBasis]
-        have hG_sub_I : (↑G : Set (MvPolynomial σ k)) ⊆ I := by rw [hGI]; exact Ideal.subset_span
-        refine ⟨hG, hG_sub_I, ?_⟩
-
-        -- We need to show `initialIdeal m I = Ideal.span (LT(G))`.
-        -- The inclusion `Ideal.span(LT(G)) ⊆ initialIdeal m I` is straightforward.
-        apply le_antisymm
-        · apply Ideal.span_mono
-          intro lt_g h_lt_g_mem
-          simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe] at h_lt_g_mem
-          obtain ⟨g, hg_in_G, rfl⟩ := h_lt_g_mem
-          refine Set.mem_setOf.mpr ?_
-          use g
-          exact ⟨by exact hG_sub_I hg_in_G, by exact hG g hg_in_G, rfl⟩
-
-        -- The difficult inclusion: `initialIdeal m I ⊆ Ideal.span (LT(G))`.
-        -- This means for any non-zero `f ∈ I`, we must show `LT(f) ∈ ⟨LT(G)⟩`.
-        rw [initialIdeal, Ideal.span_le]
-        rw [Set.subset_def]
-        intro LTf h_LTf_in_initI
-        obtain ⟨f, hfI, hf_ne, hLTf⟩ := h_LTf_in_initI
-        rw [←hLTf]; clear hLTf; clear LTf
-        by_cases hG_empty : G = ∅
-        · simp [hG_empty] at hGI
-          simp [hGI] at hfI
-          exact False.elim (hf_ne hfI)
-        rw [hGI] at hfI
-        rw [Ideal.span, Submodule.mem_span_finset] at hfI
-        have h_image_ne_empty :
-          ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
-            (Function.support H' ⊆ G ∧ f = (∑ g ∈ G, H' g * g)) →
-          Finset.image (fun g ↦ m.degree (H' g * g)) G ≠ ∅ := by
-          intro H' f_repr
-          apply Finset.nonempty_iff_ne_empty.mp
-          rw [Finset.image_nonempty]
-          exact Finset.nonempty_iff_ne_empty.mpr hG_empty
-        have h_deg_ineq :
-          ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
-            (Function.support H' ⊆ G ∧ f = (∑ g ∈ G, H' g * g)) →
-            m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (Finset.nonempty_of_ne_empty ?_) id := by
-            intro H' f_repr
-            rw [f_repr.2]
-            apply le_trans (m.degree_sum_le G (fun g => H' g * g))
-            apply m.toSyn_monotone
-            apply le_of_eq
-            let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
-            have h_s'_nonempty : s'.Nonempty := by
-              rw [Finset.image_nonempty]
-              exact Finset.nonempty_iff_ne_empty.mpr hG_empty
-            rw [Finset.sup'_eq_sup h_s'_nonempty id]
-            rw [Finset.sup_image]
-            simp only [CompTriple.comp_eq]
-            show Finset.image (fun g ↦ m.degree (H' g * g)) G ≠ ∅
-            sorry
-        have h_image_nonempty_of_repr (H' : MvPolynomial σ k → MvPolynomial σ k) :
-            (Finset.image (fun g ↦ m.degree (H' g * g)) G).Nonempty := by
-          rw [Finset.image_nonempty]
-          exact Finset.nonempty_of_ne_empty hG_empty
-
-        -- Now, let's prove the inequality holds for any representation.
-        have h_deg_ineq_for_any_repr :
-          ∀ (H' : MvPolynomial σ k → MvPolynomial σ k),
-            (f = (∑ g ∈ G, H' g * g)) →
-            m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (h_image_nonempty_of_repr H') id := by
-            intro H' h_f_repr
-            rw [h_f_repr]
-            apply le_trans (m.degree_sum_le G (fun g => H' g * g))
-            apply m.toSyn_monotone
-            apply le_of_eq
-            let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
-            rw [Finset.sup'_eq_sup (h_image_nonempty_of_repr H') id]
-            rw [Finset.sup_image]
-            simp only [CompTriple.comp_eq]
-
-
-        -- have h_deg_ineq' : (∃ (H' : MvPolynomial σ k → MvPolynomial σ k),
-        --   Function.support H ⊆ G ∧ f = (∑ g ∈ G, H g * g)) →
-        --   m.degree f ≼[m] (G.image (fun g => m.degree (H' g * g))).sup' (Finset.nonempty_of_ne_empty ?_) id := by
-        --   intro f_repr
-        --   obtain ⟨H', f_reps'⟩ := f_repr
-        --   rw [f_reps'.2]
-        --   apply le_trans (m.degree_sum_le G (fun g => H' g * g))
-        --   apply m.toSyn_monotone
-        --   apply le_of_eq
-        --   let s' := Finset.image (fun g ↦ m.degree (H' g * g)) G
-        --   have h_s'_nonempty : s'.Nonempty := by
-        --     rw [Finset.image_nonempty]
-        --     exact Finset.nonempty_iff_ne_empty.mpr hG_empty
-        --   · rw [Finset.sup'_eq_sup h_s'_nonempty id]
-        --   rw [Finset.sup_image]
-        --   --simp only [CompTriple.comp_eq]
-        --   have : (∃ H, Function.support H ⊆ ↑G ∧ f = ∑ g ∈ G, H g * g) := by
-        --     use H'
-        --   sorry
-
-
-        let RepDegrees (f : MvPolynomial σ k) : Set (σ →₀ ℕ) :=
-          { δ | ∃ (H : MvPolynomial σ k → MvPolynomial σ k),
-              Function.support H ⊆ G ∧
-              f = (∑ g ∈ G, H g * g) ∧
-              δ = G.sup (fun g => m.degree (H g * g)) }
-
-        obtain ⟨H, f_reps⟩ := hfI
-        -- need one representation H and f_reps here so that makes RepDegrees nonempty.
-
-        have h_RepDegrees_nonempty : (RepDegrees f).Nonempty := by
-          use G.sup (fun g => m.degree (H g * g))
-          use H
-          exact ⟨f_reps.1, f_reps.2.symm, rfl⟩
-        clear f_reps; clear H
-
-
-        let RepDegreesSyn : Set m.syn := m.toSyn '' (RepDegrees f)
-
-        have h_RepDegreesSyn_nonempty : RepDegreesSyn.Nonempty := by
-          exact Set.image_nonempty.mpr h_RepDegrees_nonempty
-
-        let δ_syn_min := WellFounded.min (by exact wellFounded_lt) RepDegreesSyn h_RepDegreesSyn_nonempty
-        let δ_min := m.toSyn.symm δ_syn_min
-        have h_δ_min_in_RepDegrees : δ_min ∈ RepDegrees f := by
-          dsimp [δ_min]
-          have : δ_syn_min ∈ RepDegreesSyn := by
-            exact WellFounded.min_mem wellFounded_lt RepDegreesSyn h_RepDegreesSyn_nonempty
-          rw [Set.mem_image m.toSyn (RepDegrees f)] at this
-          obtain ⟨x, hx_in_Rep, hx_maps_to_min⟩ := this
-          rw [← hx_maps_to_min]
-          rw [m.toSyn.symm_apply_apply]
-          exact hx_in_Rep
-
-
-        have f_deg_le : m.degree f ≼[m] δ_min := by
-          obtain ⟨h_min, h_supp_min, h_f_eq_min, h_δ_min_eq_repr⟩ := h_δ_min_in_RepDegrees
-          rw [h_f_eq_min]
-          apply le_trans (m.degree_sum_le G (fun g => h_min g * g))
-          rw [h_δ_min_eq_repr]
-
-        by_cases h_deg_eq_δ : m.degree f = δ_min
-        obtain ⟨H_min, H_supp_min, h_f_eq_min, h_δ_min_eq_repr⟩ := h_δ_min_in_RepDegrees
-
-        have h_sup_is_achieved : ∃ g ∈ G, m.degree (H_min g * g) = δ_min := by
-          by_contra h_not_achieved
-          push_neg at h_not_achieved
-          let d := fun g => m.degree (H_min g * g)
-          let d_syn := fun (g : MvPolynomial σ k) => (g.support.sup m.toSyn)
-          have h_δ_is_sup : δ_min = G.sup d := h_δ_min_eq_repr
-
-          have h_lt_δ_min : ∀ g ∈ G, (d g) ≺[m] δ_min := by
-            intro g hg
-            rw [h_δ_is_sup] -- Replace δ_min with the sup expression
-            apply lt_of_le_of_ne
-            · -- Prove `d g ≤ G.sup d`
-              apply m.toSyn_monotone
-              exact Finset.le_sup hg
-            · -- Prove `d g ≠ G.sup d`
-              intro h_eq_contra
-              have h1 : m.degree (H_min g * g) ≠ G.sup d := by rw [←h_δ_is_sup]; exact h_not_achieved g hg
-              exact h1 (m.toSyn.injective h_eq_contra)
-
-          have h_sup_lt_δ_min : (G.sup d) ≺[m] δ_min := by
-            --rw [@Finset.sup_lt_iff m.syn (MvPolynomial σ k) m.lo _ G (m.toSyn ∘ d) (m.toSyn δ_min) _]
-            sorry
-
-
-
-          -- We will prove `m.toSyn (s.sup d) < m.toSyn δ_min` for all non-empty `s ⊆ G`.
-          have h_sup_lt_δ_min : (G.sup d) ≺[m] δ_min := by
-            -- Let's define the property we want to prove by induction.
-            let P (s : Finset (MvPolynomial σ k)) (hs : s.Nonempty) : Prop :=
-              s ⊆ G → m.toSyn (s.sup d) < m.toSyn δ_min
-
-            -- We prove `P s hs` for all non-empty `s` by `cons_induction`.
-            suffices ∀ s (hs : s.Nonempty), P s hs by
-              apply this G (Finset.nonempty_of_ne_empty hG_empty)
-              exact Finset.Subset.refl G
-
-            apply Finset.Nonempty.cons_induction
-            · -- Base case: singleton {a}.
-              intro a ha_sub_G
-              -- Goal: `P {a} (singleton_nonempty a)`.
-              -- This means `m.toSyn (d a) < m.toSyn δ_min`.
-              rw [Finset.sup_singleton]
-              -- We need `a ∈ G` to use `h_lt_δ_min`.
-              have ha_in_G : a ∈ G := by
-                rw [Finset.singleton_subset_iff] at ha_sub_G
-                exact ha_sub_G
-              exact h_lt_δ_min a ha_in_G
-            · -- Inductive step: `cons a s h hs ih`.
-              intro a s ha_not_in_s hs_nonempty ih ha_cons_sub_G
-              -- `ih` is `P s hs`, which is `s ⊆ G → m.toSyn (s.sup d) < m.toSyn δ_min`.
-              sorry
-
-          -- The final contradiction.
-          rw [h_δ_is_sup] at h_sup_lt_δ_min
-          exact lt_irrefl _ h_sup_lt_δ_min
-
-
-        have h_sup_is_achieved : ∃ g ∈ G, m.degree (H_min g * g) = δ_min := by
-          by_contra h_not_achieved
-
-          -- Our assumption is that for all `g`, the degree is not equal to the sup.
-          push_neg at h_not_achieved
-
-          -- Let `d g := m.degree (h_min g * g)`.
-          let d := fun g => m.degree (H_min g * g)
-          -- We know `δ_min = G.sup d`.
-          have h_δ_is_sup : δ_min = G.sup d := h_δ_min_eq_repr
-          --rw [h_δ_min_eq_repr] at h_not_achieved
-
-          have h_lt_sup : ∀ g ∈ G, (d g) ≺[m] δ_min := by
-            intro g hg
-            rw [h_δ_is_sup] -- Replace δ_min with the sup expression
-            apply lt_of_le_of_ne
-            · -- Prove `d g ≤ G.sup d`
-              apply m.toSyn_monotone
-              exact Finset.le_sup hg
-            · -- Prove `d g ≠ G.sup d`
-              intro h_eq_contra
-              have h1 : m.degree (H_min g * g) ≠ G.sup d := by rw [←h_δ_is_sup]; exact h_not_achieved g hg
-              exact h1 (m.toSyn.injective h_eq_contra)
-          have h_sup_lt_δ_min : G.sup d ≺[m] δ_min := by
-            -- We will prove `m.toSyn (s.sup d) < m.toSyn δ_min` by induction on s.
-            let P (s : Finset (MvPolynomial σ k)) : Prop := m.toSyn (s.sup d) < m.toSyn δ_min
-            suffices P G by exact this
-            induction G using Finset.induction_on with
-            | empty => sorry
-            | insert a s _ _ => sorry
-
-
-
-          have h2 : ¬(G.sup d ≺[m] δ_min) := by
-            apply Eq.not_lt
-            exact congrArg (⇑m.toSyn) (id (Eq.symm h_δ_min_eq_repr))
-          exact h2 h_sup_lt_δ_min
-
-        sorry
-        sorry
-
-
-        -- -- By span_induction, we only need to prove it for the generators of `initialIdeal m I`.
-        -- -- That is, for any non-zero `f ∈ I`, `leadingTerm m f` must be in the target ideal.
-        -- apply Submodule.span_induction h_ltf_in_initI
-        -- · -- **Step 1: Setup for the minimal representation argument.**
-        --   -- Let `f ∈ I` be nonzero. We will show that `LT(f) ∈ <LT(G)>`.
-        --   intro p hp
-        --   obtain ⟨f, hf_in_I, hf_ne_zero, rfl⟩ := hp
-
-        --   -- A "representation" of `f` is a map `h` such that `f = ∑ h_g * g`.
-        --   -- Let `RepDegrees` be the set of all possible maximal degrees `δ` for representations of `f`.
-        --   let RepDegrees (f : MvPolynomial σ k) : Set (σ →₀ ℕ) :=
-        --     { δ | ∃ (h : MvPolynomial σ k →₀ MvPolynomial σ k),
-        --         h.support ⊆ G ∧
-        --         f = h.sum (fun g coeff => coeff * g) ∧
-        --         δ = (h.support.image (fun g => m.degree (h g * g))).max' (by
-        --           -- The set of degrees is non-empty if f is non-zero
-        --           refine Finset.nonempty_image_iff.mpr ?_
-        --           contrapose! hf_ne_zero
-        --           rw [h.sum_eq_zero_iff_support_empty.mpr hf_ne_zero] at ‹_›
-        --           exact hf_ne_zero) }
-
-        --   -- Since `f ∈ I = span G`, at least one representation exists.
-        --   have h_rep_exists : ∃ h, h.support ⊆ G ∧ f = h.sum (fun g c => c * g) := by
-        --     rw [hGI, Ideal.mem_span_iff_exists_sum] at hf_in_I
-        --     exact hf_in_I
-        --   have h_RepDegrees_nonempty : (RepDegrees f).Nonempty := by
-        --     obtain ⟨h, h_supp, h_f_eq⟩ := h_rep_exists
-        --     use (h.support.image (fun g => m.degree (h g * g))).max' _
-        --     exact ⟨h, h_supp, h_f_eq, rfl⟩
-
-        --   -- **Step 2: Pick the most efficient representation.**
-        --   -- The minimal `δ` exists by the well-ordering property of our monomial ordering.
-        --   let δ_min := m.syn.wf.min (RepDegrees f) h_RepDegrees_nonempty
-
-        --   -- We pick one representation for which `δ` is minimal.
-        --   obtain ⟨h_min, h_supp_min, h_f_eq_min, h_δ_eq_min⟩ :=
-        --     m.syn.wf.min_mem (RepDegrees f) h_RepDegrees_nonempty
-
-        --   -- **Step 3: Analyze the minimal representation.**
-        --   -- By definition, `multideg(f) ≤ δ_min`.
-        --   have h_deg_f_le_δ : m.degree f ≼[m] δ_min := by
-        --     rw [h_f_eq_min]
-        --     apply le_trans (m.degree_sum_le _)
-        --     rw [h_δ_eq_min]
-        --     apply Finset.sup_le_iff.mpr
-        --     intro g hg
-        --     exact Finset.le_max' (Finset.mem_image_of_mem _ hg)
-
-        --   -- We will show the case `multideg(f) < δ_min` leads to a contradiction.
-        --   -- This implies `multideg(f) = δ_min` must hold for a minimal representation.
-        --   by_cases h_deg_eq_δ : m.degree f = δ_min
-
-        --   · -- **Case 1: `multideg(f) = δ_min` (No cancellation).**
-        --     -- This easily implies that `LT(f)` is in `<LT(G)>`.
-        --     -- `LT(f) = LT(∑ h_g * g) = ∑_{deg(h_g*g)=δ_min} LT(h_g * g)`.
-        --     have h_lt_sum : leadingTerm m f =
-        --       ∑ g in h_min.support.filter (fun g => m.degree (h_min g * g) = δ_min),
-        --         leadingTerm m (h_min g * g) := by
-        --       -- This relies on a helper lemma about leading terms of sums where
-        --       -- the max degree is achieved.
-        --       sorry -- `leadingTerm_sum_of_max_degree`
-
-        --     rw [h_lt_sum]
-        --     -- Each term `LT(h_g * g)` is in the ideal `<LT(G)>`.
-        --     apply Ideal.sum_mem
-        --     intro g hg_in_filter
-        --     have : leadingTerm m (h_min g * g) ∈ Ideal.span (G.image (fun g => leadingTerm m g)) := by
-        --       have hg_in_G : g ∈ G := h_supp_min (Finset.mem_of_mem_filter hg_in_filter)
-        --       have h_lt_prod : leadingTerm m (h_min g * g) = leadingTerm m (h_min g) * leadingTerm m g := by
-        --         -- This requires `leadingCoeff(h) * leadingCoeff(g) ≠ 0`.
-        --         sorry -- `leadingTerm_mul`
-        --       rw [h_lt_prod]
-        --       apply Ideal.mul_mem_left
-        --       apply Ideal.subset_span
-        --       exact Finset.mem_image_of_mem _ hg_in_G
-        --     exact this
-
-        --   · -- **Case 2: `multideg(f) < δ_min` (Cancellation).**
-        --     -- This will contradict the minimality of `δ_min`.
-        --     have h_deg_lt_δ : m.toSyn (m.degree f) < m.toSyn δ_min :=
-        --       lt_of_le_of_ne (m.toSyn.monotone h_deg_f_le_δ) (by rwa [Ne, EmbeddingLike.apply_eq_iff_eq])
-
-        --     -- We will use `S(gᵢ,gⱼ) mod G = 0` to find a new expression for `f`
-        --     -- that decreases `δ_min`.
-
-        --     -- This part of the proof requires a very detailed construction of the new representation
-        --     -- using the cancellation lemma and the S-polynomial reduction property. It's famously
-        --     -- complex to formalize.
-        --     sorry
-
-        -- · -- The other cases for `span_induction` are trivial.
-        --   intro p q hp hq
-        --   exact Ideal.add_mem _ hp hq
-        -- · intro c p hp
-        --   exact Ideal.smul_mem _ c hp
-
-
-      -- · -- (⇐)
-      --   intro hS_poly
-      --   rw [IsGroebnerBasis]
-      --   have hG_sub_I : G.toSet ⊆ I := by rw [hGI]; exact Ideal.subset_span
-      --   constructor
-      --   · exact hG
-      --   · constructor
-      --     · exact hG_sub_I
-      --     · rw [initialIdeal, hGI]
-      --       --nth_rw 3 [Ideal.span]
-      --       --apply subset_antisymm
-      --       ext LTf
-      --       constructor
-      --       · apply Ideal.span_mono
-      --         clear LTf
-      --         refine Set.subset_setOf.mpr ?_
-      --         intro LTg LTG_in
-      --         simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe] at LTG_in
-      --         obtain ⟨g, hg⟩ := LTG_in
-      --         use g
-      --         constructor
-      --         · rw [←hGI]; exact hG_sub_I hg.1
-      --         · exact And.imp_left (hG g) hg
-      --       · intro hmem              -- We need to show that `LTf` is in `Ideal.span (G.image (leadingTerm m))`.
-      --         nth_rw 2 [Ideal.span] at hmem
-
-      --         -- Can we use Submodule.mem_span_finset
-      --         -- at hmem : LTf ∈ Ideal.span {f | ∃ g ∈ Submodule.span (MvPolynomial σ k) ↑G, g ≠ 0 ∧ m.leadingTerm g = f} ?
-      --         sorry
-
-
-            -- · intro h_LTf_G
-            --   have : (Finset.image (fun g ↦ m.leadingTerm g) G).toSet ⊆ {f | ∃ g ∈ Submodule.span (MvPolynomial σ k) ↑G, g ≠ 0 ∧ m.leadingTerm g = f} := by sorry
-            --   have : Ideal.span (Finset.image (fun g ↦ m.leadingTerm g) G)
-            --     ≤ Ideal.span {f | ∃ g ∈ Submodule.span (MvPolynomial σ k) G.toSet, g ≠ 0 ∧ m.leadingTerm g = f} := by
-            --       exact Ideal.span_mono this
-            --   exact this h_LTf_G
-            --rw [Submodule.mem_span_finset]
-
-            -- · sorry
-            -- · intro h_LTf_inI
-            --   rw [initialIdeal, hGI] at h_LTf_inI
-            --   simp only [ne_eq] at h_LTf_inI
-
-            --   have : ∃ f ∈ I, m.leadingTerm f = LTf := by
-            --     rw [Ideal.mem_span_singleton_self] at h_LTf_inI
-            --   obtain  ⟨f, hfI, h_LTf⟩ := this
-            --   obtain ⟨c, hc, hsum⟩ := Submodule.mem_span_set.mp (by rw [hGI] at hfI; apply hfI)
-            --   sorry
-
--- and now `f = ∑ q b • b` is exactly the representation you need.
--- /-forward 증명이 지저분-/
--- variable (m) [Fintype σ] [DecidableEq σ] in
--- theorem Buchberger_criterion_old
---   {I : Ideal (MvPolynomial σ k)}
---   {G : List (MvPolynomial σ k)}
---   (hG : ∀ g ∈ G, IsUnit (m.leadingCoeff g))
---   (hGI : I = Ideal.span G.toFinset) :
---   is_GroebnerBasis m I G ↔
---     (∀ (g₁ g₂ : MvPolynomial σ k),
---       g₁ ∈ G →
---       g₂ ∈ G →
---       g₁ ≠ g₂ →
---       remainder_old (S_polynomial m g₁ g₂) G hG = 0) := by
---         constructor
---         · intro h_isGB g₁ g₂ hg₁ hg₂ hneq
---           have : G.toFinset.toSet ⊆ I := by apply h_isGB.1
---           have hGsubI: ∀g ∈ G, g ∈ I := by
---             simp [SetLike.coe_subset_coe, ←SetLike.setOf_mem_eq] at this
---             exact fun g a ↦ this g a
---           have h_Sp: S_polynomial m g₁ g₂ ∈ I := by
---             rw [S_polynomial]
---             have hg₁I : g₁ ∈ I := by exact hGsubI g₁ hg₁
---             have hg₂I : g₂ ∈ I := by exact hGsubI g₂ hg₂
---             apply Ideal.sub_mem
---             · exact
---               Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₁)
---                 (hGsubI g₁ hg₁)
---             · exact
---               Ideal.mul_mem_left I ((monomial (m.degree g₁ ⊔ m.degree g₂)) 1 - leadingTerm m g₂)
---                 (hGsubI g₂ hg₂)
---           exact (mem_ideal_iff_remainder_GB_eq_zero_old hG h_isGB (S_polynomial m g₁ g₂)).mp h_Sp
---         · intro hSpols
---           -- (1) every g ∈ G lies in I because I = span G
---           have hGsubI : G.toFinset.toSet ⊆ I := by
---             simpa [hGI] using Ideal.subset_span
-
---           -- (2) we must show
---           --     span (leadingTerm m '' G) = initialIdeal m I
---           have : initialIdeal m I = initialIdeal m (Ideal.span G.toFinset) := by
---             simp [hGI]
---           -- reduce to
---           --   span (LT G) = initialIdeal m (span G)
---           rw [is_GroebnerBasis]
---           constructor
---           · exact hGsubI
---           · sorry
-
 
 
 -- variable (m) [Fintype σ]  [DecidableEq (MvPolynomial σ k)] in
