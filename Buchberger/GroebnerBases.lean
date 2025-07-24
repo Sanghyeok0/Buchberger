@@ -1464,6 +1464,7 @@ theorem Buchberger_criterion'
             convert hP₁_rw
 
 
+
           -- obtain ⟨c, h_P₁_rw⟩ := h_exists_c
 
           /-lemma exists_S_polynomial_syzygies
@@ -1478,6 +1479,86 @@ theorem Buchberger_criterion'
       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)-/
 
           sorry
+
+variable (m) in
+lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
+  (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ_ne_zero : gᵢ ≠ 0) (hgⱼ_ne_zero : gⱼ ≠ 0)
+  (aᵢ aⱼ : σ →₀ ℕ) (cᵢ cⱼ : k) (hcᵢ_ne_zero : cᵢ ≠ 0) (hcⱼ_ne_zero : cⱼ ≠ 0)
+  (h_deg_eq : aᵢ + m.degree gᵢ = aⱼ + m.degree gⱼ) :
+  let pᵢ := monomial aᵢ cᵢ * gᵢ
+  let pⱼ := monomial aⱼ cⱼ * gⱼ
+  S_polynomial m pᵢ pⱼ = monomial (aᵢ + m.degree gᵢ - (m.degree gᵢ ⊔ m.degree gⱼ)) 1 * S_polynomial m gᵢ gⱼ := by
+    let δ := aᵢ + m.degree gᵢ
+    let γ := m.degree gᵢ ⊔ m.degree gⱼ
+    let lc_gᵢ := m.leadingCoeff gᵢ
+    let lc_gⱼ := m.leadingCoeff gⱼ
+    have hᵢ_ne_zero : monomial aᵢ cᵢ ≠ 0 := by
+      contrapose hcᵢ_ne_zero
+      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      exact hcᵢ_ne_zero
+    have hᵢ_degree : m.degree ((monomial aᵢ) cᵢ) = aᵢ := by
+      rw [m.degree_monomial cᵢ]
+      exact if_neg hcᵢ_ne_zero
+    have h_δ_eq_pᵢ : m.degree (monomial aᵢ cᵢ * gᵢ) = δ := by
+      rw [m.degree_mul hᵢ_ne_zero hgᵢ_ne_zero, hᵢ_degree]
+    have hⱼ_ne_zero : monomial aⱼ cⱼ ≠ 0 := by
+      contrapose hcⱼ_ne_zero
+      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      exact hcⱼ_ne_zero
+    have hⱼ_degree : m.degree ((monomial aⱼ) cⱼ) = aⱼ := by
+      rw [m.degree_monomial cⱼ]
+      exact if_neg hcⱼ_ne_zero
+    have h_δ_eq_pⱼ : m.degree (monomial aⱼ cⱼ * gⱼ) = δ := by
+      rw [m.degree_mul hⱼ_ne_zero hgⱼ_ne_zero, hⱼ_degree, ←h_deg_eq]
+
+
+    have lhs_simplified : S_polynomial m (monomial aᵢ cᵢ * gᵢ) (monomial aⱼ cⱼ * gⱼ) =
+      (m.leadingCoeff (monomial aᵢ cᵢ * gᵢ))⁻¹ • (monomial aᵢ cᵢ * gᵢ) -
+      (m.leadingCoeff (monomial aⱼ cⱼ * gⱼ))⁻¹ • (monomial aⱼ cⱼ * gⱼ) := by
+      unfold S_polynomial
+      rw [h_δ_eq_pᵢ, h_δ_eq_pⱼ, sup_idem, tsub_self, monomial_zero']
+      simp only [C_eq_smul_one, Algebra.smul_mul_assoc, one_mul]
+    simp only
+    rw [lhs_simplified]
+    rw [m.leadingCoeff_mul hᵢ_ne_zero hgᵢ_ne_zero,
+      m.leadingCoeff_mul hⱼ_ne_zero hgⱼ_ne_zero,
+      m.leadingCoeff_monomial cᵢ, m.leadingCoeff_monomial cⱼ]
+    rw [←C_mul', ←mul_assoc, C_mul_monomial, ←C_mul', ←mul_assoc, C_mul_monomial]
+    simp only [mul_inv_rev, mul_assoc]
+    rw [inv_mul_cancel₀ hcᵢ_ne_zero, inv_mul_cancel₀ hcⱼ_ne_zero, mul_one, mul_one]
+    -- The fully simplified LHS is: `lc_gᵢ⁻¹ • (monomial aᵢ 1 * gᵢ) - lc_gⱼ⁻¹ • (monomial aⱼ 1 * gⱼ)`
+
+    -- Part 2: Simplify the RHS `monomial (δ - γ) 1 * S(gᵢ, gⱼ)`.
+    unfold S_polynomial
+    rw [mul_sub_left_distrib]
+    -- We now have two terms on the RHS. Let's simplify them one by one.
+    congr 1
+    · -- First term of the subtraction.
+      -- `(monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) (lc_gᵢ⁻¹) * gᵢ)`
+      rw [← mul_assoc] -- Group the monomials together
+
+      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
+      rw [monomial_mul, one_mul]
+      congr 1
+      · rw [tsub_add_tsub_cancel]
+        · simp only [add_tsub_cancel_right]
+        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
+        · exact le_sup_left
+
+    · rw [← mul_assoc] -- Group the monomials together
+
+      -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
+      rw [monomial_mul, one_mul]
+      congr 1
+      · -- Exponents: `aᵢ = (δ - γ) + (γ - m.degree gᵢ)`.
+        -- `γ = m.degree gᵢ ⊔ m.degree gⱼ`.
+        -- Since `m.degree gᵢ ≤ γ`, we can use `add_tsub_cancel_of_le`.
+        -- have hᵢ_le : m.degree gᵢ ≤ aᵢ + m.degree gᵢ := by exact le_add_self
+        -- have hⱼ_le : m.degree gⱼ ≤ aᵢ + m.degree gᵢ := by rw [h_deg_eq]; exact le_add_self
+        rw [tsub_add_tsub_cancel]
+        · simp only [h_deg_eq, add_tsub_cancel_right]
+        · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
+        · exact le_sup_right
 
 variable (m) [Fintype σ] [DecidableEq σ] in
 /--

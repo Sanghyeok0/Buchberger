@@ -126,10 +126,10 @@ quad\chapter{Gr{\"o}bner Bases}
           \gamma_i = \max(\alpha_i,\beta_i)
           \quad\text{for each }i.
         \]
-        We call \(x^\gamma\) the \emph{least common multiple} of \(\mathrm{LM}(f)\) and \(\mathrm{LM}(g)\),
+        We call \(x^\gamma\) the \emph{least common multiple} of \(\operatorname{LM}(f)\) and \(\operatorname{LM}(g)\),
         written
         \[
-          x^\gamma \;=\;\mathrm{lcm}\bigl(\mathrm{LM}(f),\,\mathrm{LM}(g)\bigr).
+          x^\gamma \;=\;\operatorname{lcm}\bigl(\operatorname{LM}(f),\,\operatorname{LM}(g)\bigr).
         \]
       \item The \(S\)-polynomial of \(f\) and \(g\) is the combination
         \[
@@ -153,6 +153,17 @@ quad\chapter{Gr{\"o}bner Bases}
 \begin{proof}
   \leanok %확인 필요
 \end{proof}
+
+\begin{lemma}\label{lem:S-polynomials and Monomial Multiplication} % [Cox] 89p Exercise 8
+  \uses{def:S-polynomial}
+  \lean{MvPolynomial.Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial}
+  \leanok %확인 필요
+  Suppose that $c_i x^{\alpha^{(i)}} g_i$ and $c_j x^{\alpha^{(j)}} g_j$ have multidegree $\delta$. Then
+  \[
+  S(x^{\alpha^{(i)}} g_i, x^{\alpha^{(j)}} g_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
+  \]
+  where $x^{\gamma_{ij}} = \operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
+\end{lemma}
 
 \begin{theorem}[Buchberger's Criterion]\label{thm:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
     \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation}
