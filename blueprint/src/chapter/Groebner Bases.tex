@@ -186,62 +186,29 @@ quad\chapter{Gr{\"o}bner Bases}
     \[\operatorname{deg}(f) \geq \operatorname{deg}(A_ig_i).\]
 \end{definition}
 
-\begin{latexonly}
-\begin{algorithm}\label{alg:Buchberger's_Algorithm} % [Cox] 91p
-    \uses{thm:Buchberger’s Criterion}
-    \lean{MvPolynomial.Buchberger_Algorithm}
-    \caption{Buchberger's Algorithm}
-    \begin{algorithmic}[1]
-    \Statex \textbf{Input:} An ordered list of polynomials $F = (f_1, \dots, f_s)$, a monomial order $>$
-    \Statex \textbf{Output:} A Gr{\"o}bner basis $G = (g_1, \dots, g_t)$ for $I = \ideal{f_1, \dots, f_s}$ such that $F \subseteq G$.
-    
-    \State $G := F$ \Comment{Initialize $G$ as the input list}
-    \State $t := s$ \Comment{Current number of polynomials in $G$}
-    \State $B := \{(i, j) \mid 1 \le i < j \le t\}$ \Comment{Set of index pairs to process}
-    
-    \While{$B \neq \emptyset$}
-        \State Select $(i, j)$ from $B$
-        \State $B := B \setminus \{(i, j)\}$
-        \State $S := \SPoly(g_i, g_j)$ \Comment{Compute S-polynomial (using indices for $G$)}
-        \State $r := \rem(S, G)$ \Comment{Compute remainder w.r.t. the ordered list $G$}
-        \If{$r \neq 0$}
-            \State $t := t + 1$
-            \State Append $r$ to the list $G$ as $g_t$ \Comment{Add non-zero remainder to end of list}
-            % Alternative: G := G ++ [r]
-            \State $B := B \cup \{(i, t) \mid 1 \le i < t\}$ \Comment{Add new pairs involving $g_t$}
-        \EndIf
-    \EndWhile
-    
-    \State \Return $G$
-    \end{algorithmic}
-\end{algorithm}
-\end{latexonly}
-
-\begin{htmlonly}
-    \paragraph{Buchberger's Algorithm (\lean{MvPolynomial.Buchberger_Algorithm}).}
-    \textbf{Input:} An ordered list of polynomials $F = (f_1, \dots, f_s)$ and a monomial order $>$.  
-    \textbf{Output:} A Gröbner basis $G = (g_1, \dots, g_t)$ for $I = \ideal{f_1, \dots, f_s}$ such that $F \subseteq G$.
-    
-    \begin{enumerate}
-      \item $G := F$
-      \item $t := s$
-      \item $B := \{(i, j) \mid 1 \le i < j \le t\}$
-      \item While $B \neq \emptyset$:
+\begin{theorem}[Buchberger's Algorithm]\label{thm:Buchberger's Algorithm}
+  \uses{thm:Buchberger’s Criterion}
+  \lean{MvPolynomial.Buchberger_Algorithm}
+  Let $I = \langle f_1, \ldots, f_s \rangle \ne \{0\}$ be a polynomial ideal. Then a Gr{\"o}bner basis for $I$ can be constructed in a finite number of steps by the following algorithm:
+  \normalfont % Switch from the theorem's default italic font to normal font
+  \begin{itemize}
+      \item[] \textbf{Input :} $F = (f_1, \ldots, f_s)$
+      \item[] \textbf{Output :} A Gr{\"o}bner basis $G = (g_1, \ldots, g_t)$ for $I$, with $F \subseteq G$
+      \vspace{1ex}
+      \item[] $G := F$
+      \item[] \textbf{REPEAT}
       \begin{itemize}
-        \item Choose a pair $(i, j)$ from $B$
-        \item Remove $(i, j)$ from $B$
-        \item $S := \SPoly(g_i, g_j)$
-        \item $r := \rem(S, G)$
-        \item If $r \neq 0$:
-        \begin{itemize}
-          \item $t := t + 1$
-          \item Append $r$ to $G$ as $g_t$
-          \item Add $\{(i, t) \mid 1 \le i < t\}$ to $B$
-        \end{itemize}
+          \item[] $G' := G$
+          \item[] \textbf{FOR} each pair $\{p, q\}$, $p \ne q$ in $G'$ \textbf{DO}
+          \begin{itemize}
+              \item[] $r := \overline{S(p, q)}^{G'}$
+              \item[] \textbf{IF} $r \ne 0$ \textbf{THEN} $G := G \cup \{r\}$
+          \end{itemize}
       \end{itemize}
-      \item Return $G$
-    \end{enumerate}
-\end{htmlonly}
+      \item[] \textbf{UNTIL} $G = G'$
+      \item[] \textbf{RETURN} $G$
+  \end{itemize}
+\end{theorem}
 
 \begin{lemma}\label{lem:grobner_basis_remove_redundant} % [Cox] 92p
     \lean{MvPolynomial.grobner_basis_remove_redundant}
