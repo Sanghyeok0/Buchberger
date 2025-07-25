@@ -1,4 +1,4 @@
-quad\chapter{Gr{\"o}bner Bases} 
+\chapter{Gr{\"o}bner Bases} 
 
 \section{Polynomial Reductions}
 
@@ -41,7 +41,7 @@ quad\chapter{Gr{\"o}bner Bases}
 
 \begin{theorem} % [Cox] 77p Proposition 3
     \label{thm:initialIdeal_is_FG}
-    \uses{def:initialIdeal, thm:Dickson(MvPolynomial)}
+    \uses{def:initialIdeal, thm:Dickson_MvPolynomial}
     \lean{MonomialOrder.initialIdeal_is_monomial_ideal, MonomialOrder.initialIdeal_is_FG}
     \leanok %확인 필요
     Let $I \subseteq k[x_1, \ldots , x_n]$ be an ideal different from $\{ 0 \}$.
@@ -154,7 +154,7 @@ quad\chapter{Gr{\"o}bner Bases}
   \leanok %확인 필요
 \end{proof}
 
-\begin{lemma}\label{lem:S-polynomials and Monomial Multiplication} % [Cox] 89p Exercise 8
+\begin{lemma}\label{lem:S-polynomials_and_Monomial_Multiplication} % [Cox] 89p Exercise 8
   \uses{def:S-polynomial}
   \lean{MvPolynomial.Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial}
   \leanok %확인 필요
@@ -165,8 +165,9 @@ quad\chapter{Gr{\"o}bner Bases}
   where $x^{\gamma_{ij}} = \operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
 \end{lemma}
 
-\begin{theorem}[Buchberger's Criterion]\label{thm:Buchberger’s Criterion} % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
-    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation, lem:S-polynomials and Monomial Multiplication}
+\begin{theorem}[Buchberger's Criterion] % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
+    \label{thm:Buchberger’s_Criterion} 
+    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation, lem:S-polynomials_and_Monomial_Multiplication}
     \lean{MvPolynomial.Buchberger_criterion}
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
     Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
@@ -186,8 +187,9 @@ quad\chapter{Gr{\"o}bner Bases}
     \[\operatorname{deg}(f) \geq \operatorname{deg}(A_ig_i).\]
 \end{definition}
 
-\begin{theorem}[Buchberger's Algorithm]\label{thm:Buchberger's Algorithm}
-  \uses{thm:Buchberger’s Criterion}
+\begin{theorem}[Buchberger's Algorithm]
+  \label{thm:Buchberger's_Algorithm}
+  \uses{thm:Buchberger’s_Criterion}
   \lean{MvPolynomial.Buchberger_Algorithm}
   Let $I = \langle f_1, \ldots, f_s \rangle \ne \{0\}$ be a polynomial ideal. Then a Gr{\"o}bner basis for $I$ can be constructed in a finite number of steps by the following algorithm:
   \normalfont % Switch from the theorem's default italic font to normal font

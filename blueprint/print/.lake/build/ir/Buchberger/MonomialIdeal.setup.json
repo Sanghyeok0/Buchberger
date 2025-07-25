@@ -1,0 +1,6 @@
+{"plugins": [],
+ "options": {"pp.unicode.fun": true, "autoImplicit": false},
+ "name": "Buchberger.MonomialIdeal",
+ "isModule": false,
+ "importArts": {},
+ "dynlibs": []}
