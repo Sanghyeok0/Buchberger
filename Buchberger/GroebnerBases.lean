@@ -266,8 +266,6 @@ theorem representation_of_f_of_normalForm_zero
   rw [h0, add_zero] at this
   exact this
 
-
-
 variable (m) [DecidableEq σ] in
 /-- Definition 5. Groebner_basis
 A finite subset G of an ideal I is called a Gröbner basis (or standard basis)
@@ -590,6 +588,35 @@ variable (m) in
 noncomputable def S_polynomial (f g : MvPolynomial σ k) : MvPolynomial σ k :=
   monomial (m.degree f ⊔ m.degree g - m.degree f) ((m.leadingCoeff f)⁻¹ : k) * f
   - monomial (m.degree f ⊔ m.degree g - m.degree g) (( m.leadingCoeff g)⁻¹ : k) * g
+
+variable (m) in
+omit [DecidableEq k] in
+lemma Spolynomial_zero_of_linearly_dependent
+  (f g : MvPolynomial σ k) (h_ne : f ≠ 0)
+  (h_dep : ∃ c : k, c ≠ 0 ∧ g = C c * f) :
+  S_polynomial m f g = 0 := by
+  obtain ⟨c, hc_ne_zero, rfl⟩ := h_dep
+  have h_deg_eq : m.degree (C c * f) = m.degree f := by
+    rw [degree_mul (C_ne_zero.mpr hc_ne_zero) h_ne]
+    simp only [degree_C, zero_add]
+  have h_lc_eq : m.leadingCoeff (C c * f) = c * m.leadingCoeff f := by
+    -- We need this to prove `IsRegular (m.leadingCoeff (C c))`.
+    have C_eq : C c = monomial (0 : σ →₀ ℕ) c := by exact rfl
+    have h_lc_C_ne_zero : m.leadingCoeff (C c) ≠ 0 := by
+      rw [leadingCoeff_ne_zero_iff, C_ne_zero]; exact hc_ne_zero
+
+    have : IsRegular (m.leadingCoeff (C c)) := by
+      apply isRegular_of_ne_zero h_lc_C_ne_zero
+
+    rw [leadingCoeff_mul_of_isRegular_left this h_ne]
+    rw [C_eq, leadingCoeff_monomial c]
+
+  unfold S_polynomial
+  rw [h_deg_eq, h_lc_eq]
+  simp only [le_refl, sup_of_le_left ,tsub_self, monomial_zero', mul_inv_rev, C_mul, mul_assoc]
+  nth_rw 2 [←mul_assoc]
+  rw [←C_mul, inv_mul_cancel₀ hc_ne_zero]
+  simp only [C_1, one_mul, sub_self]
 
 omit [DecidableEq k] in
 /--
@@ -1305,6 +1332,8 @@ theorem Buchberger_criterion
         · have f_deg_lt : m.toSyn (m.degree f) < δ_syn_min := by
             apply (LE.le.lt_iff_ne' f_deg_le).mpr (by exact fun a ↦ h_deg_eq_δ_syn (id (Eq.symm a)))
           clear f_deg_le; clear h_deg_eq_δ_syn
+
+          -- STEP 1: Decompose f into P₁, P₂, P₃
           let G_δ := G.filter (fun g => m.toSyn (m.degree (h_min g * g)) = δ_syn_min)
           have h_f_split : f = (∑ g ∈ G_δ, h_min g * g) + (∑ g ∈ G \ G_δ, h_min g * g) := by
             rw [h_f_eq_min]
@@ -1442,6 +1471,8 @@ theorem Buchberger_criterion
             rw [max_lt_iff]
             exact ⟨f_deg_lt, h_deg_P₂_plus_P₃_lt⟩
 
+
+          -- STEP 2: Rewrite P₁ using the Cancellation Lemma.
           let ι := ↥G_δ
           let p_fun (g : ι) : MvPolynomial σ k := leadingTerm m (h_min g.val) * g.val
           let p : ι →₀ MvPolynomial σ k := (Finsupp.equivFunOnFinite).symm p_fun
@@ -1546,16 +1577,205 @@ theorem Buchberger_criterion
           -- And `h_S_deg_lt` tells us the degree of each S-polynomial is `< δ_min`.
           -- Let's call the `p ij` terms `p_i` for clarity. `p_i = LT(h_min i) * i`.
 
-          -- Step 1: Relate `S(p_i, p_j)` back to `S(i, j)`.
+          -- Step 1: Relate `S(pᵢ, pⱼ)` back to `S(gᵢ, gⱼ)`.
+          -- This lemma formalizes the identity from Exercise 8 in the textbook:
+          -- `S(pᵢ, pⱼ) = x^{δ-γ} * S(gᵢ, gⱼ)`
           have h_S_relation : ∀ (ij : ι × ι), ij ∈ p.support.offDiag →
               S_polynomial m (p ij.1) (p ij.2) =
               monomial (δ_min - (m.degree ij.1.val ⊔ m.degree ij.2.val)) 1 * S_polynomial m ij.1.val ij.2.val := by
             intro ij hij
+            unfold p p_fun at hij
+            simp only [Finsupp.equivFunOnFinite_symm_apply_support, Set.Finite.toFinset_setOf,
+              ne_eq, mul_eq_zero, not_or, leadingTerm_ne_zero_iff, Finset.mem_offDiag,
+              Finset.mem_filter, Finset.mem_univ, true_and] at hij
 
             let gᵢ := ij.1.val; let gⱼ := ij.2.val
             let hᵢ := h_min gᵢ; let hⱼ := h_min gⱼ
+            dsimp [p, p_fun, leadingTerm]
+            rw [@Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial σ m k _ _ (↑ij.1) (↑ij.2) ?_ ?_ (m.degree (h_min ↑ij.1))]
+            · --show (monomial (m.degree (h_min ↑ij.1) + m.degree ↑ij.1 - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2 = (monomial (δ_min - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2
+              congr 4
+              rw [←MonomialOrder.degree_mul hij.1.1 hij.1.2]
+              have h_ij1_in_G_δ : ij.1.val ∈ G_δ := ij.1.property
+              apply m.toSyn.injective
+              rw [AddEquiv.apply_symm_apply]
+              exact (Finset.mem_filter.mp h_ij1_in_G_δ).2
 
-            sorry
+            · -- m.leadingCoeff (h_min ↑ij.1) ≠ 0
+              rw [MonomialOrder.leadingCoeff_ne_zero_iff]
+              exact hij.1.1
+            · -- m.leadingCoeff (h_min ↑ij.2) ≠ 0
+              rw [MonomialOrder.leadingCoeff_ne_zero_iff]
+              exact hij.2.1.1
+            · -- m.degree (h_min ↑ij.1) + m.degree ↑ij.1 = m.degree (h_min ↑ij.2) + m.degree ↑ij.2
+              rw [←MonomialOrder.degree_mul hij.1.1 hij.1.2, ←MonomialOrder.degree_mul hij.2.1.1 hij.2.1.2]
+              apply m.toSyn.injective
+              have h_ij1_in_G_δ : ij.1.val ∈ G_δ := ij.1.property
+              have h_deg1_eq_δ : m.toSyn (m.degree (h_min ij.1.val * ij.1.val)) = δ_syn_min := by
+                exact (Finset.mem_filter.mp h_ij1_in_G_δ).2
+              have h_ij2_in_G_δ : ij.2.val ∈ G_δ := ij.2.property
+              have h_deg2_eq_δ : m.toSyn (m.degree (h_min ij.2.val * ij.2.val)) = δ_syn_min := by
+                exact (Finset.mem_filter.mp h_ij2_in_G_δ).2
+              rw [h_deg1_eq_δ, h_deg2_eq_δ]
+            · -- ↑ij.1 ≠ 0
+              exact hij.1.2
+            · -- ↑ij.2 ≠ 0
+              exact hij.2.1.2
+
+          -- Step 2: Formalize (6) and (7) from the textbook.
+          -- For any S-polynomial S(gᵢ,gⱼ), since its normal form is 0, the division algorithm
+          -- gives us a representation with a good degree property.
+          have h_S_poly_repr₁ (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ : gᵢ ∈ G) (hgⱼ : gⱼ ∈ G) (h_ne : gᵢ ≠ gⱼ) :
+            let S_poly := S_polynomial m gᵢ gⱼ
+            let A := quotients m hG S_poly
+            -- Equation (6): A is an element of `↥G →₀ MvPolynomial σ k`
+            S_poly = A.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) ∧
+            -- Equation (7): The degree condition holds.
+            (∀ (gₗ : ↥G), m.degree (gₗ.val * A gₗ) ≼[m] m.degree S_poly) := by
+
+            let S_poly := S_polynomial m gᵢ gⱼ
+            specialize hS_poly gᵢ gⱼ hgᵢ hgⱼ h_ne
+
+            let A := quotients m hG S_poly
+
+            -- This is the representation from the division algorithm.
+            have h_spec := normalForm_spec' m hG S_poly
+
+            -- Use the fact that the normal form is zero.
+            rw [hS_poly] at h_spec
+            simp only [add_zero] at h_spec
+
+            -- Now h_spec.1 is `S_poly = Finsupp.linearCombination ...`.
+            -- We need to show this `linearCombination` is the same as our `Finsupp.sum`.
+            have h_repr_eq : S_poly = A.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) := by
+              -- Unfold the definition of `linearCombination` from the division algorithm's spec.
+              rw [h_spec.1]
+              -- `Finsupp.linearCombination B v f` is defined as `v.sum (fun i a => a • f i)`.
+              -- Here, B is `G.toSet`, v is `A`, f is `(fun b => b.val)`.
+              -- So it's `A.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h • g.val)`.
+              -- Since `h • g.val` is the same as `h * g.val`, the equality holds.
+              rfl
+
+            exact ⟨h_repr_eq, h_spec.2.1⟩
+
+          -- STEP 4: Formalize equations (8) and (9).
+          -- We will show that for any pair (i,j), the term `x^{δ-γ} * S(gᵢ, gⱼ)` can be rewritten
+          -- as a sum of terms, each with degree strictly less than `δ_min`.
+          have h_rewritten_S_poly_deg_lt (i j : ι) (hi : i.val ∈ G_δ) (hj : j.val ∈ G_δ) (h_ne : i.val ≠ j.val) :
+            let gᵢ := i.val; let gⱼ := j.val
+            let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) 1
+            let S_gij := S_polynomial m gᵢ gⱼ
+            let A_ij := quotients m hG S_gij
+            let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
+            -- This `have` block proves two things:
+            -- 1. The representation from eq (8): `mono * S = ∑ B * g`.
+            -- 2. The degree bound from eq (9): `deg(B * g) < δ_min`.
+            (mono_factor * S_gij = A_ij.sum (fun gₗ _ => B_ij gₗ * gₗ.val)) ∧
+            (∀ gₗ : ↥G, m.toSyn (m.degree (B_ij gₗ * gₗ.val)) < δ_syn_min) := by
+
+            let gᵢ := i.val; let gⱼ := j.val
+            let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) (1 : k)
+            let S_gij := S_polynomial m gᵢ gⱼ
+            let A_ij := quotients m hG S_gij
+            let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
+            -- Get the representation for S(gᵢ,gⱼ) from our previous lemma.
+            let h_repr := h_S_poly_repr₁ gᵢ gⱼ (Finset.mem_of_mem_filter gᵢ hi) (Finset.mem_of_mem_filter gⱼ hj) h_ne
+
+            -- Unpack the representation and degree property for S(gᵢ, gⱼ).
+            have h_eq6 : S_gij = A_ij.sum (fun gₗ hₗ => hₗ * gₗ.val) := h_repr.1
+            have h_eq7 (gₗ : ↥G) : m.degree (gₗ.val * A_ij gₗ) ≼[m] m.degree S_gij := h_repr.2 gₗ
+
+            -- Prove the first part of our goal (Equation 8).
+            have h_eq8 : mono_factor * S_gij = A_ij.sum (fun gₗ _ => B_ij gₗ * gₗ.val) := by
+              rw [h_eq6, Finsupp.mul_sum]
+              apply Finsupp.sum_congr
+              intro gₗ _
+              dsimp [B_ij]
+              rw [mul_assoc]
+
+            -- Now, prove the second part (Inequality 9).
+            have h_ineq9 : ∀ gₗ : ↥G, m.toSyn (m.degree (B_ij gₗ * gₗ.val)) < δ_syn_min := by
+              intro gₗ
+              -- by_cases h_term_zero : A_ij gₗ = 0
+              -- · unfold B_ij
+              --   rw [h_term_zero]
+              --   simp only [mul_zero, zero_mul, degree_zero, map_zero]
+              --   exact h_min_le_bot
+              by_cases h_term_is_zero : B_ij gₗ * gₗ.val = 0
+              · -- If the term is zero, its degree is 0, which is < δ_syn_min.
+                rw [h_term_is_zero, degree_zero, map_zero]
+                exact h_min_le_bot
+              -- apply lt_of_le_of_lt
+              -- The degree of the product `B*g` is `deg(B) + deg(g)`.
+              -- `deg(B) = deg(mono * A) = deg(mono) + deg(A)`.
+              -- So `deg(B*g) = deg(mono) + deg(A) + deg(g) = deg(mono) + deg(A*g)`.
+              -- We know `deg(A*g) <= deg(S)`.
+              -- So `deg(B*g) <= deg(mono) + deg(S) = deg(mono * S)`.
+              have h_Bg_ne_zero : B_ij gₗ * gₗ.val ≠ 0 := h_term_is_zero; clear h_term_is_zero
+              have h_Ag_ne_zero : gₗ.val * A_ij gₗ ≠ 0 := by
+                by_contra h_Ag_is_zero
+                apply h_Bg_ne_zero
+                dsimp [B_ij]
+                rw [mul_assoc]
+                nth_rw 2 [mul_comm]
+                exact mul_eq_zero_of_right mono_factor h_Ag_is_zero
+
+              have h_deg_le_mono_mul_S : m.degree (B_ij gₗ * gₗ.val) ≼[m] m.degree (mono_factor * S_gij) := by
+                unfold B_ij
+                rw [mul_assoc]
+                nth_rw 2 [mul_comm]
+                have h_mono_ne_zero : mono_factor ≠ 0 := by rw [Ne, MvPolynomial.monomial_eq_zero]; exact one_ne_zero
+                by_cases h_S_zero : S_gij = 0
+                · have A_deg_zero : m.degree (gₗ.val * A_ij gₗ) = 0 := by
+                    specialize h_eq7 gₗ
+                    rw [h_S_zero, degree_zero, map_zero] at h_eq7
+                    have h_syn_eq_zero := le_bot_iff.mp h_eq7
+                    exact m.toSyn.injective (by rwa [map_zero])
+
+                  apply le_trans degree_mul_le; rw [A_deg_zero, add_zero]
+                  have h_deg_rhs : m.degree (mono_factor * S_gij) = 0 := by rw [h_S_zero, mul_zero, degree_zero]
+                  rw [h_deg_rhs]
+                  sorry
+                · nth_rw 1 [degree_mul h_mono_ne_zero]; rw [degree_mul h_mono_ne_zero]
+                  · -- show m.toSyn (m.degree mono_factor + m.degree (↑gₗ * A_ij gₗ)) ≤ m.toSyn (m.degree mono_factor + m.degree S_gij)
+                    have h₁ : m.toSyn (m.degree mono_factor + m.degree (gₗ.val * A_ij gₗ)) = m.toSyn (m.degree mono_factor) + m.toSyn (m.degree (gₗ.val * A_ij gₗ)) := by apply m.toSyn.map_add
+                    have h₂ : m.toSyn (m.degree mono_factor + m.degree S_gij) = m.toSyn (m.degree mono_factor) + m.toSyn (m.degree S_gij) := by apply m.toSyn.map_add
+                    rw [h₁, h₂]
+                    apply add_le_add_left
+                    exact h_eq7 gₗ
+                  · show S_gij ≠ 0
+                    sorry
+                  · show ↑gₗ * A_ij gₗ ≠ 0
+                    sorry
+
+
+              -- Now we just need to show that `deg(mono * S) < δ_min`.
+              -- `mono * S(gᵢ, gⱼ)` is equal to `S(pᵢ, pⱼ)` from our `h_S_relation`.
+              have h_mono_mul_S_eq_S_p : mono_factor * S_gij = S_polynomial m (p i) (p j) := by
+                rw [(h_S_relation ⟨i,j⟩ (by sorry)).symm] -- Need proof that `ij ∈ offDiag`.
+
+              -- The cancellation lemma gave us the degree bound for `S(pᵢ, pⱼ)`.
+              have h_deg_S_p_lt : m.degree (S_polynomial m (p i) (p j)) ≺[m] δ_min := by
+                apply h_syzygy_result.2
+                -- Need proofs that `i,j` are in `p.support`.
+                sorry; sorry
+
+              sorry
+
+            -- Combine the two results.
+            exact ⟨h_eq8, h_ineq9⟩
+
+
+
+
+
+
+
+          rcases h_syzygy_result with ⟨⟨c, h_P₁_rw⟩, h_S_deg_lt⟩
+          have h_S_relation (i j : ι) :
+            p i = leadingTerm m (h_min i.val) * i.val := by simp [p, p_fun]
+
+
 
 
           -- obtain ⟨c, h_P₁_rw⟩ := h_exists_c
