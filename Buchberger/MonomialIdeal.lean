@@ -24,6 +24,14 @@ namespace MonomialOrder
 open MvPolynomial
 
 variable (m) in
+lemma degree_le_degree_mul (p q : MvPolynomial σ k) (hq_ne_zero : q ≠ 0) :
+  m.degree p ≼[m] m.degree (p * q) := by
+  by_cases hp_ne_zero : p = 0
+  · rw [hp_ne_zero, degree_zero, map_zero, zero_mul, degree_zero, map_zero]
+  · rw [m.degree_mul hp_ne_zero hq_ne_zero, map_add]
+    exact le_add_of_nonneg_right (bot_le)
+
+variable (m) in
 /-- the leading coefficient of a multivariate polynomial with respect
 to a monomial ordering -/
 noncomputable def leadingTerm (f : MvPolynomial σ R) : MvPolynomial σ R :=

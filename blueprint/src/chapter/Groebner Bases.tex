@@ -167,8 +167,9 @@
 
 \begin{theorem}[Buchberger's Criterion] % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
     \label{thm:Buchberger’s_Criterion} 
-    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation, lem:S-polynomials_and_Monomial_Multiplication}
+    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation, lem:S-polynomials_and_Monomial_Multiplication, lem:sum_ite_not_mem}
     \lean{MvPolynomial.Buchberger_criterion}
+    \leanok %확인 필요
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
     Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
     if and only if for all pairs $i \neq j$, the remainder on division of the $S$-polynomial $S(g_i, g_j)$ by $G$ (listed in some order) is zero.

@@ -1,0 +1,34 @@
+\chapter{Finset} 
+
+\section{Piecewise}
+
+\begin{lemma}[prod ite not mem]
+    \lean{Finset.prod_ite_not_mem}\label{lem:prod_ite_not_mem}
+    \leanok
+    Let $s, t$ be finite sets of indices in $\iota$, and let $f \colon \iota \to M$. 
+    Then
+    \[
+    \prod_{x \in s} 
+    \begin{cases}
+    1, & \text{if } x \in t, \\
+    f(x), & \text{otherwise}
+    \end{cases}
+    =
+    \prod_{x \in s \setminus t} f(x).
+    \]
+\end{lemma}
+
+\begin{lemma}[sum ite not mem]\label{lem:sum_ite_not_mem}
+    \lean{Finset.sum_ite_not_mem}
+    \leanok
+    Let $s, t$ be finite sets of indices in $\iota$, and let $f \colon \iota \to A$ be a function to an additive commutative monoid. Then
+    \[
+    \sum_{x \in s} 
+    \begin{cases}
+    0, & \text{if } x \in t, \\
+    f(x), & \text{otherwise}
+    \end{cases}
+    =
+    \sum_{x \in s \setminus t} f(x).
+    \]
+\end{lemma}

@@ -4,7 +4,9 @@ import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.LinearAlgebra.Span.Defs
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Algebra.Order.Sub.Unbundled.Hom
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 -- import Mathlib.Algebra.Ring.Defs
+import Buchberger.Piecewise
 import Buchberger.MonomialIdeal
 -- import Buchberger.Order2
 
@@ -13,22 +15,9 @@ variable {m : MonomialOrder σ}
 
 set_option maxHeartbeats 0
 
-open MonomialOrder MvPolynomial
-
-/-Already in Mathlib-/
-variable {α β : Type*}
-theorem map_tsub_of_le {F : Type*} [PartialOrder α] [AddCommSemigroup α] [ExistsAddOfLE α]
-    [AddLeftMono α] [Sub α] [OrderedSub α] [PartialOrder β] [AddCommSemigroup β] [Sub β]
-    [OrderedSub β] [AddLeftReflectLE β] [FunLike F α β] [AddHomClass F α β]
-    (f : F) (a b : α) (h : b ≤ a) : f a - f b = f (a - b) := by
-  conv => lhs; rw [← tsub_add_cancel_of_le h]
-  rw [map_add, add_tsub_cancel_right]
+open MonomialOrder MvPolynomial Finset
 
 namespace MonomialOrder
-
-/-- Given a monomial order, notation for the corresponding equality relation on `σ →₀ ℕ` -/
-scoped
-notation:50 c " ≈[" m:25 "] " d:50 => (MonomialOrder.toSyn m c = MonomialOrder.toSyn m d)
 
 /-
 ## Reference : [Cox, Little, and O'Shea 1997] [Becker-Weispfenning1993]
@@ -37,66 +26,6 @@ notation:50 c " ≈[" m:25 "] " d:50 => (MonomialOrder.toSyn m c = MonomialOrder
 section Semiring
 
 variable {R : Type*} [CommSemiring R]
-
-variable {ι : Type*} [DecidableEq ι] [LinearOrder ι] [OrderBot ι] in
-lemma degree_sum_le_max (s : Finset ι) (hs : s.Nonempty) (f : ι → MvPolynomial σ R) :
-    ∑ i ∈ s, (f i).support.sup m.toSyn ≤ (s.image (fun i => (f i).support.sup m.toSyn)).max' (by apply Finset.image_nonempty.mpr hs) := by
-  -- We proceed by induction on the finset `s`.
-  induction s using  Finset.induction_on with
-  | empty =>
-    simp only [Finset.sum_empty, Finset.image_empty, zero_le]
-  | insert i s hi_not_in_s ih =>
-    by_cases h_s_empty : s = ∅
-    · -- If s is empty, then `insert i s` is just `{i}`.
-      subst h_s_empty
-      simp
-    -- Inductive step: s' = insert i s, where s is not empty.
-    have h_s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty h_s_empty
-    have h_insert_nonempty : (insert i s).Nonempty := by exact Finset.insert_nonempty i s
-    -- `∑_{j∈s'} f j = f i + ∑_{j∈s} f j`
-    rw [Finset.sum_insert hi_not_in_s]
-    have h1 : m.toSyn (m.degree ((f i) + (∑ j ∈ s, f j))) ≤ max (m.toSyn (m.degree (f i))) (m.toSyn (m.degree (∑ j ∈ s, f j))) := m.degree_add_le
-    have : ((f i) + (∑ j ∈ s, f j)).support.sup m.toSyn ≤ max ((f i).support.sup m.toSyn) ((∑ j ∈ s, f j).support.sup m.toSyn) := by sorry
-    sorry
-    -- apply le_trans this
-    -- rw [max_le_iff]
-    -- constructor
-    -- · -- m.toSyn (m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
-    --   apply toSyn_monotone
-    --   have : i ∈ (insert i s) := by exact Finset.mem_insert_self i s
-    --   apply Finset.le_sup this
-    -- · -- m.toSyn (s.sup fun i ↦ m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
-    --   apply le_trans ih
-    --   apply toSyn_monotone
-    --   refine Finset.sup_mono ?_
-    --   exact Finset.subset_insert i s
-
--- -- We immediately prove lemmas that rewrite the notation into a more usable form.
--- -- These are the fundamental definitions of the monomial order relations.
--- theorem le_def (c d : σ →₀ ℕ) : (c ≼[m] d) = (m.toSyn c ≤ m.toSyn d) := rfl
--- theorem lt_def (c d : σ →₀ ℕ) : (c ≺[m] d) = (m.toSyn c < m.toSyn d) := rfl
-
--- -- For convenience, we provide `iff` lemmas.
--- @[simp]
--- theorem le_iff_toSyn_le {c d : σ →₀ ℕ} : c ≼[m] d ↔ m.toSyn c ≤ m.toSyn d := .rfl
-
--- @[simp]
--- theorem lt_iff_toSyn_lt {c d : σ →₀ ℕ} : c ≺[m] d ↔ m.toSyn c < m.toSyn d := .rfl
-
-/--
-A monomial order endows `σ →₀ ℕ` with the structure of a linearly ordered
-cancellative additive commutative monoid.
-We can formalize this by showing that `toSyn` is an order isomorphism.
-
-This theorem states that `toSyn` is an isomorphism between `(σ →₀ ℕ, ≼[m])`
-and `(m.syn, ≤)`.
--/
-def relIso : RelIso (· ≼[m] ·) ((· : m.syn) ≤ ·) where
-  toEquiv := m.toSyn.toEquiv
-  map_rel_iff' {c d} := by
-    -- The goal is `m.toSyn c ≤ m.toSyn d ↔ c ≼[m] d`.
-    -- This is the reverse of `le_iff_toSyn_le`, so we can use `iff_comm`.
-    exact ge_iff_le
 
 theorem toSyn_degree_eq_sup_support (f : MvPolynomial σ R) :
     m.toSyn (m.degree f) = f.support.sup m.toSyn := by
@@ -171,10 +100,6 @@ noncomputable def normalForm_general
   (f : MvPolynomial σ R) : MvPolynomial σ R := by
   choose gcomb r hr using MonomialOrder.div_set hB f
   exact r
-
-variable [CommRing R] [Finite σ] [IsNoetherianRing R] in
-theorem Hilbert_basis_initial (I : Ideal (MvPolynomial σ R)) :
-  Ideal.FG (initialIdeal m I) := by sorry --(inferInstance : IsNoetherianRing _).noetherian (initialIdeal m I) -- @isNoetherianRing R σ _ _
 
 end CommRing
 end MonomialOrder
@@ -450,61 +375,6 @@ theorem normalForm_exists_unique
     cases hin with
     | inl h => exact hnil (m.degree (r - r')) h gα hgα_in_G hα.2
     | inr h => exact hnil' (m.degree (r - r')) h gα hgα_in_G hα.2
-
--- variable [DecidableEq σ] in
--- /--
--- **§6 Corollary 2**
--- Let $G = \{g_1,\dots,g_t\}$ be a Gröbner basis for an ideal $I \subseteq k[x_1,\dots,x_n]$ and let $f \in k[x_1,\dots,x_n]$.
--- Then $f \in I$ if and only if the remainder on division of $f$ by $G$ is zero.
--- -/
--- theorem mem_I_iff_normalForm_eq_zero'
---   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
---   (hGB : IsGroebnerBasis m I G)
---   (f : MvPolynomial σ k) :
---   f ∈ I ↔ normalForm m G hGB.1 f = 0 := by
---   -- prepare the two hypotheses for `div_set` and for uniqueness
---   --let B := G.toSet
---   --have hB : ∀ b ∈ B, b ≠ 0 := fun _ hb => hGB.1 _ hb
---   let hU : ∀ g ∈ G, IsUnit (m.leadingCoeff g) := fun g hg =>
---     (isUnit_leadingCoeff_iff_nonzero m g).mpr (hGB.1 g hg)
---   have unique_rem := normalForm_exists_unique hGB f
-
---   constructor
---   · -- (→) if `f ∈ I` then the chosen remainder must be `0`
---     intro hf
---     -- build the “r = 0” witness of the unique‐remainder property
---     have P₀ :
---       (∃ g, g ∈ I ∧ f = g + 0) ∧
---       ∀ c ∈ (0 : MvPolynomial σ k).support, ∀ gi ∈ G, ¬ m.degree gi ≤ c := by
---       constructor
---       · use f; constructor; exact hf; simp
---       · simp
---     -- build the “r = normalForm …” witness
---     have Pn :
---       (∃ g, g ∈ I ∧ f = g + normalForm m G hGB.1 f) ∧
---       ∀ c ∈ (normalForm m G hGB.1 f).support, ∀ gi ∈ G, ¬ m.degree gi ≤ c := by
---       obtain ⟨q, r, ⟨hre, _, hnil⟩⟩ :=
---         MonomialOrder.div_set hU f
---       dsimp [normalForm]
---       constructor
---       · -- `g := ∑ q i • (i : MvPolynomial)`
---         use q.sum fun i coeff => coeff • (i : MvPolynomial σ k)
---         -- this `g` lies in `I` because `G ⊆ I`
---         have : ∀ i ∈ q.support, (i : MvPolynomial σ k) ∈ I := fun i hi =>
---           hGB.2.1 i.2
---         sorry
---         --refine ⟨Submodule.sum_smul_mem I _ this, _⟩
---         --simpa [Finsupp.sum, *] using hre
---       · sorry
---     -- now uniqueness forces `normalForm … = 0`
---     sorry
---     --simpa [normalForm] using unique_rem.2 _ _ Pn P₀
-
---   · -- (←) if the remainder is `0` then `f = g + 0 ∈ I`
---     intro h0
---     obtain ⟨q, r, ⟨hre, _, _⟩⟩ := MonomialOrder.div_set hU f
---     -- since `r = normalForm … = 0`, we get `f = ∑ q i • i`
---     sorry
 
 variable [DecidableEq σ] in
 /--
@@ -967,44 +837,6 @@ lemma exists_S_polynomial_syzygies
         apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
       exact hps
 
-variable (m) [Fintype σ] [DecidableEq σ] in
-lemma leadingTerm_sum_of_max_degree'
-  {f : MvPolynomial σ k}
-  (H : MvPolynomial σ k → MvPolynomial σ k) (G : Finset (MvPolynomial σ k))
-  (h_repr : f = ∑ g ∈ G, H g * g)
-  (h_deg_eq_max : m.degree f = G.sup (fun g => m.degree (H g * g))) :
-  leadingTerm m f = ∑ g ∈ G.filter (fun g => m.degree (H g * g) = m.degree f), leadingTerm m (H g * g) := by
-    calc
-    m.leadingTerm f = monomial (m.degree f) (m.leadingCoeff f) := by rw [leadingTerm]
-    _ = monomial (G.sup (fun g => m.degree (H g * g))) (m.leadingCoeff (∑ g ∈ G, H g * g)) := by rw [h_deg_eq_max, h_repr]
-    _ = ∑ g ∈ G.filter (fun g => m.degree (H g * g) = m.degree f), leadingTerm m (H g * g) := by sorry
-
-  -- rw [leadingTerm, Finset.sum_filter]
-
-
-  -- | empty => contradiction
-  -- | insert a s ha ih =>
-  --   rw [Finset.sup_insert]
-  --   -- The sup is max (a, s.sup id).
-  --   -- If s is empty, sup is just a.
-  --   by_cases hs_empty : s = ∅
-  --   · subst hs_empty
-  --     simp
-  --   · -- If s is not empty, we can use induction.
-  --     have s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty hs_empty
-  --     specialize ih s_nonempty
-  --     -- The sup is max(a, s.sup id).
-  --     -- `ih` tells us `s.sup id ∈ s`.
-  --     -- We need to show `max(a, s.sup id)` is in `insert a s`.
-  --     cases le_total a (s.sup id) with
-  --     | inl h_le => -- max is s.sup id
-  --       rw [max_eq_right h_le]
-  --       apply Finset.mem_insert_of_mem
-  --       exact ih
-  --     | inr h_ge => -- max is a
-  --       rw [max_eq_left h_ge]
-  --       apply Finset.mem_insert_self
-
 variable (m) in
 /--
 **(Cox, Little, O'Shea, Ch 2, §6, Exercise 7)
@@ -1159,15 +991,12 @@ lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
       congr 1
       · -- Exponents: `aᵢ = (δ - γ) + (γ - m.degree gᵢ)`.
         -- `γ = m.degree gᵢ ⊔ m.degree gⱼ`.
-        -- Since `m.degree gᵢ ≤ γ`, we can use `add_tsub_cancel_of_le`.
-        -- have hᵢ_le : m.degree gᵢ ≤ aᵢ + m.degree gᵢ := by exact le_add_self
-        -- have hⱼ_le : m.degree gⱼ ≤ aᵢ + m.degree gᵢ := by rw [h_deg_eq]; exact le_add_self
         rw [tsub_add_tsub_cancel]
         · simp only [h_deg_eq, add_tsub_cancel_right]
         · exact sup_le (le_add_self) (by rw [h_deg_eq]; exact le_add_self)
         · exact le_sup_right
 
-variable (m) [Fintype σ] [DecidableEq σ] in
+variable (m) [DecidableEq σ] in
 /--
 **(Cox, Little, O'Shea, Ch 2, §6, Theorem 6): Buchberger’s Criterion** :
 Let `I` be a polynomial ideal and let `G` be a basis of `I` (i.e. `I =
@@ -1227,36 +1056,44 @@ theorem Buchberger_criterion
 
         obtain ⟨H, h_H_supp, h_f_eq⟩ := hfI
 
+        let ℍ : ↥G →₀ MvPolynomial σ k :=
+          Finsupp.onFinset G.attach
+            (fun g => H g.val)
+            (by
+              intro g hg
+              simp only [Finset.mem_attach])
+
+        have h_f_eq : ∑ g ∈ G.attach, ℍ g * g.val = f := by
+          simp only [ℍ, Finsupp.onFinset_apply]
+          rw [Finset.sum_attach G (fun a => H a * a)]
+          exact h_f_eq
+
         let RepMaxSynDegrees : Set m.syn :=
-          { δ_syn | ∃ (h : MvPolynomial σ k → MvPolynomial σ k),
-              Function.support h ⊆ G ∧ f = (∑ g ∈ G, h g * g) ∧
+          { δ_syn | ∃ (h : ↥G →₀ MvPolynomial σ k),
+              f = (∑ g ∈ G.attach, h g * g.val) ∧
               -- δ_syn is the sup of the degrees *in the synonym type*.
-              δ_syn = (G.image (m.toSyn ∘ (fun g => m.degree (h g * g)))).sup id }
+              δ_syn = (G.attach.image (m.toSyn ∘ (fun g => m.degree (h g * g.val)))).sup id }
 
         have h_RepMaxSynDegrees_nonempty : RepMaxSynDegrees.Nonempty := by
-          use (G.image (m.toSyn ∘ (fun g => m.degree (H g * g)))).sup id
-          use H
-          exact ⟨h_H_supp, h_f_eq.symm, rfl⟩
+          use (G.attach.image (m.toSyn ∘ (fun g => m.degree (ℍ g * g.val)))).sup id
+          use ℍ
+          exact ⟨h_f_eq.symm, rfl⟩
 
         let δ_syn_min := WellFounded.min (by exact wellFounded_lt) RepMaxSynDegrees h_RepMaxSynDegrees_nonempty
 
-        -- obtain ⟨h_min, h_min_supp, h_f_eq_min, h_δ_syn_min_eq⟩ :=
-        --   WellFounded.min_mem (by exact wellFounded_lt) RepMaxSynDegrees h_RepMaxSynDegrees_nonempty
         let δ_min := m.toSyn.symm δ_syn_min
+        have hδ_syn : δ_syn_min = m.toSyn δ_min := by unfold δ_min; simp only [AddEquiv.apply_symm_apply]
 
         have h_δ_min_in_RepDegrees : δ_syn_min ∈ RepMaxSynDegrees := by
           exact WellFounded.min_mem wellFounded_lt RepMaxSynDegrees h_RepMaxSynDegrees_nonempty
 
-        obtain ⟨h_min, h_supp_min, h_f_eq_min, h_δ_syn_min_eq⟩ := h_δ_min_in_RepDegrees
+        obtain ⟨h_min, h_f_eq_min, h_δ_syn_min_eq⟩ := h_δ_min_in_RepDegrees
+
         have f_deg_le : m.toSyn (m.degree f) ≤ δ_syn_min := by
-          -- The goal is `m.toSyn (m.degree f) ≤ δ_syn_min`.
 
-          -- From `h_δ_min_in_RepDegrees`, we know there is a minimal representation.
-
-          -- We use this specific representation of f.
           rw [h_f_eq_min]
           -- simp only [AddEquiv.apply_symm_apply, δ_min]
-          apply le_trans (@degree_sum_le_syn σ m k _ (MvPolynomial σ k) G (fun g => h_min g * g))
+          apply le_trans (@degree_sum_le_syn σ m k _ (↥G) G.attach _) -- (fun g => h_min' g * g.val)
 
           -- The goal after applying the lemma is:
           -- `(G.sup (fun i => m.toSyn (m.degree (h_min i * i)))) ≤ δ_syn_min`.
@@ -1267,30 +1104,14 @@ theorem Buchberger_criterion
           rw [eq_comm]
           apply Finset.sup_image
 
-        -- have f_deg_le' : m.degree f ≼[m] δ_min := by
-        --   rw [h_f_eq_min]
-
-        --   apply le_trans (@degree_sum_le_syn σ m k _ (MvPolynomial σ k) G (fun g => h_min g * g))
-        --   simp only [δ_min, AddEquiv.apply_symm_apply]
-        --   rw [h_δ_syn_min_eq]
-        --   refine le_of_eq ?_
-        --   rw [eq_comm]
-        --   apply Finset.sup_image
-
-        have h_le : ∀ g ∈ G, m.toSyn (m.degree (h_min g * g)) ≤ δ_syn_min := by
-          intro h hg
+        have h_le : ∀ g ∈ G.attach, m.toSyn (m.degree (h_min g * g.val)) ≤ δ_syn_min := by
+          intro g hg
+          -- rewrite δ_syn_min to the `image ... .sup id` form
           rw [h_δ_syn_min_eq]
+          -- convert (image ...).sup id into G.attach.sup (the function on ↥G)
           rw [Finset.sup_image]
-          simp only [CompTriple.comp_eq]
-          exact @Finset.le_sup _ _ _ _ _ (m.toSyn ∘ fun g ↦ m.degree (h_min g * g)) _ (hg)
-
-        -- have h_le' : ∀ g ∈ G, m.degree (h_min g * g) ≼[m] δ_min := by
-        --   intro h hg
-        --   simp only [δ_min, AddEquiv.apply_symm_apply]
-        --   rw [h_δ_syn_min_eq]
-        --   rw [Finset.sup_image]
-        --   simp only [CompTriple.comp_eq]
-        --   exact @Finset.le_sup _ _ _ _ _ (m.toSyn ∘ fun g ↦ m.degree (h_min g * g)) _ (hg)
+          -- now apply the lemma that f x ≤ s.sup f for x ∈ s
+          exact @Finset.le_sup _ _ _ _ (G.attach) (m.toSyn ∘ fun g => m.degree (h_min g * g.val)) g hg
 
         by_cases h_min_le_bot : δ_syn_min ≤ ⊥
         · have h_syn_min_eq_bot : δ_syn_min = ⊥ := by exact le_bot_iff.mp h_min_le_bot
@@ -1305,12 +1126,12 @@ theorem Buchberger_criterion
           have h_f_is_const : f = C (m.leadingCoeff f) := eq_C_of_degree_eq_zero f_deg_0
           simp
 
-          have g_deg_0 : ∀g ∈ G, m.toSyn (m.degree (h_min g * g)) = 0 := by
+          have g_deg_0 : ∀g ∈ G.attach, m.toSyn (m.degree (h_min g * g.val)) = 0 := by
             intro g hg
             rw [h_syn_min_eq_bot] at h_le
             exact (MonomialOrder.eq_zero_iff m).mpr (h_le g hg)
 
-          have h_exists_nonzero_term : ∃ g ∈ G, h_min g * g ≠ 0 := by
+          have h_exists_nonzero_term : ∃ g ∈ G.attach, h_min g * g ≠ 0 := by
             -- We prove this by contradiction.
             by_contra h_all_terms_zero
             push_neg at h_all_terms_zero
@@ -1335,14 +1156,14 @@ theorem Buchberger_criterion
           rw [h_f_eq_min]
           rw [MvPolynomial.C_eq_smul_one]
 
-          have h_deg_g₀ : m.degree g₀ = 0 := by
+          have h_deg_g₀ : m.degree g₀.val = 0 := by
             -- We know the degree of the product is 0.
-            have h_term_deg_zero : m.degree (h_min g₀ * g₀) = 0 := by
+            have h_term_deg_zero : m.degree (h_min g₀ * g₀.val) = 0 := by
               exact (AddEquiv.map_eq_zero_iff m.toSyn).mp (g_deg_0 g₀ hg₀_in_G)
 
             -- The degree of a product is the sum of degrees (for non-zero polynomials).
             -- We need to show `h_min g₀` and `g₀` are non-zero.
-            have h_g₀_ne_zero : g₀ ≠ 0 := hG g₀ hg₀_in_G
+            have h_g₀_ne_zero : g₀.val ≠ 0 := hG g₀.val g₀.property
             have h_h_min_g₀_ne_zero : h_min g₀ ≠ 0 := by
               -- If h_min g₀ = 0, then h_min g₀ * g₀ = 0, which contradicts `h_term_ne_zero`.
               contrapose! h_term_ne_zero
@@ -1351,17 +1172,19 @@ theorem Buchberger_criterion
             -- Now apply the degree of product rule.
             have h_deg_add := m.degree_mul h_h_min_g₀_ne_zero h_g₀_ne_zero
             rw [h_term_deg_zero] at h_deg_add
-            have : m.degree (h_min g₀) = 0 ∧ m.degree g₀ = 0 := by exact add_eq_zero.mp (by exact id (Eq.symm h_deg_add))
+            have : m.degree (h_min g₀) = 0 ∧ m.degree g₀.val = 0 := by exact add_eq_zero.mp (by exact id (Eq.symm h_deg_add))
             exact this.2
 
-          have h_unit_g₀ : IsUnit (m.leadingTerm g₀) := by
+          have hg₀_val_in_G : g₀.val ∈ G := by exact Finset.coe_mem g₀
+
+          have h_unit_g₀ : IsUnit (m.leadingTerm g₀.val) := by
 
             -- The leading term is `monomial 0 (leadingCoeff g₀)`.
             -- This is the same as `C (leadingCoeff g₀)`.
             rw [leadingTerm, h_deg_g₀]
             simp only [monomial_zero', isUnit_map_iff, isUnit_iff_ne_zero, ne_eq,
               leadingCoeff_eq_zero_iff]
-            exact hG g₀ hg₀_in_G
+            exact hG g₀.val hg₀_val_in_G
           have : Ideal.span ((fun g ↦ m.leadingTerm g) '' G.toSet) = ⊤ := by
             apply Ideal.eq_top_of_isUnit_mem _ _ h_unit_g₀
             apply Ideal.subset_span
@@ -1369,7 +1192,7 @@ theorem Buchberger_criterion
             use g₀
             constructor
             · -- `g₀ ∈ G.toSet` is the same as `g₀ ∈ G`, which is `hg₀_in_G`.
-              exact hg₀_in_G
+              exact hg₀_val_in_G
             · rfl
           rw [this]
           exact Submodule.mem_top
@@ -1392,19 +1215,19 @@ theorem Buchberger_criterion
         push_neg at h_const_non_ex
 
         by_cases h_deg_eq_δ_syn : m.toSyn (m.degree f) = δ_syn_min
-        · have h_sup_is_achieved : ∃ g ∈ G, (m.toSyn (m.degree (h_min g * g))) = δ_syn_min := by
+        · have h_sup_is_achieved : ∃ g ∈ G.attach, (m.toSyn (m.degree (h_min g * g.val))) = δ_syn_min := by
             by_contra h_not_achieved
             push_neg at h_not_achieved
-            have h_g_lt_δ : ∀ g ∈ G, m.toSyn (m.degree (h_min g * g)) < δ_syn_min  := by
+            have h_g_lt_δ : ∀ g ∈ G.attach, m.toSyn (m.degree (h_min g * g.val)) < δ_syn_min  := by
               intro g hg
               apply lt_of_le_of_ne ?_ (h_not_achieved g hg)
               exact h_le g hg
 
             clear h_not_achieved
             rw [h_f_eq_min] at h_deg_eq_δ_syn
-            have h_deg_lt_δ : m.toSyn (m.degree (∑ g ∈ G, h_min g * g)) < δ_syn_min := by
-              apply LE.le.trans_lt (m.degree_sum_le_syn G (fun i ↦ (h_min i) * i))
-              rw [@Finset.sup_lt_iff _ _ _ _ G (fun i ↦ m.toSyn (m.degree (h_min i * i))) (δ_syn_min ) h_min_le_bot]
+            have h_deg_lt_δ : m.toSyn (m.degree (∑ g ∈ G.attach, h_min g * g.val)) < δ_syn_min := by
+              apply LE.le.trans_lt (m.degree_sum_le_syn G.attach (fun i ↦ (h_min i) * i.val))
+              rw [@Finset.sup_lt_iff _ _ _ _ G.attach (fun i ↦ m.toSyn (m.degree (h_min i * i.val))) (δ_syn_min ) h_min_le_bot]
               exact h_g_lt_δ
             exact (Eq.not_lt h_deg_eq_δ_syn) h_deg_lt_δ
           obtain ⟨gᵢ,⟨hgᵢG, hgᵢ_δ_min_syn⟩⟩ := h_sup_is_achieved
@@ -1416,49 +1239,49 @@ theorem Buchberger_criterion
               simp only [zero_mul, degree_zero, map_zero] at hgᵢ_δ_min_syn
               rw [←hgᵢ_δ_min_syn] at h_min_le_bot
               simp only [MonomialOrder.bot_eq_zero, lt_self_iff_false] at h_min_le_bot
-            have : m.leadingTerm f = m.leadingTerm (h_min gᵢ * gᵢ) * C ((m.leadingCoeff f) * (m.leadingCoeff (h_min gᵢ * gᵢ))⁻¹):= by
+            have : m.leadingTerm f = m.leadingTerm (h_min gᵢ * gᵢ.val) * C ((m.leadingCoeff f) * (m.leadingCoeff (h_min gᵢ * gᵢ.val))⁻¹):= by
               rw [leadingTerm, leadingTerm, mul_comm]
               rw [MvPolynomial.C_mul_monomial, mul_assoc]
               --nth_rw 2 [mul_comm]
-              rw [leadingCoeff_mul h_nzero_h_min_gᵢ (hG gᵢ hgᵢG), mul_inv_rev, mul_assoc]
+              rw [leadingCoeff_mul h_nzero_h_min_gᵢ (hG gᵢ (Finset.coe_mem gᵢ)), mul_inv_rev, mul_assoc]
               nth_rw 3 [←mul_assoc]
 
               rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr h_nzero_h_min_gᵢ), one_mul]
-              rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr (hG gᵢ hgᵢG)), mul_one]
-              have hgᵢ_δ_min : (m.degree (h_min gᵢ * gᵢ)) =  δ_min := by
+              rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr (hG gᵢ (Finset.coe_mem gᵢ))), mul_one]
+              have hgᵢ_δ_min : (m.degree (h_min gᵢ * gᵢ.val)) =  δ_min := by
                 apply m.toSyn.injective; rw [AddEquiv.apply_symm_apply]; exact hgᵢ_δ_min_syn
               have h_deg_eq_δ : (m.degree f) = δ_min := by
                 apply m.toSyn.injective; rw [AddEquiv.apply_symm_apply]; exact h_deg_eq_δ_syn
               rw [hgᵢ_δ_min, h_deg_eq_δ]
             rw [this]
             apply Ideal.mul_mem_right
-            rw [leadingTerm_mul (h_nzero_h_min_gᵢ) (hG gᵢ hgᵢG)]
+            rw [leadingTerm_mul (h_nzero_h_min_gᵢ) (hG gᵢ (Finset.coe_mem gᵢ))]
             apply Ideal.mul_mem_left
             apply Submodule.mem_span_of_mem
-            apply Finset.mem_image_of_mem _ hgᵢG
+            apply Finset.mem_image_of_mem _ (Finset.coe_mem gᵢ)
 
         · have f_deg_lt : m.toSyn (m.degree f) < δ_syn_min := by
             apply (LE.le.lt_iff_ne' f_deg_le).mpr (by exact fun a ↦ h_deg_eq_δ_syn (id (Eq.symm a)))
           clear f_deg_le; clear h_deg_eq_δ_syn
 
           -- STEP 1: Decompose f into P₁, P₂, P₃
-          let G_δ := G.filter (fun g => m.toSyn (m.degree (h_min g * g)) = δ_syn_min)
-          have h_f_split : f = (∑ g ∈ G_δ, h_min g * g) + (∑ g ∈ G \ G_δ, h_min g * g) := by
+          let G_δ := G.attach.filter (fun g => m.toSyn (m.degree (h_min g * g.val)) = δ_syn_min)
+          have h_f_split : f = (∑ g ∈ G_δ, h_min g * g) + (∑ g ∈ G.attach \ G_δ, h_min g * g) := by
             rw [h_f_eq_min]
-            have : G = G_δ ∪ (G \ G_δ) := by
+            have G_sep : G.attach = G_δ ∪ (G.attach \ G_δ) := by
               refine Eq.symm (Finset.union_sdiff_of_subset ?_)
-              exact Finset.filter_subset (fun g ↦ m.toSyn (m.degree (h_min g * g)) = δ_syn_min) G
-            nth_rw 1 [this]
+              exact Finset.filter_subset (fun g ↦ m.toSyn (m.degree (h_min g * g.val)) = δ_syn_min) G.attach
+            nth_rw 1 [G_sep]
             rw [Finset.sum_union (by exact Finset.disjoint_sdiff)]
-          have h_sdiff : G \ G_δ = G.filter (fun g => m.toSyn (m.degree (h_min g * g)) < δ_syn_min) := by
+          have h_sdiff : G.attach \ G_δ = G.attach.filter (fun g => m.toSyn (m.degree (h_min g * g.val)) < δ_syn_min) := by
             dsimp [G_δ]
             -- We also know `m.degree (h_min g * g) ≼[m] δ_min` because δ_min is the maximum.
-            have h_le : ∀ g ∈ G, m.toSyn (m.degree (h_min g * g)) ≤ δ_syn_min := by
+            have h_le : ∀ g ∈ G.attach, m.toSyn (m.degree (h_min g * g.val)) ≤ δ_syn_min := by
               intro h hg
               rw [h_δ_syn_min_eq]
               rw [Finset.sup_image]
               simp only [CompTriple.comp_eq]
-              exact @Finset.le_sup _ _ _ _ _ (m.toSyn ∘ fun g ↦ m.degree (h_min g * g)) _ (hg)
+              exact @Finset.le_sup _ _ _ _ _ (m.toSyn ∘ fun g ↦ m.degree (h_min g * g.val)) _ (by simp only [Finset.mem_attach])
             ext g
             -- We use `Finset.mem_filter` and `Finset.mem_sdiff` to simplify the goal.
             simp only [Finset.mem_filter, Finset.mem_sdiff]
@@ -1470,7 +1293,7 @@ theorem Buchberger_criterion
               refine ⟨h_left.1, ?_⟩
 
               -- We know `g ∉ G_δ`, which means `¬(m.toSyn (d g) = δ_syn_min)`.
-              have h_ne : ¬ (m.toSyn (m.degree (h_min g * g)) = δ_syn_min) := by
+              have h_ne : ¬ (m.toSyn (m.degree (h_min g * g.val)) = δ_syn_min) := by
                 simp only [not_and] at h_left
                 apply h_left.2 h_left.1
 
@@ -1495,7 +1318,7 @@ theorem Buchberger_criterion
 
           let P₁ := ∑ g ∈ G_δ, leadingTerm m (h_min g) * g
           let P₂ := ∑ g ∈ G_δ, (h_min g - leadingTerm m (h_min g)) * g
-          let P₃ := ∑ g ∈ G \ G_δ, h_min g * g
+          let P₃ := ∑ g ∈ G.attach \ G_δ, h_min g * g
 
           have h_f_is_P123 : f = P₁ + P₂ + P₃ := by
             -- Start with the split sum for f.
@@ -1512,59 +1335,62 @@ theorem Buchberger_criterion
             rw [sub_mul]
             exact fun a ↦ Eq.symm (add_sub_cancel (m.leadingTerm (h_min x) * x) (h_min x * x))
 
-          have hG_δ_deg : ∀ g ∈ G_δ, m.toSyn (m.degree (h_min g * g)) = δ_syn_min := by
+          have hG_δ_deg : ∀ g ∈ G_δ, m.toSyn (m.degree (h_min g * g.val)) = δ_syn_min := by
             intro g hg
             simp only [G_δ, Finset.mem_filter] at hg
             exact hg.2
 
-          have hP₃_deg_lt : m.toSyn (m.degree P₃) < δ_syn_min := by
-            dsimp [P₃]
-            apply lt_of_le_of_lt (m.degree_sum_le_syn (G \ G_δ) (fun g ↦ h_min g * g))
-            rw [Finset.sup_lt_iff h_min_le_bot]
+          have h_P₃term_deg_lt : ∀ g ∈ G.attach \ G_δ, m.toSyn (m.degree (h_min g * g.val)) < δ_syn_min := by
             intro g hg_sdiff
             rw [h_sdiff] at hg_sdiff
             simp only [Finset.mem_filter] at hg_sdiff
             exact hg_sdiff.2
 
-          have hP₂_deg_lt : m.toSyn (m.degree P₂) < δ_syn_min := by
-            have h_term_deg_lt : ∀ g ∈ G_δ, m.toSyn (m.degree ((h_min g - leadingTerm m (h_min g)) * g)) < δ_syn_min := by
-              intro g hg_in_G_δ
+          have hP₃_deg_lt : m.toSyn (m.degree P₃) < δ_syn_min := by
+            dsimp [P₃]
+            apply lt_of_le_of_lt (m.degree_sum_le_syn (G.attach \ G_δ) (fun g ↦ h_min g * g.val))
+            rw [Finset.sup_lt_iff h_min_le_bot]
+            exact h_P₃term_deg_lt
 
-              -- We need `h_min g` to be non-zero to use `degree_sub_LTerm_lt`.
-              have h_h_min_g_ne_zero : h_min g ≠ 0 := by
-                -- If `h_min g` were zero, deg(0*g)=0, so `δ_syn_min` would be 0, contradicting `h_min_le_bot`.
-                intro h_h_zero
-                have hg_prop := (Finset.mem_filter.mp hg_in_G_δ).2
-                rw [h_h_zero, zero_mul, degree_zero, map_zero] at hg_prop
-                exact not_le_of_gt h_min_le_bot (le_of_eq hg_prop.symm)
-              -- We consider two cases for the degree of `h_min g`.
-              by_cases h_deg_h_min_g_zero : m.degree (h_min g) = 0
-              · -- Case 1: `deg(h_min g) = 0`.
-                -- Then `h_min g` is a constant, so `h_min g = LT(h_min g)`.
-                have : h_min g = leadingTerm m (h_min g) := by
-                  apply m.eq_leadingTerm_of_degree_zero h_deg_h_min_g_zero
-                rw [this]
-                rw [sub_eq_zero_of_eq (congrArg m.leadingTerm this)]
-                simp only [zero_mul, degree_zero, map_zero, gt_iff_lt]
+          have h_P₂term_deg_lt : ∀ g ∈ G_δ, m.toSyn (m.degree ((h_min g - leadingTerm m (h_min g)) * g.val)) < δ_syn_min := by
+            intro g hg_in_G_δ
+            -- We need `h_min g` to be non-zero to use `degree_sub_LTerm_lt`.
+            have h_h_min_g_ne_zero : h_min g ≠ 0 := by
+              -- If `h_min g` were zero, deg(0*g)=0, so `δ_syn_min` would be 0, contradicting `h_min_le_bot`.
+              intro h_h_zero
+              have hg_prop := (Finset.mem_filter.mp hg_in_G_δ).2
+              rw [h_h_zero, zero_mul, degree_zero, map_zero] at hg_prop
+              exact not_le_of_gt h_min_le_bot (le_of_eq hg_prop.symm)
+            -- We consider two cases for the degree of `h_min g`.
+            by_cases h_deg_h_min_g_zero : m.degree (h_min g) = 0
+            · -- Case 1: `deg(h_min g) = 0`.
+              -- Then `h_min g` is a constant, so `h_min g = LT(h_min g)`.
+              have : h_min g = leadingTerm m (h_min g) := by
+                apply m.eq_leadingTerm_of_degree_zero h_deg_h_min_g_zero
+              rw [this]
+              rw [sub_eq_zero_of_eq (congrArg m.leadingTerm this)]
+              simp only [zero_mul, degree_zero, map_zero, gt_iff_lt]
+              exact h_min_le_bot
+
+            · -- Case 2: `deg(h_min g) ≠ 0`.
+              -- Now we can use `degree_sub_LTerm_lt`.
+              have h_sub_lt : m.degree (h_min g - leadingTerm m (h_min g)) ≺[m] m.degree (h_min g) :=
+                degree_sub_LTerm_lt h_deg_h_min_g_zero
+              by_cases h_sub_zero : (h_min g - leadingTerm m (h_min g)) = 0
+              · rw [h_sub_zero, zero_mul, degree_zero, map_zero]
                 exact h_min_le_bot
 
-              · -- Case 2: `deg(h_min g) ≠ 0`.
-                -- Now we can use `degree_sub_LTerm_lt`.
-                have h_sub_lt : m.degree (h_min g - leadingTerm m (h_min g)) ≺[m] m.degree (h_min g) :=
-                  degree_sub_LTerm_lt h_deg_h_min_g_zero
-                by_cases h_sub_zero : (h_min g - leadingTerm m (h_min g)) = 0
-                · rw [h_sub_zero, zero_mul, degree_zero, map_zero]
-                  exact h_min_le_bot
+              · rw [←(hG_δ_deg g hg_in_G_δ)]
+                rw [degree_mul h_sub_zero (hG g (by simp only [Finset.coe_mem]))]
+                rw [degree_mul h_h_min_g_ne_zero (hG g (by simp only [Finset.coe_mem]))]
+                simp only [map_add, add_lt_add_iff_right, gt_iff_lt]
+                exact h_sub_lt
 
-                · rw [←(hG_δ_deg g hg_in_G_δ)]
-                  rw [degree_mul h_sub_zero (hG g (h_supp_min h_h_min_g_ne_zero))]
-                  rw [degree_mul h_h_min_g_ne_zero (hG g (h_supp_min h_h_min_g_ne_zero))]
-                  simp only [map_add, add_lt_add_iff_right, gt_iff_lt]
-                  exact h_sub_lt
+          have hP₂_deg_lt : m.toSyn (m.degree P₂) < δ_syn_min := by
             dsimp [P₂]
-            apply lt_of_le_of_lt (m.degree_sum_le_syn G_δ fun g ↦ (h_min g - m.leadingTerm (h_min g)) * g)
+            apply lt_of_le_of_lt (m.degree_sum_le_syn G_δ fun g ↦ (h_min g - m.leadingTerm (h_min g)) * g.val)
             rw [Finset.sup_lt_iff h_min_le_bot]
-            exact h_term_deg_lt
+            exact h_P₂term_deg_lt
 
           have hP₁_deg_lt : m.toSyn (m.degree P₁) < δ_syn_min := by
             have h_P1_eq_sub : P₁ = f - (P₂ + P₃) := by
@@ -1578,7 +1404,6 @@ theorem Buchberger_criterion
             apply lt_of_le_of_lt (m.degree_sub_le)
             rw [max_lt_iff]
             exact ⟨f_deg_lt, h_deg_P₂_plus_P₃_lt⟩
-
 
           -- STEP 2: Rewrite P₁ using the Cancellation Lemma.
           let ι := ↥G_δ
@@ -1606,8 +1431,8 @@ theorem Buchberger_criterion
 
             · -- Second goal: `i.val ≠ 0`.
               -- This is true because `i.val ∈ G_δ ⊆ G`.
-              have hi_in_G : i.val ∈ G := (Finset.mem_filter.mp i.property).1
-              exact hG i.val hi_in_G
+              have hi_in_G : i.val ∈ G.attach := (Finset.mem_filter.mp i.property).1
+              exact hG i.val (by simp only [Finset.coe_mem])
 
           have h_p_support : p.support = (Finset.univ : Finset ι) := by
             -- To show two finsets are equal, we show they have the same elements.
@@ -1648,14 +1473,14 @@ theorem Buchberger_criterion
             -- Goal: `m.degree (LT(h_min i.val) * i.val) = δ_min`.
             -- We prove this by showing it's equal to `m.degree(h_min i.val * i.val)`,
             -- which is `δ_min` by definition of `G_δ`.
-            have h_deg_eq : m.degree (m.leadingTerm (h_min i.val) * i.val) = m.degree (h_min i.val * i.val) := by
-              have hi_in_G : i.val ∈ G := (Finset.mem_filter.mp i.property).1
+            have h_deg_eq : m.degree (m.leadingTerm (h_min i.val) * i.val.val) = m.degree (h_min i.val * i.val.val) := by
+              --have hi_in_G : i.val ∈ G.attach := (Finset.mem_filter.mp i.property).1
               have h_h_min_i_ne_zero : h_min i.val ≠ 0 := by
                 intro h_h_min_i_zero
                 have h_deg_is_δ := (Finset.mem_filter.mp i.property).2
                 rw [h_h_min_i_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
                 exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
-              rw [m.degree_mul _ (hG i.val hi_in_G), degree_leadingTerm, m.degree_mul h_h_min_i_ne_zero (hG i.val hi_in_G)]
+              rw [m.degree_mul _ (hG i.val (by simp only [Finset.coe_mem])), degree_leadingTerm, m.degree_mul h_h_min_i_ne_zero (hG i.val (by simp only [Finset.coe_mem]))]
               contrapose! LT_hᵢi_ne_zero
               use i; apply mul_eq_zero_of_left LT_hᵢi_ne_zero
             rw [h_deg_eq]
@@ -1678,19 +1503,11 @@ theorem Buchberger_criterion
           have h_syzygy_result :=
             by exact Spolynomial_syzygy_of_degree_cancellation m δ_min p hp_ne_zero hp_deg hsum
 
-          rcases h_syzygy_result.1 with ⟨c, hP₁_rw⟩
-          have : P₁ = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
-            convert hP₁_rw
-          -- We now have `P₁ = ∑ ij ∈ p.support.offDiag, c ij • S(p ij.1, p ij.2)`.
-          -- And `h_S_deg_lt` tells us the degree of each S-polynomial is `< δ_min`.
-          -- Let's call the `p ij` terms `p_i` for clarity. `p_i = LT(h_min i) * i`.
+          rcases h_syzygy_result.1 with ⟨c, hP₁_rw_S_poly_pᵢ_pⱼ⟩
 
-          -- Step 1: Relate `S(pᵢ, pⱼ)` back to `S(gᵢ, gⱼ)`.
-          -- This lemma formalizes the identity from Exercise 8 in the textbook:
-          -- `S(pᵢ, pⱼ) = x^{δ-γ} * S(gᵢ, gⱼ)`
           have h_S_relation : ∀ (ij : ι × ι), ij ∈ p.support.offDiag →
               S_polynomial m (p ij.1) (p ij.2) =
-              monomial (δ_min - (m.degree ij.1.val ⊔ m.degree ij.2.val)) 1 * S_polynomial m ij.1.val ij.2.val := by
+              monomial (δ_min - (m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) 1 * S_polynomial m ij.1.val ij.2.val := by
             intro ij hij
             unfold p p_fun at hij
             simp only [Finsupp.equivFunOnFinite_symm_apply_support, Set.Finite.toFinset_setOf,
@@ -1719,10 +1536,10 @@ theorem Buchberger_criterion
               rw [←MonomialOrder.degree_mul hij.1.1 hij.1.2, ←MonomialOrder.degree_mul hij.2.1.1 hij.2.1.2]
               apply m.toSyn.injective
               have h_ij1_in_G_δ : ij.1.val ∈ G_δ := ij.1.property
-              have h_deg1_eq_δ : m.toSyn (m.degree (h_min ij.1.val * ij.1.val)) = δ_syn_min := by
+              have h_deg1_eq_δ : m.toSyn (m.degree (h_min ij.1.val * ij.1.val.val)) = δ_syn_min := by
                 exact (Finset.mem_filter.mp h_ij1_in_G_δ).2
               have h_ij2_in_G_δ : ij.2.val ∈ G_δ := ij.2.property
-              have h_deg2_eq_δ : m.toSyn (m.degree (h_min ij.2.val * ij.2.val)) = δ_syn_min := by
+              have h_deg2_eq_δ : m.toSyn (m.degree (h_min ij.2.val * ij.2.val.val)) = δ_syn_min := by
                 exact (Finset.mem_filter.mp h_ij2_in_G_δ).2
               rw [h_deg1_eq_δ, h_deg2_eq_δ]
             · -- ↑ij.1 ≠ 0
@@ -1733,18 +1550,20 @@ theorem Buchberger_criterion
           -- Step 2: Formalize (6) and (7) from the textbook.
           -- For any S-polynomial S(gᵢ,gⱼ), since its normal form is 0, the division algorithm
           -- gives us a representation with a good degree property.
-          have h_S_poly_repr₁ (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ : gᵢ ∈ G) (hgⱼ : gⱼ ∈ G) (h_ne : gᵢ ≠ gⱼ) :
+          have h_S_poly_gᵢ_gⱼ_repr
+            (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ) (h_ne : ij.1.val ≠ ij.2.val) :
+            --(gᵢ gⱼ : MvPolynomial σ k) (hgᵢ : gᵢ ∈ G) (hgⱼ : gⱼ ∈ G) (h_ne : gᵢ ≠ gⱼ)
+            let gᵢ := ij.1.val; let gⱼ := ij.2.val
             let S_poly := S_polynomial m gᵢ gⱼ
             let A := quotients m hG S_poly
             -- Equation (6): A is an element of `↥G →₀ MvPolynomial σ k`
-            S_poly = A.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) ∧
+            S_poly = A.sum (fun (g : ↥G) (q : MvPolynomial σ k) => q * g.val) ∧
             -- Equation (7): The degree condition holds.
             (∀ (gₗ : ↥G), m.degree (gₗ.val * A gₗ) ≼[m] m.degree S_poly) := by
-
-            let S_poly := S_polynomial m gᵢ gⱼ
-            specialize hS_poly gᵢ gⱼ hgᵢ hgⱼ h_ne
-
-            let A := quotients m hG S_poly
+            intro gᵢ gⱼ S_poly A
+            have hgᵢ : ↑gᵢ ∈ G := by simp only [Finset.coe_mem]
+            have hgⱼ : ↑gⱼ ∈ G := by simp only [Finset.coe_mem]
+            specialize hS_poly (gᵢ : MvPolynomial σ k) (gⱼ : MvPolynomial σ k) hgᵢ hgⱼ (by exact Subtype.coe_ne_coe.mpr h_ne)
 
             -- This is the representation from the division algorithm.
             have h_spec := normalForm_spec' m hG S_poly
@@ -1766,18 +1585,58 @@ theorem Buchberger_criterion
 
             exact ⟨h_repr_eq, h_spec.2.1⟩
 
-          have h_rewritten_S_poly_deg_lt (i j : ι) (hi : i.val ∈ G_δ) (hj : j.val ∈ G_δ) (h_ne : i.val ≠ j.val) :
+          have hP₁_rw_S_poly_gᵢ_gⱼ : ∑ i ∈ p.support, p i
+            = ∑ ij ∈ p.support.offDiag, c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) 1 * S_polynomial m ↑ij.1 ↑ij.2) := by
+            rw [hP₁_rw_S_poly_pᵢ_pⱼ]
+            apply Finset.sum_congr rfl
+            intro ij hij
+            congr
+            exact h_S_relation ij hij
+
+          have γ_le_δ (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ)
+            :
+            let i := ij.1; let j := ij.2
             let gᵢ := i.val; let gⱼ := j.val
-            let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) 1
+            m.degree gᵢ.val ⊔ m.degree gⱼ.val ≤ δ_min:= by
+            intro i j gᵢ gⱼ
+            simp only [sup_le_iff]
+            have h_deg_prod_i : m.degree (h_min i.val * i.val.val) = δ_min := by
+              apply m.toSyn.injective
+              rw [AddEquiv.apply_symm_apply]
+              exact (Finset.mem_filter.mp i.property).2
+            have h_deg_prod_j : m.degree (h_min j.val * j.val.val) = δ_min := by
+              apply m.toSyn.injective
+              rw [AddEquiv.apply_symm_apply]
+              exact (Finset.mem_filter.mp j.property).2
+            constructor
+            · rw [←h_deg_prod_i, degree_mul]
+              · exact le_add_self
+              · intro h_h_min_i_zero
+                have h_deg_is_δ := (Finset.mem_filter.mp i.property).2
+                rw [h_h_min_i_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
+                exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
+              · exact hG i.val (by simp only [Finset.coe_mem])
+            · rw [←h_deg_prod_j, degree_mul]
+              · exact le_add_self
+              · intro h_h_min_j_zero
+                have h_deg_is_δ := (Finset.mem_filter.mp j.property).2
+                rw [h_h_min_j_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
+                exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
+              · exact hG j.val ((by simp only [Finset.coe_mem]))
+
+          -- We don't need (h_ne : ij.1.val ≠ ij.2.val) here
+          have h_γ_S_poly_gᵢ_gⱼ_deg_lt (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ) :
+            let i := ij.1; let j := ij.2
+            let gᵢ := i.val; let gⱼ := j.val
+            let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) 1
             let S_gij := S_polynomial m gᵢ gⱼ
             let A_ij := quotients m hG S_gij
-            let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
             m.toSyn (m.degree (mono_factor * S_gij)) < δ_syn_min := by
+              let i := ij.1; let j := ij.2
               let gᵢ := i.val; let gⱼ := j.val
-              let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) (1 : k)
-              let S_gij := S_polynomial m gᵢ gⱼ
+              let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) (1 : k)
+              let S_gij := S_polynomial m gᵢ.val gⱼ.val
               let A_ij := quotients m hG S_gij
-              let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
               by_cases S_poly_zero : S_gij = 0
               · dsimp [S_gij] at *
                 rw [S_poly_zero]
@@ -1787,362 +1646,411 @@ theorem Buchberger_criterion
               clear S_poly_zero
               have h_mono_ne_zero : mono_factor ≠ 0 := by rw [Ne, MvPolynomial.monomial_eq_zero]; exact one_ne_zero
               apply lt_of_le_of_lt degree_mul_le
+              have mon_deg_δ_min : m.degree ((monomial δ_min) (1:k) ) = δ_min := by
+                rw [degree_monomial]
+                simp only [one_ne_zero, ↓reduceIte]
               have h1 : m.degree ((monomial (δ_min - m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k))) (1 : k))
                 = m.degree ((monomial (δ_min)) (1 : k)) - m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k) := by
-                have : m.degree ((monomial δ_min) (1:k) ) = δ_min := by
-                  rw [degree_monomial]
-                  simp only [one_ne_zero, ↓reduceIte]
-                rw [←this]
+                rw [mon_deg_δ_min]
                 repeat rw [degree_monomial]
                 repeat simp only [one_ne_zero, ↓reduceIte]
               rw [h1]
-              have γ_le_δ : m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k) ≤ m.degree ((monomial δ_min) (1 : k)) := by
-                rw [degree_monomial]
-                simp only [one_ne_zero, ↓reduceIte, sup_le_iff]
-                have h_deg_prod_i : m.degree (h_min i.val * i.val) = δ_min := by
-                  apply m.toSyn.injective
-                  rw [AddEquiv.apply_symm_apply]
-                  exact (Finset.mem_filter.mp i.property).2
-                have h_deg_prod_j : m.degree (h_min j.val * j.val) = δ_min := by
-                  apply m.toSyn.injective
-                  rw [AddEquiv.apply_symm_apply]
-                  exact (Finset.mem_filter.mp j.property).2
-                constructor
-                · rw [←h_deg_prod_i, degree_mul]
-                  · exact le_add_self
-                  · intro h_h_min_i_zero
-                    have h_deg_is_δ := (Finset.mem_filter.mp i.property).2
-                    rw [h_h_min_i_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
-                    exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
-                  · have hi_in_G : i.val ∈ G := (Finset.mem_filter.mp i.property).1
-                    exact hG i.val hi_in_G
-                · rw [←h_deg_prod_j, degree_mul]
-                  · exact le_add_self
-                  · intro h_h_min_j_zero
-                    have h_deg_is_δ := (Finset.mem_filter.mp j.property).2
-                    rw [h_h_min_j_zero, zero_mul, degree_zero, map_zero] at h_deg_is_δ
-                    exact not_le_of_gt h_min_le_bot (le_of_eq h_deg_is_δ.symm)
-                  · have hj_in_G : j.val ∈ G := (Finset.mem_filter.mp j.property).1
-                    exact hG j.val hj_in_G
+              rw [mon_deg_δ_min]
 
-              rw [tsub_add_eq_add_tsub γ_le_δ]
+              rw [hδ_syn]
+              have rw_δ_min : (δ_min - m.degree i.val.val ⊔ m.degree j.val.val) + m.degree i.val.val ⊔ m.degree j.val.val = δ_min := by
+                rw [tsub_add_cancel_iff_le]
+                exact γ_le_δ ij hi hj
+              nth_rw 2 [←rw_δ_min]
+              rw [map_add, map_add]
+              simp only [add_lt_add_iff_left, gt_iff_lt]
+              apply degree_S_polynomial_lt_lcm
+              · -- show ↑↑ij.1 ≠ 0
+                intro h_zero
+                -- For example, if degree is defined and zero polynomial has degree -∞, contradict bounds
+                have h_deg := (Finset.mem_filter.mp hi).2
+                rw [h_zero] at h_deg
+                have : δ_syn_min ≤ ⊥ := by
+                  simp only [MonomialOrder.bot_eq_zero]
+                  rw [←h_deg]; simp only [mul_zero, degree_zero, map_zero, le_refl]
+                exact not_le_of_gt h_min_le_bot this
 
-              -- show m.toSyn (m.degree ((monomial δ_min) 1) + m.degree (S_polynomial m ↑i ↑j) - m.degree ↑i ⊔ m.degree ↑j) < δ_syn_min
-              sorry
+              · -- show ↑↑ij.2 ≠ 0
+                intro h_zero
+                -- For example, if degree is defined and zero polynomial has degree -∞, contradict bounds
+                have h_deg := (Finset.mem_filter.mp hj).2
+                rw [h_zero] at h_deg
+                have : δ_syn_min ≤ ⊥ := by
+                  simp only [MonomialOrder.bot_eq_zero]
+                  rw [←h_deg]; simp only [mul_zero, degree_zero, map_zero, le_refl]
+                exact not_le_of_gt h_min_le_bot this
+              · -- show `γ > 0`
+                apply lt_sup_of_lt_left
+                apply lt_of_le_of_ne
+                · simp only [_root_.zero_le]
+                · symm
+                  apply h_const_non_ex
+                  simp only [Finset.coe_mem]
 
+          by_cases h_γ_zero : ∃ ij : ι × ι, m.toSyn (m.degree ij.1.val.val ⊔ m.degree ij.2.val.val) = 0
+          · obtain ⟨ij, hij_γ_is_zero⟩ := h_γ_zero
 
+            have h_sup_is_zero : m.degree ij.1.val.val ⊔ m.degree ij.2.val.val = 0 := by
+              exact m.toSyn.injective (by rwa [map_zero])
 
+            -- The sup of two multidegrees is 0 iff both are 0.
+            have h_degs_are_zero : m.degree ij.1.val.val = 0 ∧ m.degree ij.2.val.val = 0 := by
+              -- We prove each part of the `and`.
+              constructor
+              · -- Prove `m.degree ij.1.val = 0`.
+                -- We know `a ≤ a ⊔ b`.
+                have h_le_sup := @le_sup_left _ _ (m.degree ij.1.val.val) (m.degree ij.2.val.val)
+                -- Substitute the hypothesis that the sup is 0.
+                rw [h_sup_is_zero] at h_le_sup
+                -- Now we have `... ≤ 0`. Since 0 is the minimum, it must be an equality.
+                exact le_bot_iff.mp h_le_sup
+              · -- Prove `m.degree ij.2.val = 0`.
+                -- The argument is symmetric.
+                have h_le_sup := @le_sup_right _ _ (m.degree ij.1.val.val) (m.degree ij.2.val.val)
+                rw [h_sup_is_zero] at h_le_sup
+                exact le_bot_iff.mp h_le_sup
 
-              -- have h2 : m.degree ((monomial δ_min) (1 : k)) - m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k) + m.degree (S_polynomial m (i : MvPolynomial σ k) ↑j)
-              --   = m.degree ((monomial δ_min) (1:k)) - (m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k) - m.degree (S_polynomial m (i : MvPolynomial σ k) ↑j)) := by
-              --   rw [AddLECancellable.tsub_tsub_assoc]
-              --   · intro b c
-              --     rw [m.iocam.le_of_add_le_add_left _ b c]
-              -- rw [h2]
-              -- sorry
+            -- Now we have `m.degree ij.1.val = 0`.
+            have h_deg_i_is_zero : m.degree ij.1.val.val = 0 := h_degs_are_zero.1
 
+            -- We know `ij.1.val ∈ G`.
+            have h_i_in_G : ij.1.val.val ∈ G := by simp only [Finset.coe_mem]
 
-              -- have : m.degree ((monomial (δ_min - m.degree (↑i : (MvPolynomial σ k)) ⊔ m.degree (j : MvPolynomial σ k))) (1 : k)) + m.degree (S_polynomial m i (j : MvPolynomial σ k))
-              --   = m.degree ((monomial (δ_min - m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k)) (1 : k)) * (S_polynomial m ↑i ↑j)) := by
-              --   have LC_S_poly_nezero : m.leadingCoeff (S_polynomial m i (j : MvPolynomial σ k)) ≠ 0 := by
-              --     rw [leadingCoeff_ne_zero_iff]; exact S_poly_nezero
-              --   have : m.leadingCoeff ((monomial (δ_min - m.degree (i : MvPolynomial σ k) ⊔ m.degree (j : MvPolynomial σ k))) (1 : k)) ≠ 0 := by
-              --     rw [leadingCoeff_monomial]
-              --     simp only [ne_eq, one_ne_zero, not_false_eq_true]
-              --   rw [←degree_mul_of_mul_leadingCoeff_ne_zero]
-              --   rw [mul_ne_zero_iff]
-              --   exact ⟨this, LC_S_poly_nezero⟩
-              -- rw [this]
+            -- This contradicts our hypothesis `h_const_non_ex`.
+            exact False.elim (h_const_non_ex ij.1.val h_i_in_G h_deg_i_is_zero)
 
-
-
-
-
-
-
-
-          -- STEP 4: Formalize equations (8) and (9).
-          -- We will show that for any pair (i,j), the term `x^{δ-γ} * S(gᵢ, gⱼ)` can be rewritten
-          -- as a sum of terms, each with degree strictly less than `δ_min`.
-          have h_rewritten_S_poly_deg_lt (i j : ι) (hi : i.val ∈ G_δ) (hj : j.val ∈ G_δ) (h_ne : i.val ≠ j.val) :
+          have h_γ_S_poly_gᵢ_gⱼ_repr
+            (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ) (h_ne : ij.1.val ≠ ij.2.val) :
+            let i := ij.1; let j := ij.2
             let gᵢ := i.val; let gⱼ := j.val
-            let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) 1
+            let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) (1 : k)
             let S_gij := S_polynomial m gᵢ gⱼ
-            let A_ij := quotients m hG S_gij
-            let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
-            -- This `have` block proves two things:
-            -- 1. The representation from eq (8): `mono * S = ∑ B * g`.
-            -- 2. The degree bound from eq (9): `deg(B * g) < δ_min`.
-            (mono_factor * S_gij = A_ij.sum (fun gₗ _ => B_ij gₗ * gₗ.val)) ∧
-            (∀ gₗ : ↥G, m.toSyn (m.degree (B_ij gₗ * gₗ.val)) < δ_syn_min) := by
+            let A_ij : ↑G →₀ MvPolynomial σ k := quotients m hG S_gij
+            let B_ij : ↥G →₀ MvPolynomial σ k :=
+              A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+            mono_factor * S_gij = B_ij.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) := by
+            intro i j gᵢ gⱼ mono_factor S_gij A_ij B_ij
+            -- nth_rw 1 [(h_S_poly_gᵢ_gⱼ_repr gᵢ gⱼ hi hj h_ne).1]
+            -- simp only [Set.elem_mem, Finset.mem_val]
+            unfold S_gij B_ij A_ij
+            rw [Finsupp.sum_mapRange_index (by simp)]
+            specialize h_S_poly_gᵢ_gⱼ_repr ij hi hj h_ne
+            rw [h_S_poly_gᵢ_gⱼ_repr.1]
+            rw [Finsupp.mul_sum]
+            congr
+            ext
+            rw [mul_assoc]
 
+          have h_Bₗgₗ_lt_δ
+            (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ) (h_ne : ij.1.val ≠ ij.2.val) :
+            -- (gᵢ gⱼ : MvPolynomial σ k) (hgᵢ : gᵢ ∈ G) (hgⱼ : gⱼ ∈ G) (h_ne : gᵢ ≠ gⱼ)
+            let i := ij.1; let j := ij.2
             let gᵢ := i.val; let gⱼ := j.val
-            let mono_factor := monomial (δ_min - (m.degree gᵢ ⊔ m.degree gⱼ)) (1 : k)
+            let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) (1 : k)
             let S_gij := S_polynomial m gᵢ gⱼ
-            let A_ij := quotients m hG S_gij
-            let B_ij (gₗ : ↥G) : MvPolynomial σ k := mono_factor * A_ij gₗ
-            -- Get the representation for S(gᵢ,gⱼ) from our previous lemma.
-            let h_repr := h_S_poly_repr₁ gᵢ gⱼ (Finset.mem_of_mem_filter gᵢ hi) (Finset.mem_of_mem_filter gⱼ hj) h_ne
+            let A_ij : ↑G →₀ MvPolynomial σ k := quotients m hG S_gij
+            let B_ij : ↥G →₀ MvPolynomial σ k :=
+              A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+            (∀ (gₗ : ↥G), m.degree (gₗ.val * B_ij gₗ) ≺[m] δ_min) := by
+            -- simp only
+            intro i j gᵢ gⱼ mono_factor S_gij A_ij B_ij gₗ
+            have h_mono_ne_zero : mono_factor ≠ 0 := by rw [Ne, monomial_eq_zero]; exact one_ne_zero
+            unfold B_ij
+            rw [Finsupp.mapRange_apply]
+            by_cases h_Aₗ_zero : A_ij gₗ = 0
+            · -- unfold B_ij
+              -- rw [Finsupp.mapRange_apply]
+              rw [h_Aₗ_zero]
+              simp only [mul_zero, degree_zero, map_zero, ←hδ_syn]
+              exact h_min_le_bot
 
-            -- Unpack the representation and degree property for S(gᵢ, gⱼ).
-            have h_eq6 : S_gij = A_ij.sum (fun gₗ hₗ => hₗ * gₗ.val) := h_repr.1
-            have h_eq7 (gₗ : ↥G) : m.degree (gₗ.val * A_ij gₗ) ≼[m] m.degree S_gij := h_repr.2 gₗ
+            have h_gₗAₗ_ne_zero : gₗ.val * A_ij gₗ ≠ 0 := by rw [mul_ne_zero_iff]; exact ⟨hG gₗ gₗ.2, h_Aₗ_zero⟩
+            by_cases hS_poly_zero : S_polynomial m gᵢ.val gⱼ.val = 0
+            · specialize h_γ_S_poly_gᵢ_gⱼ_repr ij hi hj h_ne
+              have h_gₗAₗ_deg_zero : m.toSyn (m.degree (gₗ.val * A_ij gₗ)) = m.toSyn 0 := by
+                have h_spec := normalForm_spec' m hG S_gij
+                have := h_spec.2.1 gₗ
+                unfold S_gij at this
+                nth_rw 2 [hS_poly_zero] at this
+                simp only [Set.elem_mem, Finset.mem_val, degree_zero, map_zero] at this
+                rw [←m.bot_eq_zero, le_bot_iff, m.bot_eq_zero] at this
+                unfold A_ij S_gij
+                rw [map_zero]
+                exact this
 
-            -- Prove the first part of our goal (Equation 8).
-            have h_eq8 : mono_factor * S_gij = A_ij.sum (fun gₗ _ => B_ij gₗ * gₗ.val) := by
-              rw [h_eq6, Finsupp.mul_sum]
-              apply Finsupp.sum_congr
-              intro gₗ _
-              dsimp [B_ij]
-              rw [mul_assoc]
+              rw [←mul_assoc, mul_comm gₗ.val, mul_assoc, degree_mul h_mono_ne_zero h_gₗAₗ_ne_zero]
+              rw [map_add, h_gₗAₗ_deg_zero, map_zero, add_zero]
+              unfold mono_factor
+
+              have rw_δ_min : (δ_min - m.degree i.val.val ⊔ m.degree j.val.val) + m.degree i.val.val ⊔ m.degree j.val.val = δ_min := by
+                rw [tsub_add_cancel_iff_le]
+                exact γ_le_δ ij hi hj
+              nth_rw 2 [←rw_δ_min]
+              rw [map_add, degree_monomial]
+              simp only [one_ne_zero, ↓reduceIte]
+              have : m.toSyn (δ_min - m.degree gᵢ.val ⊔ m.degree gⱼ.val) = m.toSyn (δ_min - m.degree gᵢ.val ⊔ m.degree gⱼ.val) + 0 := by simp only [add_zero]
+              nth_rw 1 [←add_zero (m.toSyn (δ_min - m.degree gᵢ.val ⊔ m.degree gⱼ.val))]
+              rw [add_lt_add_iff_left]
+              push_neg at h_γ_zero
+              rw [←bot_eq_zero, bot_lt_iff_ne_bot]
+              exact h_γ_zero ij
+            have := h_γ_S_poly_gᵢ_gⱼ_deg_lt ij hi hj
+            rw [←hδ_syn]
+            apply lt_of_le_of_lt _ (h_γ_S_poly_gᵢ_gⱼ_deg_lt ij hi hj)
+            rw [←mul_assoc, mul_comm gₗ.val, mul_assoc, degree_mul h_mono_ne_zero h_gₗAₗ_ne_zero, map_add]
+            nth_rw 2 [degree_mul, degree_monomial]
+            simp only [one_ne_zero, ↓reduceIte, map_add]
+            unfold mono_factor gᵢ gⱼ
+            rw [degree_monomial]
+            simp only [one_ne_zero, ↓reduceIte]
+            rw [add_le_add_iff_left]
+            specialize h_S_poly_gᵢ_gⱼ_repr ij hi hj h_ne
+            apply h_S_poly_gᵢ_gⱼ_repr.2 gₗ
+            · unfold mono_factor at h_mono_ne_zero
+              exact h_mono_ne_zero
+            · exact hS_poly_zero
+
+          have h_P₁_rw1 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
+            convert hP₁_rw_S_poly_pᵢ_pⱼ
+
+          have h_P₁_rw2 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) 1 * S_polynomial m ij.1.val ij.2.val) := by
+            rw [h_P₁_rw1]
+            apply Finset.sum_congr rfl
+            intro ij hij
+            congr 1
+            exact h_S_relation ij hij
+
+          have h_P₁_rw3 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • (
+              let gᵢ := ij.1.val; let gⱼ := ij.2.val
+              let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) 1
+              let S_gij := S_polynomial m gᵢ gⱼ
+              let A_ij := quotients m hG S_gij
+              let B_ij : ↥G →₀ MvPolynomial σ k := A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+              B_ij.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val)
+            ) := by
+
+            rw [h_P₁_rw2]
+            apply Finset.sum_congr rfl
+            intro ij hij
+            congr 1
+            -- This is exactly `h_γ_S_poly_gᵢ_gⱼ_repr`.
+            apply h_γ_S_poly_gᵢ_gⱼ_repr ij ij.1.property ij.2.property ?_
+            simp only [Finset.mem_offDiag, Finsupp.mem_support_iff] at hij
+            apply Subtype.val_injective.ne
+            exact hij.2.2
+
+          let B_tilde : ↥G →₀ MvPolynomial σ k :=
+              ∑ ij ∈ (p.support).offDiag,
+                let gᵢ := ij.1.val; let gⱼ := ij.2.val
+                let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) 1
+                let A_ij := quotients m hG (S_polynomial m gᵢ gⱼ)
+                let B_ij : ↥G →₀ MvPolynomial σ k := A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+                c ij • B_ij
+
+          have h_P₁_rw4 : P₁ = B_tilde.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) := by
+            -- Start with the representation of P₁ from h_P₁_rw3.
+            rw [h_P₁_rw3]
+
+            unfold B_tilde
+            rw [←Finsupp.sum_finset_sum_index (by simp) (by ring_nf; simp)]
+            congr 1
+            funext ij
+            ring_nf
+
+            rw [←MvPolynomial.C_mul']
+            rw [Finsupp.mul_sum]
+            rw [Finsupp.sum_smul_index']
+            · simp only [Algebra.smul_mul_assoc]
+              congr
+              funext g h
+              rw [MvPolynomial.C_mul']
+            · simp only [zero_mul, implies_true]
+
+          let h_P₂_fun (g : ↥G) : MvPolynomial σ k :=
+            if g ∈ G_δ then (h_min g - leadingTerm m (h_min g)) else 0
+          let h_P₂_finsupp : ↥G →₀ MvPolynomial σ k :=
+            (Finsupp.equivFunOnFinite).symm h_P₂_fun
+
+          let h_P₃_fun (g : ↥G) : MvPolynomial σ k :=
+            if g ∈ G.attach \ G_δ then h_min g else 0
+          let h_P₃_finsupp : ↥G →₀ MvPolynomial σ k :=
+            (Finsupp.equivFunOnFinite).symm h_P₃_fun
+
+          -- Now, all three Finsupps have the same type `↥G →₀ MvPolynomial σ k`.
+          -- The definition of `h_new` is now well-defined.
+          let h_new : ↥G →₀ MvPolynomial σ k := B_tilde + h_P₂_finsupp + h_P₃_finsupp
+
+          have h_f_eq_new : f = h_new.sum (fun g h => h * g.val) := by
+            rw [h_f_is_P123, h_P₁_rw4]
+            dsimp [h_new]
+            rw [Finsupp.sum_add_index, Finsupp.sum_add_index]
+            · rw [add_assoc, add_assoc, add_left_cancel_iff]
+              have G_sep : G.attach = G_δ ∪ (G.attach \ G_δ) := by
+                refine Eq.symm (Finset.union_sdiff_of_subset ?_)
+                apply Finset.filter_subset
+              -- show P₂ + P₃ = (h_P₂_finsupp.sum fun g h ↦ h * ↑g) + h_P₃_finsupp.sum fun g h ↦ h * ↑g
+              congr
+              · -- P₂ = h_P₂_finsupp.sum fun g h ↦ h * ↑g
+                dsimp [P₂]
+                -- Unfold the sum of the finsupp.
+                -- `h_P₂_finsupp` was defined via `equivFunOnFinite`. Its sum can be rewritten.
+                have h_rhs_eq_sum_univ :
+                    h_P₂_finsupp.sum (fun g h => h * g.val)
+                    = ∑ i ∈ (Finset.univ : Finset ↥G), h_P₂_fun i * i.val := by
+                  dsimp [h_P₂_finsupp]
+                  rw [Finsupp.equivFunOnFinite_symm_eq_sum]
+                  simp only [Finset.univ_eq_attach]
+                  have h_sum_of_sum_single :
+                    ((∑ a ∈ G.attach, Finsupp.single a (h_P₂_fun a))).sum (fun g h => h * g.val)
+                    = ∑ a ∈ G.attach, (h_P₂_fun a) * a.val := by
+                    -- Let `F g h := h * g.val` be the function inside the `Finsupp.sum`.
+
+                    -- `Finsupp.sum` distributes over `Finset.sum`.
+                    -- The lemma is `Finsupp.sum_sum_index`.
+                    rw [Finsupp.sum_sum_index']
+                    · congr
+                      funext g
+                      simp only [zero_mul, Finsupp.sum_single_index]
+                    · simp only [zero_mul, implies_true]
+                    · ring_nf; simp only [implies_true]
+                  exact h_sum_of_sum_single
+                rw [h_rhs_eq_sum_univ]
+                unfold h_P₂_fun
+                simp only [Finset.univ_eq_attach, ite_mul, zero_mul]
+                rw [G_sep]
+                rw [Finset.sum_union]
+                simp only [Finset.sum_ite_mem, Finset.inter_self, Finset.sdiff_inter_self,
+                  Finset.sum_empty, add_zero]
+                exact Finset.disjoint_sdiff
+
+              · -- show P₃ = h_P₃_finsupp.sum fun g h ↦ h * ↑g
+                dsimp [P₃, h_P₃_finsupp]
+                rw [Finsupp.equivFunOnFinite_symm_eq_sum]
+                simp only [Finset.univ_eq_attach]
+                -- Step 1: Prove the helper lemma to simplify the `Finsupp.sum`.
+                have h_sum_of_sum_single :
+                    ((∑ a ∈ G.attach, Finsupp.single a (h_P₃_fun a))).sum (fun g h => h * g.val)
+                    = ∑ a ∈ G.attach, (h_P₃_fun a) * a.val := by
+                  rw [Finsupp.sum_sum_index']
+                  · congr
+                    funext g
+                    rw [Finsupp.sum_single_index]
+                    exact zero_mul g.val
+                  · -- Side condition 1 for `sum_sum_index'`: `F 0 = 0`.
+                    simp only [zero_mul, implies_true]
+                  · -- Side condition 2 for `sum_sum_index'`: `F` is additive.
+                    ring_nf; simp only [implies_true]
+
+                rw [h_sum_of_sum_single]
+                unfold h_P₃_fun
+
+                simp only [Finset.mem_sdiff, Finset.mem_attach, true_and, ite_not, ite_mul,
+                  zero_mul]
+
+                rw [Finset.sum_ite_not_mem]
+
+            · -- show ∀ a ∈ B_tilde.support ∪ h_P₂_finsupp.support, 0 * ↑a = 0
+              intro a ha_in_union; exact zero_mul a.val
+            · -- show ∀ a ∈ B_tilde.support ∪ h_P₂_finsupp.support, ∀ (b₁ b₂ : MvPolynomial σ k), (b₁ + b₂) * ↑a = b₁ * ↑a + b₂ * ↑a
+              intro a ha_in_union b₁ b₂; exact add_mul b₁ b₂ a.val
+            · -- show ∀ a ∈ (B_tilde + h_P₂_finsupp).support ∪ h_P₃_finsupp.support, 0 * ↑a = 0
+              intro a ha_in_union; exact zero_mul a.val
+            · -- show ∀ a ∈ (B_tilde + h_P₂_finsupp).support ∪ h_P₃_finsupp.support, ∀ (b₁ b₂ : MvPolynomial σ k), (b₁ + b₂) * ↑a = b₁ * ↑a + b₂ * ↑a
+              intro a ha_in_union b₁ b₂; exact add_mul b₁ b₂ a.val
+
+          let δ_new_min := (Finset.image (⇑m.toSyn ∘ fun g ↦ m.degree (h_new g * g.val)) G.attach).sup id
+
+          have δ_new_min_lt_δ_syn_min : δ_new_min < δ_syn_min := by
+            rw [Finset.sup_lt_iff h_min_le_bot]
+            intro Hg Hg_mem
+            simp only [id_eq]
+            simp only [Finset.mem_image, Function.comp_apply] at Hg_mem
+            obtain ⟨g, ⟨hg_mem_G, h_eq_Hg⟩⟩ := Hg_mem
+            rw [←h_eq_Hg]; clear Hg h_eq_Hg
+            unfold h_new
+            simp only [Finsupp.coe_add, Pi.add_apply]
+            rw [right_distrib, right_distrib]
+            apply lt_of_le_of_lt MonomialOrder.degree_add_le
+            apply max_lt
+            · apply lt_of_le_of_lt MonomialOrder.degree_add_le
+              apply max_lt
+              · -- show m.toSyn (m.degree (B_tilde g * ↑g)) < δ_syn_min
+                unfold B_tilde
+
+                simp only [Finsupp.coe_finset_sum, Finsupp.coe_smul,
+                    sum_apply, Pi.smul_apply, Finsupp.mapRange_apply]
+                ring_nf
+                rw [Finset.sum_mul]
+                apply lt_of_le_of_lt
+                  (m.degree_sum_le_syn (p.support.offDiag)
+                  (fun ij ↦ c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) (1 : k) * (quotients m hG (S_polynomial m ↑↑ij.1 ↑↑ij.2)) g) * g.val))
+                rw [Finset.sup_lt_iff h_min_le_bot]
+                intro ij hij_mem_p_supp_offdiag
+                have := h_Bₗgₗ_lt_δ ij (coe_mem ij.1) (coe_mem ij.2) (Subtype.coe_ne_coe.mpr ((Finset.mem_offDiag.mp hij_mem_p_supp_offdiag).2.2))
+                have kk := this g
+                rw [←MvPolynomial.C_mul']
+                rw [mul_assoc _ _ g.val]
+                apply lt_of_le_of_lt MonomialOrder.degree_mul_le
+                rw [map_add]
+                simp only [degree_C, map_zero, Set.elem_mem, mem_val, zero_add]
+                rw [hδ_syn]
+                simp only [Finsupp.mapRange_apply, mul_comm g.val _] at kk
+                exact kk
+
+              · -- show m.toSyn (m.degree (h_P₂_finsupp g * ↑g)) < δ_syn_min
+                unfold h_P₂_finsupp
+                simp only [Finsupp.equivFunOnFinite_symm_apply_toFun]
+                unfold h_P₂_fun
+                simp only [ite_mul, zero_mul]
+                by_cases h : g ∈ G_δ
+                · rw [ite_cond_eq_true ((h_min g - m.leadingTerm (h_min g)) * g.val) 0 (eq_true h)]
+                  exact h_P₂term_deg_lt g h
+                · rw [ite_cond_eq_false ((h_min g - m.leadingTerm (h_min g)) * g.val) 0 (eq_false h)]
+                  simp only [degree_zero, map_zero]
+                  exact h_min_le_bot
+                -- h_P₂term_deg_lt : ∀ g ∈ G_δ, m.toSyn (m.degree ((h_min g - m.leadingTerm (h_min g)) * ↑g)) < δ_syn_min
 
 
-            -- Now, prove the second part (Inequality 9).
-            have h_ineq9 : ∀ gₗ : ↥G, m.toSyn (m.degree (B_ij gₗ * gₗ.val)) < δ_syn_min := by
-              intro gₗ
-              -- by_cases h_term_zero : A_ij gₗ = 0
-              -- · unfold B_ij
-              --   rw [h_term_zero]
-              --   simp only [mul_zero, zero_mul, degree_zero, map_zero]
-              --   exact h_min_le_bot
-              by_cases h_term_is_zero : B_ij gₗ * gₗ.val = 0 -- **************************************
-              · -- If the term is zero, its degree is 0, which is < δ_syn_min.
-                rw [h_term_is_zero, degree_zero, map_zero]
+            · -- show m.toSyn (m.degree (h_P₃_finsupp g * ↑g)) < δ_syn_min
+              unfold h_P₃_finsupp
+              simp only [Finsupp.equivFunOnFinite_symm_apply_toFun]
+              unfold h_P₃_fun
+              simp only [ite_mul, zero_mul]
+              by_cases h : g ∈ G.attach \ G_δ
+              · rw [ite_cond_eq_true ((h_min g) * g.val) 0 (eq_true h)]
+                exact h_P₃term_deg_lt g h
+              · rw [ite_cond_eq_false ((h_min g) * g.val) 0 (eq_false h)]
+                simp only [degree_zero, map_zero]
                 exact h_min_le_bot
-              -- apply lt_of_le_of_lt
-              -- The degree of the product `B*g` is `deg(B) + deg(g)`.
-              -- `deg(B) = deg(mono * A) = deg(mono) + deg(A)`.
-              -- So `deg(B*g) = deg(mono) + deg(A) + deg(g) = deg(mono) + deg(A*g)`.
-              -- We know `deg(A*g) <= deg(S)`.
-              -- So `deg(B*g) <= deg(mono) + deg(S) = deg(mono * S)`.
-              have h_Bg_ne_zero : B_ij gₗ * gₗ.val ≠ 0 := h_term_is_zero; clear h_term_is_zero
-              have h_Ag_ne_zero : gₗ.val * A_ij gₗ ≠ 0 := by
-                by_contra h_Ag_is_zero
-                apply h_Bg_ne_zero
-                dsimp [B_ij]
-                rw [mul_assoc]
-                nth_rw 2 [mul_comm]
-                exact mul_eq_zero_of_right mono_factor h_Ag_is_zero
+              -- h_P₃term_deg_lt : ∀ g ∈ G.attach \ G_δ, m.toSyn (m.degree (h_min g * ↑g)) < δ_syn_min
 
-              have h_deg_le_mono_mul_S : m.degree (B_ij gₗ * gₗ.val) ≼[m] m.degree (mono_factor * S_gij) := by
-                unfold B_ij
-                rw [mul_assoc]
-                nth_rw 2 [mul_comm]
-                have h_mono_ne_zero : mono_factor ≠ 0 := by rw [Ne, MvPolynomial.monomial_eq_zero]; exact one_ne_zero
+          have h_new_in : δ_new_min ∈ RepMaxSynDegrees := by
+            use h_new
+            -- h_f_eq_new : f = h_new.sum (fun g h => h * g.val)
+            -- δ_new_min was defined to be the sup for h_new, so the equality is `rfl` by definition
+            refine ⟨?_, rfl⟩
+            have : h_new.sum (fun g h ↦ h * ↑g) = ∑ g ∈ G.attach, h_new g * ↑g := by
+              dsimp [Finsupp.sum]
+              have support_subset : h_new.support ⊆ G.attach := by
+                unfold h_new
 
-                nth_rw 1 [degree_mul h_mono_ne_zero]; rw [degree_mul h_mono_ne_zero]
-                · -- show m.toSyn (m.degree mono_factor + m.degree (↑gₗ * A_ij gₗ)) ≤ m.toSyn (m.degree mono_factor + m.degree S_gij)
-                  -- have h₁ : m.toSyn (m.degree mono_factor + m.degree (gₗ.val * A_ij gₗ)) = m.toSyn (m.degree mono_factor) + m.toSyn (m.degree (gₗ.val * A_ij gₗ)) := by apply m.toSyn.map_add
-                  -- have h₂ : m.toSyn (m.degree mono_factor + m.degree S_gij) = m.toSyn (m.degree mono_factor) + m.toSyn (m.degree S_gij) := by apply m.toSyn.map_add
-                  -- rw [h₁, h₂]
-                  rw [m.toSyn.map_add, m.toSyn.map_add]
-                  apply add_le_add_left
-                  exact h_eq7 gₗ
-                · -- show S_gij ≠ 0
-                  sorry
-                · -- show ↑gₗ * A_ij gₗ ≠ 0
-                  sorry
+                apply Finset.Subset.trans Finsupp.support_add
+                · apply Finset.union_subset
+                  · exact Finset.subset_univ _
+                  · exact Finset.subset_univ _
 
-              -- The cancellation lemma gave us the degree bound for `S(pᵢ, pⱼ)`.
-              have h_deg_S_p_lt : m.degree (S_polynomial m (p i) (p j)) ≺[m] δ_min := by
-                apply h_syzygy_result.2
-                -- Need proofs that `i,j` are in `p.support`.
-                sorry; sorry
+              rw [Finset.sum_subset support_subset]
+              intro g hg_in_G hg_not_in_h_new
+              simp only [Finsupp.mem_support_iff, ne_eq, Decidable.not_not] at hg_not_in_h_new
+              rw [hg_not_in_h_new, zero_mul]
 
-              sorry
+            rw [←this]; exact h_f_eq_new
 
-            -- Combine the two results.
-            exact ⟨h_eq8, h_ineq9⟩
-
-
-          rcases h_syzygy_result with ⟨⟨c, h_P₁_rw⟩, h_S_deg_lt⟩
-          have h_S_relation (i j : ι) :
-            p i = leadingTerm m (h_min i.val) * i.val := by simp [p, p_fun]
-
-
-
-
-
-          -- obtain ⟨c, h_P₁_rw⟩ := h_exists_c
-
-          /-lemma exists_S_polynomial_syzygies
-    (p : Finset (MvPolynomial σ k)) -- The list of polynomials p₁, ..., pₛ
-    (hp : ∀ pi ∈ p, pi ≠ 0) -- Finset.nonempty_of_sum_ne_zero
-    (δ : σ →₀ ℕ) -- The common multidegree
-    (hδ : 0 ≺[m] δ)
-    (hp_deg : ∀ pi ∈ p, m.degree pi = δ) -- All polynomials have multidegree δ
-    (hsum   : m.degree (∑ pi ∈ p, pi) ≺[m] δ)
-    : ∀ ps ∈ p,
-      (∑ pi ∈ p, pi = ∑ pi ∈ p.erase ps, m.leadingCoeff pi • S_polynomial m pi ps
-      ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)-/
-
-          sorry
-
-
--- variable (m) [Fintype σ]  [DecidableEq (MvPolynomial σ k)] in
--- theorem Buchberger_criterion_domain
---   {ι : Type*} {I : Ideal (MvPolynomial σ k)}
---   (G : ι →₀ MvPolynomial σ k)
---   (hG : I = Ideal.span (Set.range G)) :
---   is_GroebnerBasis_domain m I G ↔
---     (∀ (g₁ g₂ : MvPolynomial σ k),
---       g₁ ∈ (Set.range G) →
---       g₂ ∈ (Set.range G) →
---       g₁ ≠ g₂ →
---       remainder (S_polynomial m g₁ g₂) (G.toFinset.image (fun i ↦ G i)) = 0) := by sorry
-
-/-
-A polynomial `f` in `MvPolynomial σ R` is said to reduce to zero modulo a
-finite set of polynomials `G ⊆ MvPolynomial σ R` (written `f ⟶[G] 0`) if there
-exists a standard representation
-  f = ∑ (g ∈ G), A(g) * g,
-where `A : G → MvPolynomial σ R`, such that for every `g ∈ G`, if
-  A(g) * g ≠ 0,
-then
-  m.degree (A(g) * g) ≤ m.degree f.
--/
-
-variable [Fintype σ] in
-def reduces_to_zero (G : Finset (MvPolynomial σ k)) (f : MvPolynomial σ k) : Prop :=
-∃ (A : MvPolynomial σ k → MvPolynomial σ k),
-  (f = ∑ g ∈ G, (A g) * g) ∧ ∀ g ∈ G, (A g) * g ≠ 0 → m.degree ((A g) * g) ≼[m] m.degree f
-
--- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
--- partial def BuchbergerAux (G : List (MvPolynomial σ k)) (B : List (Nat × Nat)) :
---     List (MvPolynomial σ k) :=
---   -- Use pattern matching directly on B for the loop condition
---   match hB : B with
---   | [] => G -- Base case: No more pairs, return current G
---   | (i, j) :: B_tl => -- Get head and tail
---       -- Get polynomials safely (ensure indices are valid for THIS G)
---       if hi : i < G.length then
---         if hj : j < G.length then
---           let gi := G.get ⟨i, hi⟩ -- Use Fin index for guaranteed validity
---           let gj := G.get ⟨j, hj⟩ -- Use Fin index
-
---           -- Compute S-polynomial and remainder
---           let S_ij := S_polynomial m gi gj
---           let r := remainder S_ij G -- Divide by the current ordered list G
---           if hr : r ≠ 0 then
---             -- Add non-zero remainder to basis G
---             let G' := G ++ [r]
---             let t' := G.length -- Current length BEFORE adding r
---             -- Add new pairs involving the new element (index t')
---             let new_pairs := (List.range t').map fun k ↦ (k, t')
---             -- Recursive call with updated G and B
---             BuchbergerAux G' (new_pairs ++ B_tl)
---           else
---             -- Remainder is zero, just continue with the remaining pairs
---              BuchbergerAux G B_tl
---         else -- Index j out of bounds (should ideally not happen if B is managed correctly)
---           BuchbergerAux G B_tl -- Skip pair if index j is invalid
---       else -- Index i out of bounds (should ideally not happen)
---         BuchbergerAux G B_tl -- Skip pair if index i is invalid
-
-/-
-Implementation of Buchberger's Algorithm based on the provided pseudocode.
-Input: F = a list of polynomials (generators of the ideal I)
-Output: G = a Gröbner basis for I such that F ⊆ G
--/
-
-/- Buchberger's Algorithm to compute a Gröbner basis. -/
-/-Id.run do 사용 안함, List 없이 쓰려면?-/
--- variable [DecidableEq (σ →₀ ℕ)] [DecidableEq (MvPolynomial σ k)] in
--- noncomputable def Buchberger (F : List (MvPolynomial σ k)) : List (MvPolynomial σ k) :=
---   let G₀ := F
---   let rec loop (G : List (MvPolynomial σ k)) : List (MvPolynomial σ k) :=
---     let G' := G
---     -- Generate pairs {p, q}, p ≠ q in G'
---     let pairs := G'.tails.flatMap (fun tail =>
---       match tail with
---       | [] => []
---       | p :: ps => ps.map (fun q => (p, q)) -- Pair p with every q after it
---     )
---     -- Process pairs iteratively (simulating the FOR loop)
---     let rec processPairs (currentG : List (MvPolynomial σ k)) (pairsToProcess : List (MvPolynomial σ k × MvPolynomial σ k)) : List (MvPolynomial σ k) :=
---       match pairsToProcess with
---       | [] => currentG -- No more pairs for this iteration, return the potentially updated G
---       | (p, q) :: restOfPairs =>
---           -- Assume polynomials in G are non-zero for remainder calculation (or handle zero case in remainder)
---           -- have hG_nonzero : ∀ g ∈ currentG, g ≠ 0 := sorry -- Requires proof or assumption management
---           have hG_nonzero : ∀ b ∈ currentG, IsUnit (m.leadingCoeff b) := by sorry
---           -- r := remainder(S(p, q), G') -- Use currentG for division
---           let r := remainder (S_polynomial m p q) currentG hG_nonzero
---           -- IF r ≠ 0 THEN G := G ∪ {r}
---           if hr : r ≠ 0 then
---             -- Need to re-run the whole process with the new G
---             -- The pseudocode implies a REPEAT-UNTIL structure which means we restart the pair checking
---             let G_new := currentG ++ [r] -- Add r to G
---             loop G_new -- Restart the outer loop with the new G
---           else
---             -- Remainder is 0, continue processing the rest of the pairs for *this* iteration
---             processPairs currentG restOfPairs
-
---     -- Start processing pairs for the current G
---     let G_next := processPairs G pairs
---     -- UNTIL G = G' (Check if G changed in this iteration)
---     if G_next == G' then
---       G' -- G did not change, terminate and return G'
---     else
---       -- G changed (implicitly handled by restarting loop in processPairs when r ≠ 0)
---       -- If processPairs finishes *without* finding a non-zero remainder, G_next will equal G'
---       G_next -- Should be G' if no change occurred
-
---   -- Initial call to the loop
---   loop G₀
--- termination_by sorry
-
-partial def Buchberger_Algorithm (F : List (MvPolynomial σ k)) : List (MvPolynomial σ k) := by sorry
-  -- Id.run do
-  --   let mut G : List (MvPolynomial σ R) := F -- Explicit type
-  --   let mut t : Nat := G.length           -- Explicit type
-  --   -- Generate initial pairs (i, j) with 0 <= i < j < t
-  --   let mut B : List (Nat × Nat) := List.flatten <| (List.range t).map fun i ↦
-  --      (List.range (t - (i + 1))).map fun k ↦ (i, i + 1 + k)
-
-  --   -- Use `B ≠ []` which is Decidable
-  --   while hB : B ≠ [] do
-  --     -- Use pattern matching on the list B
-  --     match B with
-  --     | [] => panic! "while condition ¬(B = []) failed" -- Should be unreachable
-  --     | (i, j) :: B_tl => -- Get head and tail
-  --         let gi := G.getD i 0 -- Default to 0 if index is somehow invalid
-  --         let gj := G.getD j 0 -- Default to 0 if index is somehow invalid
-
-  --         -- Compute S-polynomial and remainder
-  --         let S_ij := sPolynomial m gi gj
-  --         let r := remainder m S_ij G -- Divide by the current ordered list G
-
-  --         if hr : r ≠ 0 then
-  --           -- Add non-zero remainder to basis G
-  --           let t' := G.length -- Get current length *before* adding
-  --           let G' := G ++ [r]
-  --           -- Add new pairs involving the new element (index t')
-  --           let new_pairs := (List.range t').map fun k ↦ (k, t')
-  --           -- Update state
-  --           G := G'
-  --           t := t' + 1 -- Update count *after* using old length for pairs
-  --           B := new_pairs ++ B_tl -- Add new pairs (e.g., at the front)
-  --         else
-  --           -- Remainder is zero, just continue with the remaining pairs
-  --            B := B_tl -- Update B to the tail
-  --   return G
-
-variable [DecidableEq σ] in
-lemma grobner_basis_remove_redundant
-  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
-  (hG : IsGroebnerBasis m I G)
-  (hpG : p ∈ G)
-  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
-  IsGroebnerBasis m I (G.erase p) := by sorry
-
--- variable [DecidableEq σ] in
--- lemma grobner_basis_remove_redundant_old
---   {I : Ideal (MvPolynomial σ k)} {G : List (MvPolynomial σ k)} {p : MvPolynomial σ k}
---   (hG : is_GroebnerBasis m I G)
---   (hpG : p ∈ G)
---   (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).toFinset.image (fun g ↦ leadingTerm m g))) :
---   is_GroebnerBasis m I (G.erase p) := by sorry
-
-end Field
-end MvPolynomial
+          have h_min_property := WellFounded.not_lt_min (by exact wellFounded_lt) RepMaxSynDegrees h_RepMaxSynDegrees_nonempty h_new_in
+          -- unfold δ_syn_min at δ_new_min_lt_δ_syn_min
+          exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
