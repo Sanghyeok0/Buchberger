@@ -6,7 +6,7 @@ import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Algebra.Order.Sub.Unbundled.Hom
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 -- import Mathlib.Algebra.Ring.Defs
-import Buchberger.Piecewise
+import Buchberger.Finset
 import Buchberger.MonomialIdeal
 -- import Buchberger.Order2
 
