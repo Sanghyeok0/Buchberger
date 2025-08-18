@@ -2055,31 +2055,5 @@ theorem Buchberger_criterion
           -- unfold δ_syn_min at δ_new_min_lt_δ_syn_min
           exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
 
-/-
-A polynomial `f` in `MvPolynomial σ R` is said to reduce to zero modulo a
-finite set of polynomials `G ⊆ MvPolynomial σ R` (written `f ⟶[G] 0`) if there
-exists a standard representation
-  f = ∑ (g ∈ G), A(g) * g,
-where `A : G → MvPolynomial σ R`, such that for every `g ∈ G`, if
-  A(g) * g ≠ 0,
-then
-  m.degree (A(g) * g) ≤ m.degree f.
--/
-
-variable [Fintype σ] in
-def reduces_to_zero (G : Finset (MvPolynomial σ k)) (f : MvPolynomial σ k) : Prop :=
-∃ (A : MvPolynomial σ k → MvPolynomial σ k),
-  (f = ∑ g ∈ G, (A g) * g) ∧ ∀ g ∈ G, (A g) * g ≠ 0 → m.degree ((A g) * g) ≼[m] m.degree f
-
-partial def Buchberger_Algorithm (F : List (MvPolynomial σ k)) : List (MvPolynomial σ k) := by sorry
-
-variable [DecidableEq σ] in
-lemma grobner_basis_remove_redundant
-  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
-  (hG : IsGroebnerBasis m I G)
-  (hpG : p ∈ G)
-  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
-  IsGroebnerBasis m I (G.erase p) := by sorry
-
 end Field
 end MvPolynomial
