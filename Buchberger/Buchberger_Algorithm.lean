@@ -433,6 +433,7 @@ noncomputable def buchberger_alg [Finite σ]
         · rfl
       exact hLT_r_notin hLT_r_in
 
+
 variable (m) [DecidableEq σ] in
 theorem Buchberger_Alg [Finite σ]
   {F : Finset (MvPolynomial σ k)}
@@ -442,52 +443,53 @@ theorem Buchberger_Alg [Finite σ]
   ∃ G : Finset (MvPolynomial σ k),
   F ⊆ G ∧
   IsGroebnerBasis m I G := by
-  -- 1. The state of our recursion is a Finset known to be zero-free.
+
+  -- 1. State packages the set with the invariant "all entries nonzero".
   let State := { G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0 }
 
-  -- 2. The termination
+  -- 2. Measure and well-founded relation (OrderDual so that < is well-founded).
   let H (s : State) := OrderDual.toDual (@Ideal.span (MvPolynomial σ k) _ (s.val.image (leadingTerm m)))
   let R (s₁ s₂ : State) : Prop := H s₁ < H s₂
-  have h_wf : WellFounded R := InvImage.wf H (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+  have h_wf : WellFounded R := InvImage.wf H
+    (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
 
-  -- 3. Define the function for one step of the recursion.
-  let buchberger_step_fn (G_sub : State)
-    (rec_call : ∀ (G'_sub : State), R G'_sub G_sub → State) : State :=
+  -- 3. One-step function: uses s.property as hG for normalForm.
+  let buchberger_step_fn (G_sub : State) (rec_call : ∀ (G'_sub : State), R G'_sub G_sub → State) : State :=
 
-    -- Unpack the current state
     let G := G_sub.val
     let hG := G_sub.property
 
-    -- Compute the non-zero remainders.
+    -- new = nonzero normal forms of S-polys
     let new := (G.offDiag.image (fun pq => normalForm m hG (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
-    ----------------------------------------------
+
     if hR_empty : new = ∅ then
-      -- Base case: No new remainders. The basis is stable. Return it.
       G_sub
     else
-      -- Recursive step: Add the remainders and recurse.
       let G' := G ∪ new
       have hG' : ∀ g ∈ G', g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
-        | inl hg_in_G => exact hG g hg_in_G
-        | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
+        | inl hgG => exact hG g hgG
+        | inr hgNew => unfold new at hgNew; rw [mem_filter] at hgNew; exact hgNew.2
 
-      -- We must prove the new state is "smaller" to make the recursive call.
+      -- prove strict decrease of the measure when new ≠ ∅
       have h_decreasing : R ⟨G', hG'⟩ G_sub := by
         dsimp [R, H, OrderDual.toDual, OrderDual.ofDual]
-        -- This is the full `decreasing_by` proof.
         apply lt_of_le_of_ne
         · apply Ideal.span_mono; simp only [coe_image]
           refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
           unfold G'; exact subset_union_left
         · intro h_ideals_eq
           simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_ideals_eq
+          -- pick witness r ∈ new and use normalForm property
           obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr hR_empty)
           have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
             unfold new at hr
             simp only [ne_eq, mem_filter, mem_image] at hr
-            obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
+            obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
+            -- hpq : pq ∈ G.offDiag, and hpq.2 = proof (pq.1 ≠ pq.2) etc.
+            -- use lemma: leadingTerm (normalForm ...) ∉ span (LT G)
+            -- (named earlier in your development)
             rw [←hpq.2]
             apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
             rw [hpq.2]
@@ -501,13 +503,19 @@ theorem Buchberger_Alg [Finite σ]
           exact hLT_r_notin hLT_r_in
 
       rec_call ⟨G', hG'⟩ h_decreasing
-    ----------------------------------------------
 
+  -- initial state: filter out zeroes (but hF guarantees none)
   let F₀_sub : State := ⟨F.filter (· ≠ 0), fun g hg => (Finset.mem_filter.mp hg).2⟩
   have hF_eq_F₀ : F = F₀_sub.val := Eq.symm (filter_true_of_mem hF)
+
+  -- the fixpoint state and the resulting G
   let G_sub := @WellFounded.fix State (fun _ => State) R h_wf buchberger_step_fn F₀_sub
   let G := G_sub.val
   use G
+
+  ----------------------------------------------------------------
+  -- 1) F ⊆ G  (monotonicity of the recursion)
+  ----------------------------------------------------------------
   have h_F_sub_G : F ⊆ G := by
     rw [hF_eq_F₀]
     unfold G G_sub
@@ -558,10 +566,16 @@ theorem Buchberger_Alg [Finite σ]
       specialize IH s' h_decreasing
       exact Finset.Subset.trans h_s_sub_union IH
 
-
+  ----------------------------------------------------------------
+  -- 2) G is zero-free (invariant)
+  ----------------------------------------------------------------
   have hG_nonzero : ∀ g ∈ G, g ≠ 0 := by
+    -- property is carried in the State, so just use G_sub.property
     exact G_sub.property
 
+  ----------------------------------------------------------------
+  -- 3) span equality: I = span G
+  ----------------------------------------------------------------
   have h_I_eq_span_G : I = Ideal.span G := by
     rw [hspan, hF_eq_F₀]
     apply h_wf.induction
@@ -656,35 +670,351 @@ theorem Buchberger_Alg [Finite σ]
             apply Ideal.subset_span
             exact g_sub.property
 
+  ----------------------------------------------------------------
+  -- 4) Use Buchberger criterion: show all S-polynomials reduce to 0.
+  ----------------------------------------------------------------
+  -- define the Rset function (nonzero remainders at state s)
+  let Rset (s : State) : Finset (MvPolynomial σ k) :=
+    (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+
+  -- show Rset at the fixpoint is empty (by WF induction)
+  -- have Rset_fix_empty : Rset (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
+  --   apply h_wf.induction (C := fun s => Rset (h_wf.fix buchberger_step_fn s) = ∅) _
+  --   intro s ih
+  --   have hfix := WellFounded.fix_eq h_wf buchberger_step_fn s
+  --   unfold Rset
+  --   have : image
+  --     (fun (pq : MvPolynomial σ k × MvPolynomial σ k) ↦ (normalForm m ((h_wf.fix buchberger_step_fn s).property) (S_polynomial m pq.1 pq.2)))
+  --     (h_wf.fix buchberger_step_fn s).val.offDiag ≠ {0} := by sorry
+  -- show Rset at the fixpoint is empty (by WF induction)
+  have Rset_fix_empty : Rset (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
+    -- Do induction on arbitrary starting state s, specialize at F₀_sub
+    apply h_wf.induction (C := fun s => Rset (h_wf.fix buchberger_step_fn s) = ∅) F₀_sub
+    intro s ih
+    let new_s := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+    have hfix := WellFounded.fix_eq h_wf buchberger_step_fn s
+
+    by_cases h_new_empty : new_s = ∅
+    · -- stable case: fix s = s, so Rset (fix s) = new_s = ∅
+      have : (h_wf.fix buchberger_step_fn s) = s := by
+        rw [WellFounded.fix_eq]
+        dsimp [buchberger_step_fn]
+        rw [if_pos h_new_empty]
+      simp [Rset, this, new_s, h_new_empty]
+    · -- recursive case: form s' = s ∪ new_s and use IH
+      have h_all_nonzero : ∀ g ∈ s.val ∪ new_s, g ≠ 0 := by
+        intro g hg
+        cases mem_union.mp hg with
+        | inl hg_in_s => exact s.property g hg_in_s
+        | inr hg_in_new => unfold new_s at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
+      let s' : State := ⟨s.val ∪ new_s, h_all_nonzero⟩
+      -- prove strict decrease R s' s (same pattern as earlier)
+      have h_decreasing : R s' s := by
+        dsimp [R, H, OrderDual.toDual, OrderDual.ofDual]
+        obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
+        apply lt_of_le_of_ne
+        · apply Ideal.span_mono
+          simp only [coe_image]
+          refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
+          unfold s'; exact subset_union_left
+        · intro h_ideals_eq
+          simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_ideals_eq
+          have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f => m.leadingTerm f) '' s.val) := by
+            unfold new_s at hr
+            simp only [mem_filter, mem_image] at hr
+            obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
+            rw [←hpq.2]
+            apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+            rw [hpq.2]
+            exact hr_nezero
+          have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f => m.leadingTerm f) '' s.val) := by
+            rw [id (Eq.symm h_ideals_eq)]
+            apply Ideal.subset_span
+            simp only [Set.mem_image, mem_coe]
+            use r
+            exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
+          exact hLT_r_notin hLT_r_in
+
+      have hfix : h_wf.fix buchberger_step_fn s =
+              h_wf.fix buchberger_step_fn s' := by
+        rw [WellFounded.fix_eq]
+        dsimp [buchberger_step_fn]
+        rw [if_neg h_new_empty]
+      -- finish using IH at s'
+      simpa [hfix] using ih s' h_decreasing
+
+  -- finish Buchberger criterion
   have h_G_is_GB : IsGroebnerBasis m I G := by
     apply (Buchberger_criterion m hG_nonzero h_I_eq_span_G).mpr
     intro p q hp hq h_ne
-    have h_fix_eq := WellFounded.fix_eq h_wf buchberger_step_fn G_sub
-    let new := (G.offDiag.image (fun pq => normalForm m hG_nonzero (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+    let r := normalForm m hG_nonzero (S_polynomial m p q)
+    by_contra hr_nonzero
+    -- r would be in Rset of final state
+    have hr_in : r ∈ (G.offDiag.image (fun pq => normalForm m hG_nonzero (S_polynomial m pq.1 pq.2))).filter (· ≠ 0) := by
+      simp only [ mem_filter, mem_image, mem_offDiag]
+      refine ⟨⟨(p, q), ?_, rfl⟩, ?_⟩
+      · -- show (p, q) ∈ offDiag
+        simpa [mem_offDiag] using ⟨hp, hq, h_ne⟩
+      · -- show r ≠ 0
+        exact hr_nonzero
 
-    have h_new_is_empty : new = ∅ := by sorry
-      -- let P (s : State) : Prop :=
-      --   let G_final := (WellFounded.fix h_wf buchberger_step_fn s).val
-      --   let hG_final := (WellFounded.fix h_wf buchberger_step_fn s).property
-      --   let R_final := (G_final.offDiag.image (fun pq => normalForm m hG_final (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
-      --   R_final = ∅
+    have hr_in' : r ∈ Rset G_sub := by
+      -- reduce `Rset` and the local lets so `hr_in` matches it
+      dsimp [Rset]
+      -- now `hr_in` and the `Rset G_sub` shape are definitionally the same up to the local names `G`/`G_sub`
+      -- `simpa` will replace the explicit form by the named `Rset G_sub`
+      simpa [G, G_sub] using hr_in
 
-
-    by_contra h_rem_ne_zero
-
-    -- If the remainder is non-zero, it would be in `new`.
-    have h_rem_in_new : normalForm m hG_nonzero (S_polynomial m p q) ∈ new := by
-      dsimp [new]
-      apply Finset.mem_filter.mpr
-      constructor
-      · simp only [mem_image, mem_offDiag]
-        use ⟨p, q⟩
-      · exact h_rem_ne_zero
-
-    rw [h_new_is_empty] at h_rem_in_new
-    exact Finset.notMem_empty _ h_rem_in_new
+    rw [Rset_fix_empty] at hr_in'
+    exact Finset.notMem_empty r hr_in'
 
   exact ⟨h_F_sub_G, h_G_is_GB⟩
+
+
+
+
+-- variable (m) [DecidableEq σ] in
+-- theorem Buchberger_Alg' [Finite σ]
+--   {F : Finset (MvPolynomial σ k)}
+--   {I : Ideal (MvPolynomial σ k)}
+--   (hF : ∀ f ∈ F, f ≠ 0)
+--   (hspan : I = Ideal.span F) :
+--   ∃ G : Finset (MvPolynomial σ k),
+--   F ⊆ G ∧
+--   IsGroebnerBasis m I G := by
+--   -- 1. The state of our recursion is a Finset known to be zero-free.
+--   let State := { G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0 }
+
+--   -- 2. The termination
+--   let H (s : State) := OrderDual.toDual (@Ideal.span (MvPolynomial σ k) _ (s.val.image (leadingTerm m)))
+--   let R (s₁ s₂ : State) : Prop := H s₁ < H s₂
+--   have h_wf : WellFounded R := InvImage.wf H (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+
+--   -- 3. Define the function for one step of the recursion.
+--   let buchberger_step_fn (G_sub : State)
+--     (rec_call : ∀ (G'_sub : State), R G'_sub G_sub → State) : State :=
+
+--     -- Unpack the current state
+--     let G := G_sub.val
+--     let hG := G_sub.property
+
+--     -- Compute the non-zero remainders.
+--     let new := (G.offDiag.image (fun pq => normalForm m hG (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+--     ----------------------------------------------
+--     if hR_empty : new = ∅ then
+--       -- Base case: No new remainders. The basis is stable. Return it.
+--       G_sub
+--     else
+--       -- Recursive step: Add the remainders and recurse.
+--       let G' := G ∪ new
+--       have hG' : ∀ g ∈ G', g ≠ 0 := by
+--         intro g hg
+--         cases mem_union.mp hg with
+--         | inl hg_in_G => exact hG g hg_in_G
+--         | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
+
+--       -- We must prove the new state is "smaller" to make the recursive call.
+--       have h_decreasing : R ⟨G', hG'⟩ G_sub := by
+--         dsimp [R, H, OrderDual.toDual, OrderDual.ofDual]
+--         -- This is the full `decreasing_by` proof.
+--         apply lt_of_le_of_ne
+--         · apply Ideal.span_mono; simp only [coe_image]
+--           refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
+--           unfold G'; exact subset_union_left
+--         · intro h_ideals_eq
+--           simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_ideals_eq
+--           obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr hR_empty)
+--           have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
+--             unfold new at hr
+--             simp only [ne_eq, mem_filter, mem_image] at hr
+--             obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
+--             rw [←hpq.2]
+--             apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+--             rw [hpq.2]
+--             exact hr_nezero
+--           have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
+--             rw [←h_ideals_eq]
+--             apply Ideal.subset_span
+--             simp only [Set.mem_image, mem_coe]
+--             use r
+--             exact ⟨by unfold G'; exact mem_union_right G hr, rfl⟩
+--           exact hLT_r_notin hLT_r_in
+
+--       rec_call ⟨G', hG'⟩ h_decreasing
+--     ----------------------------------------------
+
+--   let F₀_sub : State := ⟨F.filter (· ≠ 0), fun g hg => (Finset.mem_filter.mp hg).2⟩
+--   have hF_eq_F₀ : F = F₀_sub.val := Eq.symm (filter_true_of_mem hF)
+--   let G_sub := @WellFounded.fix State (fun _ => State) R h_wf buchberger_step_fn F₀_sub
+--   let G := G_sub.val
+--   use G
+--   have h_F_sub_G : F ⊆ G := by
+--     rw [hF_eq_F₀]
+--     unfold G G_sub
+--     apply h_wf.induction
+--       (C := fun s => s.val ⊆ (h_wf.fix buchberger_step_fn s).val)
+--       F₀_sub
+--     intro s IH
+--     let hG := s.property
+--     let new := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+
+--     rw [WellFounded.fix_eq]
+--     unfold buchberger_step_fn
+--     by_cases h_new_empty : new = ∅
+--     · rw [dif_pos h_new_empty]
+--     · rw [dif_neg h_new_empty]
+--       have h_s_sub_union : s.val ⊆ s.val ∪ new := subset_union_left
+--       have : ∀ g ∈ ↑s ∪ new, g ≠ 0 := by
+--         intro g hg
+--         cases mem_union.mp hg with
+--           | inl hg_in_G => exact hG g hg_in_G
+--           | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
+--       let s' : State := ⟨s.val ∪ new, this⟩
+--       have h_decreasing : R s' s := by
+--         unfold R H
+--         simp only [ne_eq, coe_image, OrderDual.toDual_lt_toDual]
+--         obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
+--         apply lt_of_le_of_ne
+--         · apply Ideal.span_mono
+--           refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
+--           unfold s'; exact subset_union_left
+--         · intro h_ideals_eq
+--           have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
+--             unfold new at hr
+--             simp only [ne_eq, mem_filter, mem_image] at hr
+--             obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
+--             rw [←hpq.2]
+--             apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+--             rw [hpq.2]
+--             exact hr_nezero
+
+--           have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
+--             rw [h_ideals_eq]
+--             apply Ideal.subset_span
+--             simp only [Set.mem_image, mem_coe]
+--             use r
+--             exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
+--           exact hLT_r_notin hLT_r_in
+--       specialize IH s' h_decreasing
+--       exact Finset.Subset.trans h_s_sub_union IH
+
+
+--   have hG_nonzero : ∀ g ∈ G, g ≠ 0 := by
+--     exact G_sub.property
+
+--   have h_I_eq_span_G : I = Ideal.span G := by
+--     rw [hspan, hF_eq_F₀]
+--     apply h_wf.induction
+--       (C := fun s => Ideal.span s.val = @Ideal.span (MvPolynomial σ k) _ (WellFounded.fix h_wf buchberger_step_fn s).val)
+--       F₀_sub
+--     intro s ih
+--     let hG := s.property
+--     rw [WellFounded.fix_eq]
+--     dsimp [buchberger_step_fn]
+--     let new := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+--     by_cases h_new_empty : new = ∅
+--     · rw [if_pos h_new_empty]
+--     · rw [if_neg h_new_empty]
+--       have : ∀ g ∈ ↑s ∪ new, g ≠ 0 := by
+--         intro g hg
+--         cases mem_union.mp hg with
+--           | inl hg_in_G => exact hG g hg_in_G
+--           | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
+--       let s' : State := ⟨s.val ∪ new, this⟩
+
+--       have h_decreasing : R s' s := by
+--         unfold R H
+--         simp only [coe_image, OrderDual.toDual_lt_toDual]
+--         obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
+--         apply lt_of_le_of_ne
+--         · apply Ideal.span_mono
+--           refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
+--           unfold s'; exact subset_union_left
+--         · intro h_ideals_eq
+--           have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
+--             unfold new at hr
+--             simp only [mem_filter, mem_image] at hr
+--             obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
+--             rw [←hpq.2]
+--             apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+--             rw [hpq.2]
+--             exact hr_nezero
+
+--           have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
+--             rw [h_ideals_eq]
+--             apply Ideal.subset_span
+--             simp only [Set.mem_image, mem_coe]
+--             use r
+--             exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
+--           exact hLT_r_notin hLT_r_in
+
+--       rw [← ih s' h_decreasing]
+--       apply le_antisymm
+--       · apply Ideal.span_mono
+--         unfold s'
+--         simp only [coe_union, Set.subset_union_left]
+--       · rw [Ideal.span_le]
+--         unfold s'
+--         simp only [coe_union, Set.union_subset_iff]
+--         constructor
+--         · exact Ideal.subset_span
+--         · unfold new
+--           simp only [coe_filter, mem_image, mem_offDiag]
+--           rw [Set.subset_def]
+--           intro r hr_in_new
+--           obtain ⟨⟨pq, hpq_in_offDiag, hr_eq_normalForm⟩, hr_ne_zero⟩ := hr_in_new
+--           rw [← hr_eq_normalForm]
+
+--           let S := S_polynomial m pq.1 pq.2
+--           have h_spec := normalForm_spec' m s.property S
+--           let q := quotients m s.property S
+--           let q_sum := q.sum (fun (g : ↥s.val) (h : MvPolynomial σ k) => h * g.val)
+
+--           have h_r_eq_sub : r = S - q_sum := by
+--             have : S = q_sum + r := by
+--               rw [h_spec.1]
+--               unfold q_sum q quotients
+--               congr
+--             exact eq_sub_of_add_eq' (id (Eq.symm this))
+--           rw [hr_eq_normalForm, h_r_eq_sub]
+--           apply Ideal.sub_mem
+--           · -- First goal: `S ∈ Ideal.span s.val`.
+--             unfold S S_polynomial
+--             let I_s := Ideal.span (s.val : Set (MvPolynomial σ k))
+--             have hp_in_I : pq.1 ∈ I_s := Ideal.subset_span (hpq_in_offDiag.1)
+--             have hq_in_I : pq.2 ∈ I_s := Ideal.subset_span (hpq_in_offDiag.2.1)
+--             exact Ideal.sub_mem _ (Ideal.mul_mem_left _ _ hp_in_I) (Ideal.mul_mem_left _ _ hq_in_I)
+
+--           · -- Second goal: `q_sum ∈ Ideal.span s.val`.
+--             unfold q_sum
+--             rw [Finsupp.sum]
+--             apply sum_mem
+--             intro g_sub _
+--             -- `g_sub` is `⟨g, hg_in_s⟩` of type `↥s.val`.
+--             -- The term is `(q g_sub) * g_sub.val`.
+--             apply Ideal.mul_mem_left
+--             apply Ideal.subset_span
+--             exact g_sub.property
+
+--   have h_G_is_GB : IsGroebnerBasis m I G := by
+--     apply (Buchberger_criterion m hG_nonzero h_I_eq_span_G).mpr
+--     intro p q hp hq h_ne
+--     have h_fix_eq := WellFounded.fix_eq h_wf buchberger_step_fn G_sub
+--     let new := (G.offDiag.image (fun pq => normalForm m hG_nonzero (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+
+--     by_contra h_rem_ne_zero
+--     let r := normalForm m hG_nonzero (S_polynomial m p q)
+--     -- If the remainder is non-zero, it would be in `new`.
+--     have h_rem_in_new : r ∈ new := by
+--       dsimp [new]
+--       apply Finset.mem_filter.mpr
+--       constructor
+--       · simp only [mem_image, mem_offDiag]
+--         use ⟨p, q⟩
+--       · exact h_rem_ne_zero
+
+--     sorry
+--   exact ⟨h_F_sub_G, h_G_is_GB⟩
 
 
 
