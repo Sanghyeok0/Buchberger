@@ -277,7 +277,7 @@ Furthermore, any Gröbner basis for \(I\) is a generating set of \(I\).
 theorem grobner_basis_exists (I : Ideal (MvPolynomial σ k)) :
   ∃ G : Finset (MvPolynomial σ k), IsGroebnerBasis m I G := by
   -- have h_fin : Ideal.FG (initialIDeal m I) := Hilbert_basis_initial I
-  sorry
+sorry
 
 variable [DecidableEq σ] in
 /--
@@ -2054,6 +2054,14 @@ theorem Buchberger_criterion
           have h_min_property := WellFounded.not_lt_min (by exact wellFounded_lt) RepMaxSynDegrees h_RepMaxSynDegrees_nonempty h_new_in
           -- unfold δ_syn_min at δ_new_min_lt_δ_syn_min
           exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
+
+variable [DecidableEq σ] in
+lemma grobner_basis_remove_redundant
+  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
+  (hG : IsGroebnerBasis m I G)
+  (hpG : p ∈ G)
+  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
+  IsGroebnerBasis m I (G.erase p) := by sorry
 
 end Field
 end MvPolynomial

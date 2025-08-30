@@ -364,7 +364,7 @@ theorem Buchberger_Alg [Finite σ]
         rw [WellFounded.fix_eq]
         dsimp [buchberger_step_fn]
         rw [if_pos h_new_empty]
-      simp [Rset, this, new_s, h_new_empty]
+      simp only [Rset, this, new_s, h_new_empty]
     · -- recursive case: form s' = s ∪ new_s and use IH
       have h_all_nonzero : ∀ g ∈ s.val ∪ new_s, g ≠ 0 := by
         intro g hg
