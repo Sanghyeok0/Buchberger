@@ -192,6 +192,7 @@
   \label{thm:Buchberger's_Algorithm}
   \uses{thm:Buchberger’s_Criterion}
   \lean{MvPolynomial.Buchberger_Alg}
+  \leanok %확인 필요
   Let $I = \langle f_1, \ldots, f_s \rangle \ne \{0\}$ be a polynomial ideal. Then a Gr{\"o}bner basis for $I$ can be constructed in a finite number of steps by the following algorithm:
   \normalfont % Switch from the theorem's default italic font to normal font
   \begin{itemize}
@@ -212,6 +213,44 @@
       \item[] \textbf{RETURN} $G$
   \end{itemize}
 \end{theorem}
+\begin{proof}
+  We begin with some frequently used notation. If $G = \{ g_1, \ldots, g_t \}$, 
+  then $\langle G \rangle$ and $\langle \operatorname{LT}(G) \rangle$ will denote the following ideals:
+  \[
+  \langle G \rangle = \langle g_1, \ldots, g_t \rangle, \qquad
+  \langle \operatorname{LT}(G) \rangle = \langle \operatorname{LT}(g_1), \ldots, \operatorname{LT}(g_t) \rangle.
+  \]
+
+  Turning to the proof of the theorem, we first show that $G \subseteq I$ holds at every stage of
+  the algorithm. This is true initially, and whenever we enlarge $G$, we do so by adding the remainder
+  $r = \overline{S(p,q)}^{G'}$ for $p,q \in G' \subseteq G$. Thus, if $G \subseteq I$, then $p,q \in I$ and, 
+  hence, $S(p,q) \in I$, and since we are dividing by $G' \subseteq I$, we get $G \cup \{r\} \subseteq I$. 
+  We also note that $G$ contains the given basis $F$ of $I$, so that $G$ is actually a basis of $I$.
+
+  The algorithm terminates when $G = G'$, which means that 
+  $r = \overline{S(p,q)}^{G'} = 0$ for all $p,q \in G$. Hence $G$ is a Gr\"obner basis of 
+  $\langle G \rangle = I$ by Theorem~6 of \S6.
+
+  It remains to prove that the algorithm terminates. We need to consider what happens after each
+  pass through the main loop. The set $G$ consists of $G'$ (the old $G$) together with the nonzero
+  remainders of $S$-polynomials of elements of $G'$. Then
+  \begin{equation}
+  \langle \operatorname{LT}(G') \rangle \subseteq \langle \operatorname{LT}(G) \rangle.
+  \end{equation}
+  Since $G' \subseteq G$. Furthermore, if $G' \ne G$, we claim that 
+  $\langle \operatorname{LT}(G') \rangle$ is strictly smaller than $\langle \operatorname{LT}(G) \rangle$. 
+  To see this, suppose that a nonzero remainder $r$ of an $S$-polynomial has been adjoined to $G$. 
+  Since $r$ is a remainder on division by $G'$, $\operatorname{LT}(r)$ is not divisible by the leading
+  terms of elements of $G'$, and thus $\operatorname{LT}(r) \notin \langle \operatorname{LT}(G') \rangle$ 
+  by Lemma~2 of \S4. Yet $\operatorname{LT}(r) \in \langle \operatorname{LT}(G) \rangle$, which proves our claim.
+
+  By (1), the ideals $\langle \operatorname{LT}(G') \rangle$ from successive iterations of the loop form an
+  ascending chain of ideals in $k[x_1, \ldots, x_n]$. Thus, the ACC (Theorem~7 of \S5) implies that after
+  a finite number of iterations the chain will stabilize, so that 
+  $\langle \operatorname{LT}(G') \rangle = \langle \operatorname{LT}(G) \rangle$ must happen eventually. 
+  By the previous paragraph, this implies that $G' = G$, so that the algorithm must terminate after a 
+  finite number of steps.
+\end{proof}
 
 \begin{lemma}\label{lem:grobner_basis_remove_redundant} % [Cox] 92p
     \lean{MvPolynomial.grobner_basis_remove_redundant}
