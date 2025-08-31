@@ -255,7 +255,7 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
     obtain ⟨g, hg_in_G, rfl⟩ := hf
     obtain ⟨gnzero, hGI, hspan⟩ := hGB
     have hlt : monomial (m.degree g) (1 : k) = C (m.leadingCoeff g)⁻¹ * leadingTerm m g := by
-      simp [leadingTerm]
+      unfold leadingTerm
       rw [C_mul_monomial]
       have : (m.leadingCoeff g)⁻¹ * m.leadingCoeff g = 1 := by
         exact IsUnit.inv_mul_cancel ((isUnit_leadingCoeff_iff_nonzero m g).mpr (gnzero g hg_in_G))
@@ -304,7 +304,7 @@ theorem normalForm_exists_unique
   -- 2) set `g := ∑ b in gcomb.support, gcomb b • (b : MvPolynomial)`
   let g : MvPolynomial σ k := gcomb.sum (fun b coeff => coeff • (b : MvPolynomial σ k))
   have hgI : g ∈ I := by
-    simp [g, Finsupp.sum]
+    simp only [Finsupp.sum, Set.elem_mem, mem_val, smul_eq_mul, g]
     have h_support_mem : ∀ b ∈ gcomb.support, (b : MvPolynomial σ k) ∈ I :=
       fun b hb => hGB.2.1 b.2
     exact Submodule.sum_smul_mem I gcomb h_support_mem
@@ -341,7 +341,7 @@ theorem normalForm_exists_unique
       rw [hrg]
       exact (Submodule.sub_mem_iff_left I hgI).mpr hg'I
     have hlt_in : leadingTerm m (r - r') ∈ initialIdeal m I := by
-      dsimp [initialIdeal]
+      unfold initialIdeal
       apply Ideal.subset_span
       exact ⟨r - r', dI, hne, rfl⟩
     have hlm_in : monomial (m.degree (r - r')) 1 ∈ initialIdeal m I := by
@@ -525,9 +525,9 @@ lemma Spolynomial_syzygy_of_degree_cancellation
     unfold S_polynomial
     -- The sup of the degrees is δ.
     have h_deg_sup : m.degree (p i) ⊔ m.degree (p j) = δ := by
-      simp [hp_deg i hi, hp_deg j hj]
+      simp only [hp_deg i hi, hp_deg j hj, le_refl, sup_of_le_left]
     simp_rw [h_deg_sup, hp_deg i hi, hp_deg j hj, tsub_self, monomial_zero']
-    dsimp [d]
+    unfold d
     rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
 
   constructor
@@ -552,7 +552,7 @@ lemma Spolynomial_syzygy_of_degree_cancellation
 
       have h_coeff_eq_lc : ∀ i ∈ p.support, MvPolynomial.coeff δ (p i) = d i := by
         intro i hi
-        dsimp [d]
+        unfold d
         rw [leadingCoeff, hp_deg i hi]
 
       rwa [Finset.sum_congr rfl h_coeff_eq_lc] at h_coeff_sum_zero
@@ -607,8 +607,8 @@ lemma Spolynomial_syzygy_of_degree_cancellation
     -- We define `c ij` to be `d i` if `j=s` and `i≠s`, and 0 otherwise.
     let c (ij : ι × ι) : k := if ij.2 = s ∧ ij.1 ∈ p.support.erase s then d ij.1 else 0
     use c
-    dsimp [c]
-    simp only [Finset.mem_erase, ne_eq, Finsupp.mem_support_iff, ite_smul, zero_smul]
+    dsimp only [mem_erase, Finsupp.mem_support_iff, c]
+    simp only [Finset.mem_erase, Finsupp.mem_support_iff, ite_smul, zero_smul]
     show ∑ i ∈ p.support, p i =
     ∑ x ∈ p.support.offDiag, if x.2 = s ∧ x.1 ∈ p.support.erase s then d x.1 • S_polynomial m (p x.1) (p x.2) else 0
     rw [h_sum_reduces]
@@ -724,7 +724,7 @@ lemma exists_S_polynomial_syzygies
         simpa using hsum
       -- But (∑ pi in p, pi).coeff δ = ∑ pi in p, pi.coeff δ by coeff_sum.
       have sum_of_coeffs : ∑ pi ∈ p, pi.coeff δ = 0 := by
-        simp [coeff_sum] at coeff_sum_zero
+        rw [coeff_sum] at coeff_sum_zero
         exact coeff_sum_zero
       -- 3)  Because m.degree pi = δ for each pi ∈ p, we have pi.coeff δ = m.leadingCoeff pi.
       have sum_lead_coeffs : ∑ pi ∈ p, m.leadingCoeff pi = 0 := by
@@ -777,7 +777,7 @@ lemma exists_S_polynomial_syzygies
         have : (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ - (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ = 0 := by
           exact sub_eq_zero.mpr rfl
         rw [←this, sub_eq_neg_add, ←add_assoc]
-        dsimp [p']
+        unfold p'
         rw [←neg_add]
         rw [Finset.sum_erase_add p _ hps, ←Finset.sum_mul]
         rw [sum_lead_coeffs]
@@ -1027,7 +1027,7 @@ theorem Buchberger_criterion
         have hG_sub_I : (↑G : Set (MvPolynomial σ k)) ⊆ I := by rw [hGI]; exact Ideal.subset_span
         refine ⟨hG, hG_sub_I, ?_⟩
         by_cases hG_empty : G = ∅
-        · simp [hG_empty] at hGI
+        · simp only [hG_empty, coe_empty, Ideal.span_empty] at hGI
           rw [initialIdeal, hGI, hG_empty]
           simp
         -- We need to show `initialIdeal m I = Ideal.span (LT(G))`.
@@ -1274,7 +1274,7 @@ theorem Buchberger_criterion
             nth_rw 1 [G_sep]
             rw [Finset.sum_union (by exact Finset.disjoint_sdiff)]
           have h_sdiff : G.attach \ G_δ = G.attach.filter (fun g => m.toSyn (m.degree (h_min g * g.val)) < δ_syn_min) := by
-            dsimp [G_δ]
+            dsimp only [G_δ]
             -- We also know `m.degree (h_min g * g) ≼[m] δ_min` because δ_min is the maximum.
             have h_le : ∀ g ∈ G.attach, m.toSyn (m.degree (h_min g * g.val)) ≤ δ_syn_min := by
               intro h hg
@@ -1326,7 +1326,7 @@ theorem Buchberger_criterion
             -- Unfold S_δ.
             -- Rewrite the first sum using its decomposition.
             -- Unfold the definitions of P₁, P₂, P₃.
-            dsimp [P₁, P₂, P₃]
+            unfold P₁ P₂ P₃
             -- The goal is now `(a + b) + c = a + b + c`, which is true by associativity.
             rw [add_left_inj]
             rw [←Finset.sum_add_distrib]
@@ -1347,7 +1347,7 @@ theorem Buchberger_criterion
             exact hg_sdiff.2
 
           have hP₃_deg_lt : m.toSyn (m.degree P₃) < δ_syn_min := by
-            dsimp [P₃]
+            unfold P₃
             apply lt_of_le_of_lt (m.degree_sum_le_syn (G.attach \ G_δ) (fun g ↦ h_min g * g.val))
             rw [Finset.sup_lt_iff h_min_le_bot]
             exact h_P₃term_deg_lt
@@ -1387,7 +1387,7 @@ theorem Buchberger_criterion
                 exact h_sub_lt
 
           have hP₂_deg_lt : m.toSyn (m.degree P₂) < δ_syn_min := by
-            dsimp [P₂]
+            unfold P₂
             apply lt_of_le_of_lt (m.degree_sum_le_syn G_δ fun g ↦ (h_min g - m.leadingTerm (h_min g)) * g.val)
             rw [Finset.sup_lt_iff h_min_le_bot]
             exact h_P₂term_deg_lt
@@ -1440,10 +1440,10 @@ theorem Buchberger_criterion
             -- We need to prove `i ∈ p.support ↔ i ∈ Finset.univ`.
             -- `i ∈ Finset.univ` is always true.
             simp only [Finset.mem_univ, Finsupp.mem_support_iff, iff_true]
-            dsimp [p]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p]
 
             -- The goal is now `p_fun i ≠ 0`.
-            dsimp [p_fun]
+            unfold p_fun
             exact LT_hᵢi_ne_zero i
 
           have h_P₁_eq_sum_p : P₁ = ∑ i ∈ p.support, p_fun i := by
@@ -1453,7 +1453,7 @@ theorem Buchberger_criterion
 
             rw [← Finset.attach_eq_univ]
 
-            dsimp [P₁, p_fun]
+            unfold P₁ p_fun
             rw [Finset.sum_attach G_δ (fun i ↦ m.leadingTerm (h_min ↑i) * ↑i)]
 
           -- Hypothesis 1: All polynomials in the family are non-zero.
@@ -1461,15 +1461,14 @@ theorem Buchberger_criterion
             -- Since `p.support` is `Finset.univ`, this is `∀ i, p i ≠ 0`.
             rw [h_p_support]
             intro i _ -- i is `Finset.mem_univ`
-            dsimp [p]
-            dsimp [p_fun]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun]
             exact LT_hᵢi_ne_zero i
 
           -- Hypothesis 2: All polynomials in the family have degree `δ_min`.
           have hp_deg : ∀ i ∈ p.support, m.degree (p i) = δ_min := by
             rw [h_p_support]
             intro i _
-            dsimp [p]; --simp [(Finsupp.equivFunOnFinite), p_fun]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p]
             -- Goal: `m.degree (LT(h_min i.val) * i.val) = δ_min`.
             -- We prove this by showing it's equal to `m.degree(h_min i.val * i.val)`,
             -- which is `δ_min` by definition of `G_δ`.
@@ -1494,7 +1493,7 @@ theorem Buchberger_criterion
             -- We know `∑ i in p.support, p i` is `P₁`.
             have h_sum_p_eq_P₁ : (∑ i ∈ p.support, p i) = P₁ := by
               rw [h_p_support, ← Finset.attach_eq_univ]
-              dsimp [P₁, p, p_fun]
+              dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun, P₁]
               exact Finset.sum_attach G_δ (fun i ↦ m.leadingTerm (h_min i) * i)
             rw [h_sum_p_eq_P₁]
             rw [AddEquiv.apply_symm_apply]
@@ -1516,7 +1515,7 @@ theorem Buchberger_criterion
 
             let gᵢ := ij.1.val; let gⱼ := ij.2.val
             let hᵢ := h_min gᵢ; let hⱼ := h_min gⱼ
-            dsimp [p, p_fun, leadingTerm]
+            dsimp only [leadingTerm, Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun]
             rw [@Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial σ m k _ _ (↑ij.1) (↑ij.2) ?_ ?_ (m.degree (h_min ↑ij.1))]
             · --show (monomial (m.degree (h_min ↑ij.1) + m.degree ↑ij.1 - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2 = (monomial (δ_min - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2
               congr 4
@@ -1638,7 +1637,7 @@ theorem Buchberger_criterion
               let S_gij := S_polynomial m gᵢ.val gⱼ.val
               let A_ij := quotients m hG S_gij
               by_cases S_poly_zero : S_gij = 0
-              · dsimp [S_gij] at *
+              · dsimp only [Set.elem_mem, mem_val, Lean.Elab.WF.paramLet, S_gij] at *
                 rw [S_poly_zero]
                 simp only [mul_zero, degree_zero, map_zero, gt_iff_lt]
                 exact h_min_le_bot
@@ -1732,7 +1731,7 @@ theorem Buchberger_criterion
             let S_gij := S_polynomial m gᵢ gⱼ
             let A_ij : ↑G →₀ MvPolynomial σ k := quotients m hG S_gij
             let B_ij : ↥G →₀ MvPolynomial σ k :=
-              A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+              A_ij.mapRange (fun p => mono_factor * p) (by exact CommMonoidWithZero.mul_zero mono_factor)
             mono_factor * S_gij = B_ij.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) := by
             intro i j gᵢ gⱼ mono_factor S_gij A_ij B_ij
             -- nth_rw 1 [(h_S_poly_gᵢ_gⱼ_repr gᵢ gⱼ hi hj h_ne).1]
@@ -1755,7 +1754,7 @@ theorem Buchberger_criterion
             let S_gij := S_polynomial m gᵢ gⱼ
             let A_ij : ↑G →₀ MvPolynomial σ k := quotients m hG S_gij
             let B_ij : ↥G →₀ MvPolynomial σ k :=
-              A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+              A_ij.mapRange (fun p => mono_factor * p) (by exact CommMonoidWithZero.mul_zero mono_factor)
             (∀ (gₗ : ↥G), m.degree (gₗ.val * B_ij gₗ) ≺[m] δ_min) := by
             -- simp only
             intro i j gᵢ gⱼ mono_factor S_gij A_ij B_ij gₗ
@@ -1830,7 +1829,8 @@ theorem Buchberger_criterion
               let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) 1
               let S_gij := S_polynomial m gᵢ gⱼ
               let A_ij := quotients m hG S_gij
-              let B_ij : ↥G →₀ MvPolynomial σ k := A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+              let B_ij : ↥G →₀ MvPolynomial σ k :=
+                A_ij.mapRange (fun p => mono_factor * p) (by exact CommMonoidWithZero.mul_zero mono_factor)
               B_ij.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val)
             ) := by
 
@@ -1849,7 +1849,8 @@ theorem Buchberger_criterion
                 let gᵢ := ij.1.val; let gⱼ := ij.2.val
                 let mono_factor := monomial (δ_min - (m.degree gᵢ.val ⊔ m.degree gⱼ.val)) 1
                 let A_ij := quotients m hG (S_polynomial m gᵢ gⱼ)
-                let B_ij : ↥G →₀ MvPolynomial σ k := A_ij.mapRange (fun p => mono_factor * p) (by simp [mul_zero])
+                let B_ij : ↥G →₀ MvPolynomial σ k := A_ij.mapRange
+                  (fun p => mono_factor * p) (by exact CommMonoidWithZero.mul_zero mono_factor)
                 c ij • B_ij
 
           have h_P₁_rw4 : P₁ = B_tilde.sum (fun (g : ↥G) (h : MvPolynomial σ k) => h * g.val) := by
@@ -1887,7 +1888,7 @@ theorem Buchberger_criterion
 
           have h_f_eq_new : f = h_new.sum (fun g h => h * g.val) := by
             rw [h_f_is_P123, h_P₁_rw4]
-            dsimp [h_new]
+            unfold h_new
             rw [Finsupp.sum_add_index, Finsupp.sum_add_index]
             · rw [add_assoc, add_assoc, add_left_cancel_iff]
               have G_sep : G.attach = G_δ ∪ (G.attach \ G_δ) := by
@@ -1896,13 +1897,13 @@ theorem Buchberger_criterion
               -- show P₂ + P₃ = (h_P₂_finsupp.sum fun g h ↦ h * ↑g) + h_P₃_finsupp.sum fun g h ↦ h * ↑g
               congr
               · -- P₂ = h_P₂_finsupp.sum fun g h ↦ h * ↑g
-                dsimp [P₂]
+                unfold P₂
                 -- Unfold the sum of the finsupp.
                 -- `h_P₂_finsupp` was defined via `equivFunOnFinite`. Its sum can be rewritten.
                 have h_rhs_eq_sum_univ :
                     h_P₂_finsupp.sum (fun g h => h * g.val)
                     = ∑ i ∈ (Finset.univ : Finset ↥G), h_P₂_fun i * i.val := by
-                  dsimp [h_P₂_finsupp]
+                  dsimp only [univ_eq_attach, h_P₂_finsupp]
                   rw [Finsupp.equivFunOnFinite_symm_eq_sum]
                   simp only [Finset.univ_eq_attach]
                   have h_sum_of_sum_single :
@@ -1929,7 +1930,7 @@ theorem Buchberger_criterion
                 exact Finset.disjoint_sdiff
 
               · -- show P₃ = h_P₃_finsupp.sum fun g h ↦ h * ↑g
-                dsimp [P₃, h_P₃_finsupp]
+                dsimp only [P₃, h_P₃_finsupp]
                 rw [Finsupp.equivFunOnFinite_symm_eq_sum]
                 simp only [Finset.univ_eq_attach]
                 -- Step 1: Prove the helper lemma to simplify the `Finsupp.sum`.
@@ -2035,7 +2036,7 @@ theorem Buchberger_criterion
             -- δ_new_min was defined to be the sup for h_new, so the equality is `rfl` by definition
             refine ⟨?_, rfl⟩
             have : h_new.sum (fun g h ↦ h * ↑g) = ∑ g ∈ G.attach, h_new g * ↑g := by
-              dsimp [Finsupp.sum]
+              rw [Finsupp.sum]
               have support_subset : h_new.support ⊆ G.attach := by
                 unfold h_new
 

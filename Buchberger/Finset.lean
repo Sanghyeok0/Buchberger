@@ -23,7 +23,7 @@ theorem prod_ite_not_mem (s t : Finset ι)
   have h_disj : Disjoint (s \ t) (s ∩ t) := by
     rw [disjoint_iff_inter_eq_empty]
     ext x
-    simp [mem_sdiff, mem_inter]
+    simp only [mem_inter, mem_sdiff, notMem_empty, iff_false, not_and, and_imp]
     exact fun a a a_1 ↦ a
 
   rw [prod_union h_disj]

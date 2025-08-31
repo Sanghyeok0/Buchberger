@@ -122,7 +122,7 @@ lemma initialIdeal_is_monomial_ideal' (I : Ideal (MvPolynomial σ k)) :
     rcases hf_in with ⟨g, hg_mem, hg_ne_zero, h_LT_eq⟩
     have hlc_ne_zero : m.leadingCoeff g ≠ 0 := MonomialOrder.leadingCoeff_ne_zero_iff.mpr hg_ne_zero
     have h_lt : leadingTerm m g = (MvPolynomial.C (m.leadingCoeff g)) * (monomial (m.degree g) (1 : k)) := by
-      simp [leadingTerm, C_mul_monomial]
+      simp only [leadingTerm, C_mul_monomial, mul_one]
     rw [h_lt] at h_LT_eq
     rw [←h_LT_eq]
     apply Ideal.mul_mem_left
@@ -155,7 +155,7 @@ def LM_set (I : Ideal (MvPolynomial σ R)) : Set (σ →₀ ℕ) :=
 
 theorem initialIdeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
   initialIdeal m I = monomialIdeal k (LM_set m I) := by
-  dsimp [monomialIdeal, LM_set]
+  dsimp only [LM_set, ne_eq, monomialIdeal]
   have : { f | ∃ g ∈ I, g ≠ 0 ∧ monomial (m.degree g) 1 = f } = (fun α => monomial α (1 : k)) '' LM_set m I := by
     ext f
     constructor
@@ -168,7 +168,7 @@ theorem initialIdeal_is_monomial_ideal (I : Ideal (MvPolynomial σ k)) :
       use g; -- simp [hdeg] at hαf;
       rw [hdeg]
       exact ⟨hgI, h0, hαf⟩
-  simp [LM_set] at this
+  simp only [ne_eq, LM_set] at this
   rw [←this]
   apply initialIdeal_is_monomial_ideal'
 
@@ -189,7 +189,7 @@ lemma mem_monomialIdeal_iff_divisible {A : Set (σ →₀ ℕ)} {β : σ →₀ 
       rw [MvPolynomial.support_monomial]
       have : 0 ≠ (1 : R) := by exact zero_ne_one' R
       exact if_neg (id (Ne.symm this))
-    specialize h β (by simp [supp_eq])
+    specialize h β (by simp only [supp_eq, Finset.mem_singleton])
     exact h
   · intro h
     unfold monomialIdeal
@@ -278,7 +278,7 @@ theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
     obtain ⟨b₀, hb₀B', hb₀a⟩ := hB'basis a ha
     use b₀
     constructor
-    · simp [B]
+    · simp only [mem_toFinset, B]
       exact hb₀B'
     · exact hb₀a
   simp only [Finset.coe_image]

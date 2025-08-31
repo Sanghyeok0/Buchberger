@@ -89,8 +89,8 @@ lemma leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
       monomial (m.degree r) (1 : k)
         ∈ monomialIdeal k ((G.image m.degree).toSet) := by
     have : monomial (m.degree r) (1 : k) = C (lc_r⁻¹) * m.leadingTerm r := by
-      simp [leadingTerm, C_mul_monomial]
-      dsimp [lc_r]
+      simp only [leadingTerm, C_mul_monomial]
+      dsimp only [lc_r]
       rw [inv_mul_cancel₀ hlc_ne_zero]
     simpa [this] using Ideal.mul_mem_left _ _ hLT_r_in_mono
 
@@ -132,52 +132,63 @@ theorem Buchberger_Alg [Finite σ]
   have h_wf : WellFounded R := InvImage.wf H
     (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
 
+  ------------------------------------------------------------------------------------------------------------------
+    -- the "new" S-polys at a state
+  let NonZero_Rem_Spoly (s : {G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0}) : Finset (MvPolynomial σ k) :=
+    (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+
+  -- extend a state by adjoining new S-polys
+  let extend (s : {G // ∀ g ∈ G, g ≠ (0 : (MvPolynomial σ k))}) : {G // ∀ g ∈ G, g ≠ (0 : (MvPolynomial σ k))} :=
+    ⟨s.val ∪ NonZero_Rem_Spoly s, by
+      intro g hg
+      rcases Finset.mem_union.mp hg with hgs | hgR
+      · exact s.property g hgs
+      · unfold NonZero_Rem_Spoly at hgR; simp only [mem_filter] at hgR; exact hgR.2⟩
+
+  have extend_decreases (s : {G // ∀ g ∈ G, g ≠ 0}) (h_nonempty : NonZero_Rem_Spoly s ≠ ∅) :
+    R (extend s) s := by
+    unfold R H
+    dsimp only [OrderDual.toDual]
+    obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
+    apply lt_of_le_of_ne
+    · apply Ideal.span_mono
+      simp only [coe_image]
+      refine Set.image_subset m.leadingTerm ?_
+      unfold extend
+      rw [coe_union]
+      exact Set.subset_union_left
+    · intro h_eq
+      have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s.val) := by
+        unfold NonZero_Rem_Spoly at hr
+        simp only [mem_filter, mem_image, mem_offDiag] at hr
+        obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
+        rw [←hpq.2]
+        apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+        rw [hpq.2]
+        exact hr_nezero
+      have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' s.val) := by
+        simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_eq
+        rw [←h_eq]
+        apply Ideal.subset_span
+        simp only [Set.mem_image, mem_coe]
+        use r
+        exact ⟨Finset.mem_union_right _ hr, rfl⟩
+      exact hLT_r_notin hLT_r_in
+
+  ------------------------------------------------------------------------------------------------------------------
   -- 3. One-step function: uses s.property as hG for normalForm.
   let buchberger_step_fn (G_sub : State) (rec_call : ∀ (G'_sub : State), R G'_sub G_sub → State) : State :=
 
     let G := G_sub.val
     let hG := G_sub.property
 
-    -- new = nonzero normal forms of S-polys
-    let new := (G.offDiag.image (fun pq => normalForm m hG (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
-
-    if hR_empty : new = ∅ then
+    if h_Rem_empty : NonZero_Rem_Spoly G_sub = ∅ then
       G_sub
     else
-      let G' := G ∪ new
-      have hG' : ∀ g ∈ G', g ≠ 0 := by
-        intro g hg
-        cases mem_union.mp hg with
-        | inl hgG => exact hG g hgG
-        | inr hgNew => unfold new at hgNew; rw [mem_filter] at hgNew; exact hgNew.2
+      -- prove strict decrease of the measure when NonZero_Rem_Spoly G ≠ ∅
+      have h_decreasing := extend_decreases G_sub h_Rem_empty
 
-      -- prove strict decrease of the measure when new ≠ ∅
-      have h_decreasing : R ⟨G', hG'⟩ G_sub := by
-        dsimp [R, H, OrderDual.toDual, OrderDual.ofDual]
-        apply lt_of_le_of_ne
-        · apply Ideal.span_mono; simp only [coe_image]
-          refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
-          unfold G'; exact subset_union_left
-        · intro h_ideals_eq
-          simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_ideals_eq
-          obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr hR_empty)
-          have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
-            unfold new at hr
-            simp only [ne_eq, mem_filter, mem_image] at hr
-            obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
-            rw [←hpq.2]
-            apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
-            rw [hpq.2]
-            exact hr_nezero
-          have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
-            rw [←h_ideals_eq]
-            apply Ideal.subset_span
-            simp only [Set.mem_image, mem_coe]
-            use r
-            exact ⟨by unfold G'; exact mem_union_right G hr, rfl⟩
-          exact hLT_r_notin hLT_r_in
-
-      rec_call ⟨G', hG'⟩ h_decreasing
+      rec_call (extend G_sub) h_decreasing
 
   -- initial state: filter out zeroes (but hF guarantees none)
   let F₀_sub : State := ⟨F.filter (· ≠ 0), fun g hg => (Finset.mem_filter.mp hg).2⟩
@@ -199,46 +210,20 @@ theorem Buchberger_Alg [Finite σ]
       F₀_sub
     intro s IH
     let hG := s.property
-    let new := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
 
     rw [WellFounded.fix_eq]
     unfold buchberger_step_fn
-    by_cases h_new_empty : new = ∅
-    · rw [dif_pos h_new_empty]
-    · rw [dif_neg h_new_empty]
-      have h_s_sub_union : s.val ⊆ s.val ∪ new := subset_union_left
-      have : ∀ g ∈ ↑s ∪ new, g ≠ 0 := by
+    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
+    · rw [dif_pos h_Rem_empty]
+    · rw [dif_neg h_Rem_empty]
+      have h_s_sub_union : s.val ⊆ s.val ∪ NonZero_Rem_Spoly s := subset_union_left
+      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
           | inl hg_in_G => exact hG g hg_in_G
-          | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
-      let s' : State := ⟨s.val ∪ new, this⟩
-      have h_decreasing : R s' s := by
-        unfold R H
-        simp only [ne_eq, coe_image, OrderDual.toDual_lt_toDual]
-        obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
-        apply lt_of_le_of_ne
-        · apply Ideal.span_mono
-          refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
-          unfold s'; exact subset_union_left
-        · intro h_ideals_eq
-          have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
-            unfold new at hr
-            simp only [ne_eq, mem_filter, mem_image] at hr
-            obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
-            rw [←hpq.2]
-            apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
-            rw [hpq.2]
-            exact hr_nezero
-
-          have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
-            rw [h_ideals_eq]
-            apply Ideal.subset_span
-            simp only [Set.mem_image, mem_coe]
-            use r
-            exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
-          exact hLT_r_notin hLT_r_in
-      specialize IH s' h_decreasing
+          | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+      have h_decreasing := extend_decreases s h_Rem_empty
+      specialize IH (extend s) h_decreasing
       exact Finset.Subset.trans h_s_sub_union IH
 
   ----------------------------------------------------------------
@@ -259,59 +244,33 @@ theorem Buchberger_Alg [Finite σ]
     intro s ih
     let hG := s.property
     rw [WellFounded.fix_eq]
-    dsimp [buchberger_step_fn]
-    let new := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
-    by_cases h_new_empty : new = ∅
-    · rw [if_pos h_new_empty]
-    · rw [if_neg h_new_empty]
-      have : ∀ g ∈ ↑s ∪ new, g ≠ 0 := by
+    dsimp only [Lean.Elab.WF.paramLet, dite_eq_ite, buchberger_step_fn]
+    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
+    · rw [if_pos h_Rem_empty]
+    · rw [if_neg h_Rem_empty]
+      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
           | inl hg_in_G => exact hG g hg_in_G
-          | inr hg_in_new => unfold new at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
-      let s' : State := ⟨s.val ∪ new, this⟩
+          | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+      let s' : State := ⟨s.val ∪ NonZero_Rem_Spoly s, this⟩
+      have h_decreasing := extend_decreases s h_Rem_empty
 
-      have h_decreasing : R s' s := by
-        unfold R H
-        simp only [coe_image, OrderDual.toDual_lt_toDual]
-        obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
-        apply lt_of_le_of_ne
-        · apply Ideal.span_mono
-          refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
-          unfold s'; exact subset_union_left
-        · intro h_ideals_eq
-          have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
-            unfold new at hr
-            simp only [mem_filter, mem_image] at hr
-            obtain ⟨⟨pq, hpq⟩ , hr_nezero⟩ := hr
-            rw [←hpq.2]
-            apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
-            rw [hpq.2]
-            exact hr_nezero
-
-          have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' s) := by
-            rw [h_ideals_eq]
-            apply Ideal.subset_span
-            simp only [Set.mem_image, mem_coe]
-            use r
-            exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
-          exact hLT_r_notin hLT_r_in
-
-      rw [← ih s' h_decreasing]
+      rw [← ih (extend s) h_decreasing]
       apply le_antisymm
       · apply Ideal.span_mono
-        unfold s'
+        unfold extend
         simp only [coe_union, Set.subset_union_left]
       · rw [Ideal.span_le]
-        unfold s'
+        unfold extend
         simp only [coe_union, Set.union_subset_iff]
         constructor
         · exact Ideal.subset_span
-        · unfold new
+        · unfold NonZero_Rem_Spoly
           simp only [coe_filter, mem_image, mem_offDiag]
           rw [Set.subset_def]
-          intro r hr_in_new
-          obtain ⟨⟨pq, hpq_in_offDiag, hr_eq_normalForm⟩, hr_ne_zero⟩ := hr_in_new
+          intro r hr_in_Rem
+          obtain ⟨⟨pq, hpq_in_offDiag, hr_eq_normalForm⟩, hr_ne_zero⟩ := hr_in_Rem
           rw [← hr_eq_normalForm]
 
           let S := S_polynomial m pq.1 pq.2
@@ -348,64 +307,35 @@ theorem Buchberger_Alg [Finite σ]
   ----------------------------------------------------------------
   -- 4) Use Buchberger criterion: show all S-polynomials reduce to 0.
   ----------------------------------------------------------------
-  -- define the Rset function (nonzero remainders at state s)
-  let Rset (s : State) : Finset (MvPolynomial σ k) :=
-    (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
-  have Rset_fix_empty : Rset (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
+  have Rem_fix_empty : NonZero_Rem_Spoly (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
     -- Do induction on arbitrary starting state s, specialize at F₀_sub
-    apply h_wf.induction (C := fun s => Rset (h_wf.fix buchberger_step_fn s) = ∅) F₀_sub
+    apply h_wf.induction (C := fun s => NonZero_Rem_Spoly (h_wf.fix buchberger_step_fn s) = ∅) F₀_sub
     intro s ih
-    let new_s := (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
     have hfix := WellFounded.fix_eq h_wf buchberger_step_fn s
 
-    by_cases h_new_empty : new_s = ∅
-    · -- stable case: fix s = s, so Rset (fix s) = new_s = ∅
+    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
+    · -- stable case: fix s = s, so NonZero_Rem_Spoly (fix s) = NonZero_Rem_Spoly s = ∅
       have : (h_wf.fix buchberger_step_fn s) = s := by
         rw [WellFounded.fix_eq]
-        dsimp [buchberger_step_fn]
-        rw [if_pos h_new_empty]
-      simp only [Rset, this, new_s, h_new_empty]
-    · -- recursive case: form s' = s ∪ new_s and use IH
-      have h_all_nonzero : ∀ g ∈ s.val ∪ new_s, g ≠ 0 := by
+        dsimp only [Lean.Elab.WF.paramLet, dite_eq_ite, buchberger_step_fn]
+        rw [if_pos h_Rem_empty]
+      simp only [NonZero_Rem_Spoly, this, h_Rem_empty]
+    · -- recursive case: s ∪ NonZero_Rem_Spoly s and use IH
+      have h_all_nonzero : ∀ g ∈ s.val ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
         | inl hg_in_s => exact s.property g hg_in_s
-        | inr hg_in_new => unfold new_s at hg_in_new; rw [mem_filter] at hg_in_new; exact hg_in_new.2
-      let s' : State := ⟨s.val ∪ new_s, h_all_nonzero⟩
-      -- prove strict decrease R s' s (same pattern as earlier)
-      have h_decreasing : R s' s := by
-        dsimp [R, H, OrderDual.toDual, OrderDual.ofDual]
-        obtain ⟨r, hr⟩ := by refine Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_new_empty)
-        apply lt_of_le_of_ne
-        · apply Ideal.span_mono
-          simp only [coe_image]
-          refine Set.image_subset m.leadingTerm ?_; simp only [coe_subset]
-          unfold s'; exact subset_union_left
-        · intro h_ideals_eq
-          simp only [coe_image, EmbeddingLike.apply_eq_iff_eq] at h_ideals_eq
-          have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f => m.leadingTerm f) '' s.val) := by
-            unfold new_s at hr
-            simp only [mem_filter, mem_image] at hr
-            obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
-            rw [←hpq.2]
-            apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
-            rw [hpq.2]
-            exact hr_nezero
-          have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f => m.leadingTerm f) '' s.val) := by
-            rw [id (Eq.symm h_ideals_eq)]
-            apply Ideal.subset_span
-            simp only [Set.mem_image, mem_coe]
-            use r
-            exact ⟨by unfold s'; exact mem_union_right s hr, rfl⟩
-          exact hLT_r_notin hLT_r_in
+        | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+      -- prove strict decrease
+      have h_decreasing := extend_decreases s h_Rem_empty
 
       have hfix : h_wf.fix buchberger_step_fn s =
-              h_wf.fix buchberger_step_fn s' := by
+              h_wf.fix buchberger_step_fn (extend s) := by
         rw [WellFounded.fix_eq]
-        dsimp [buchberger_step_fn]
-        rw [if_neg h_new_empty]
-      -- finish using IH at s'
-      simpa [hfix] using ih s' h_decreasing
+        dsimp only [Lean.Elab.WF.paramLet, dite_eq_ite, buchberger_step_fn]
+        rw [if_neg h_Rem_empty]
+      -- finish using IH at (extend s)
+      simpa [hfix] using ih (extend s) h_decreasing
 
   -- finish Buchberger criterion
   have h_G_is_GB : IsGroebnerBasis m I G := by
@@ -413,20 +343,17 @@ theorem Buchberger_Alg [Finite σ]
     intro p q hp hq h_ne
     let r := normalForm m hG_nonzero (S_polynomial m p q)
     by_contra hr_nonzero
-    -- r would be in Rset of final state
-    have hr_in : r ∈ (G.offDiag.image (fun pq => normalForm m hG_nonzero (S_polynomial m pq.1 pq.2))).filter (· ≠ 0) := by
-      simp only [ mem_filter, mem_image, mem_offDiag]
+    -- r would be in NonZero_Rem_Spoly of final state
+    have hr_in : r ∈ NonZero_Rem_Spoly G_sub := by
+      dsimp only [NonZero_Rem_Spoly]
+      simp only [mem_filter, mem_image, mem_offDiag]
       refine ⟨⟨(p, q), ?_, rfl⟩, ?_⟩
       · -- show (p, q) ∈ offDiag
-        simpa [mem_offDiag] using ⟨hp, hq, h_ne⟩
+        simpa only [mem_offDiag] using ⟨hp, hq, h_ne⟩
       · -- show r ≠ 0
         exact hr_nonzero
 
-    have hr_in' : r ∈ Rset G_sub := by
-      dsimp [Rset]
-      simpa [G, G_sub] using hr_in
-
-    rw [Rset_fix_empty] at hr_in'
-    exact Finset.notMem_empty r hr_in'
+    rw [Rem_fix_empty] at hr_in
+    exact Finset.notMem_empty r hr_in
 
   exact ⟨h_F_sub_G, h_G_is_GB⟩

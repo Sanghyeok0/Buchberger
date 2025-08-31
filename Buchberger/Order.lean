@@ -83,12 +83,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
       obtain ⟨x, hx⟩ := hc
       use x
       exact and_assoc.mp hx
-    --choose rep rep_spec using pick
-    let rep (c : Antisymmetrization M (· ≤ ·)) (hc : c ∈ S) : M :=
-      Classical.choose (pick c hc)
-    let rep_spec (c : Antisymmetrization M (· ≤ ·)) (hc : c ∈ S)
-      : rep c hc ∈ N ∧ (∀ x ∈ N, ¬x < rep c hc) ∧ ⟦rep c hc⟧ = c
-      := (Classical.choose_spec (pick c hc))
+    choose rep rep_spec using pick
 
     -- Turn `S` into a `Finset M` of actual reps
     let rep' (x : Subtype fun c => c ∈ S) : M := rep x.1 x.2
@@ -115,7 +110,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
             exact @Set.Aesop.toFinset_nonempty_of_nonempty (Antisymmetrization M (· ≤ ·)) (minClasses N') (by exact hfin'.fintype) hnonempty'
         have pick' : ∀ c ∈ S', ∃ d, d ∈ N' ∧ (∀ x ∈ N', ¬(x < d)) ∧ toAntisymmetrization ((· : M) ≤ ·) d = c := by
           intro c hc'
-          simp [S', minClasses] at hc'
+          simp only [minClasses, Set.mem_toFinset, Set.mem_image, Set.mem_setOf_eq, S'] at hc'
           obtain ⟨x, hx⟩ := hc'
           use x
           exact and_assoc.mp hx
@@ -140,7 +135,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
           use rep γ hγS
           constructor
           · -- rep γ hc'S is one of your basis elements
-            simp [B, hγS]
+            simp only [Finset.coe_attach, Set.image_univ, Set.mem_range, Subtype.exists, B]
             exact BEx.intro γ hγS rfl
           · calc
               toAntisymmetrization ((· : M) ≤ ·) (rep γ hγS) = γ := (rep_spec γ hγS).2.2
@@ -167,7 +162,7 @@ theorem HasDicksonProperty.to_wellQuasiOrderedLE
   (h : HasDicksonProperty M) :
     WellQuasiOrderedLE M := by
   refine { wqo := ?_ }
-  dsimp [WellQuasiOrdered]; intro f
+  dsimp only [WellQuasiOrdered]; intro f
   -- 1) Let N = range f, apply Dickson
   let N : Set M := Set.range f
   obtain ⟨B, hBfin, ⟨hBsub, hbasis⟩⟩ := h N
@@ -269,7 +264,8 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
       have hclass_neq : ¬g_classes i = g_classes j := by exact fun a ↦ heq (congrArg g (inj a))
       have hclass_lt : g_classes i < g_classes j := by exact lt_of_le_of_ne hclass_le hclass_neq
       have hlt : g i < g j := by
-        simp [←g_eq i, ←g_eq j] at hclass_lt
+        simp only [← g_eq i, ← g_eq j,
+          toAntisymmetrization_lt_toAntisymmetrization_iff] at hclass_lt
         exact hclass_lt
       exact (g_minimal j (g i) (g_in_N i)) hlt
   · -- (minClasses N) is nonempty
@@ -277,7 +273,7 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     --haveI _ : WellFoundedLT M := WellQuasiOrderedLE.to_wellFoundedLT
     have : ∃ a ∈ N, ∀ x ∈ N, ¬ x < a := @WellFounded.has_min M (· < ·) (wellFounded_lt) N hN
     obtain ⟨a, ha⟩ := this
-    dsimp [Set.Nonempty, minClasses]
+    dsimp only [minClasses, Set.Nonempty]
     use toAntisymmetrization ((· : M) ≤ ·) a
     exact Set.mem_image_of_mem (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) ha
 
