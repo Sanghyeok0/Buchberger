@@ -1932,14 +1932,6 @@ lemma grobner_basis_remove_redundant
   (hG : IsGroebnerBasis m I G)
   (hpG : p ∈ G)
   (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
-  IsGroebnerBasis m I (G.erase p) := by sorry
-
-variable [DecidableEq σ] in
-lemma grobner_basis_remove_redundant₀
-  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
-  (hG : IsGroebnerBasis m I G)
-  (hpG : p ∈ G)
-  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
   IsGroebnerBasis m I (G.erase p) := by
 
   -- Let G' be the smaller basis for clarity.
