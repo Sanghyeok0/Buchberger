@@ -517,17 +517,17 @@ lemma Spolynomial_syzygy_of_degree_cancellation
     : (∃ (c : ι × ι → k),
       (∑ i ∈ p.support, p i = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2))) ∧
       (∀ i ∈ p.support, ∀ j ∈ p.support, m.degree (S_polynomial m (p i) (p j)) ≺[m] δ) := by
-  -- Let d i := LC(p i) be the leading coefficient of p i.
-  let d : ι → k := fun i => m.leadingCoeff (p i)
+  -- Let lc i := LC(p i) be the leading coefficient of p i.
+  let lc : ι → k := fun i => m.leadingCoeff (p i)
   -- Since all `p i` have the same degree `δ`, their S-polynomial simplifies.
-  have h_S_poly_simple : ∀ i ∈ p.support, ∀ j ∈ p.support, S_polynomial m (p i) (p j) = (d i)⁻¹ • p i - (d j)⁻¹ • p j := by
+  have h_S_poly_simple : ∀ i ∈ p.support, ∀ j ∈ p.support, S_polynomial m (p i) (p j) = (lc i)⁻¹ • p i - (lc j)⁻¹ • p j := by
     intro i hi j hj
     unfold S_polynomial
     -- The sup of the degrees is δ.
     have h_deg_sup : m.degree (p i) ⊔ m.degree (p j) = δ := by
       simp only [hp_deg i hi, hp_deg j hj, le_refl, sup_of_le_left]
     simp_rw [h_deg_sup, hp_deg i hi, hp_deg j hj, tsub_self, monomial_zero']
-    unfold d
+    unfold lc
     rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
 
   constructor
@@ -544,74 +544,83 @@ lemma Spolynomial_syzygy_of_degree_cancellation
 
     -- As in the textbook, the sum of these leading coefficients must be zero
     -- because the degree of the sum dropped.
-    have h_sum_lc_zero : ∑ i ∈ p.support, d i = 0 := by
+    have h_sum_lc_zero : ∑ i ∈ p.support, lc i = 0 := by
       have h_coeff_sum_zero : MvPolynomial.coeff δ (∑ i ∈ p.support, p i) = 0 :=
         m.coeff_eq_zero_of_lt hsum
 
       rw [MvPolynomial.coeff_sum] at h_coeff_sum_zero
 
-      have h_coeff_eq_lc : ∀ i ∈ p.support, MvPolynomial.coeff δ (p i) = d i := by
+      have h_coeff_eq_lc : ∀ i ∈ p.support, MvPolynomial.coeff δ (p i) = lc i := by
         intro i hi
-        unfold d
+        unfold lc
         rw [leadingCoeff, hp_deg i hi]
 
       rwa [Finset.sum_congr rfl h_coeff_eq_lc] at h_coeff_sum_zero
 
+    have S_polynomial_of_equal_degree {p q : MvPolynomial σ k} (h_deg_p : m.degree p = δ) (h_deg_q : m.degree q = δ) :
+      S_polynomial m p q = C (m.leadingCoeff p)⁻¹ * p - C (m.leadingCoeff q)⁻¹ * q := by
+      unfold S_polynomial
+      simp only [h_deg_p, h_deg_q, le_refl, sup_of_le_left, tsub_self, monomial_zero']
 
+    have h_sum_reduces : ∑ i ∈ (p.support.erase s), lc i • S_polynomial m (p i) (p s) = ∑ i ∈ p.support, p i := by
+      have h_lc_ne_zero : ∀ i ∈ p.support, lc i ≠ 0 :=
+        fun i hi => leadingCoeff_ne_zero_iff.mpr (hp_ne_zero i hi)
 
-    -- The textbook shows that `∑ pᵢ` can be rewritten using S-polynomials involving `pₛ`.
-    have h_sum_reduces : ∑ i ∈ p.support, p i = ∑ i ∈ (p.support.erase s), d i • S_polynomial m (p i) (p s) := by
-      -- We expand the RHS and show it equals the LHS.
-      have h_d_ne_zero : ∀ i ∈ p.support, d i ≠ 0 := fun i hi => leadingCoeff_ne_zero_iff.mpr (hp_ne_zero i hi)
-      -- Expand S-polynomials: `∑ dᵢ • ((1/dᵢ)pᵢ - (1/dₛ)pₛ)`
+      calc
+        -- Start with the LHS of the goal.
+        ∑ i ∈ (p.support.erase s), lc i • S_polynomial m (p i) (p s)
 
-      have expand_sum1 : ∑ i ∈ p.support.erase s, d i • S_polynomial m (p i) (p s)
-        = ∑ i ∈ p.support.erase s, (p i - ((d i) * (d s)⁻¹) • p s) := by
-          apply Finset.sum_congr rfl
-          intro x hx
-          have : x ∈ p.support := by exact Finset.mem_of_mem_erase hx
-          rw [h_S_poly_simple x (Finset.mem_of_mem_erase hx) s hs]
-          rw [MvPolynomial.smul_eq_C_mul]
-          rw [mul_sub_left_distrib]
-          rw [MvPolynomial.smul_eq_C_mul, ←mul_assoc]
-          rw [←MvPolynomial.C_mul]
-          have : d x * (d x)⁻¹ = 1 := by exact
-            CommGroupWithZero.mul_inv_cancel (d x) (h_d_ne_zero x this)
-          rw [this]
-          simp only [C_1, one_mul, sub_right_inj]
-          rw [MvPolynomial.smul_eq_C_mul, ←mul_assoc]
-          rw [←MvPolynomial.C_mul]
-          exact C_mul'
+        -- Step 1: Expand the definition of S_polynomial
+        _ = ∑ i ∈ (p.support.erase s), lc i • (C (lc i)⁻¹ * p i - C (lc s)⁻¹ * p s) := by
+            apply Finset.sum_congr rfl; intro i hi
+            have hi_supp : i ∈ p.support := Finset.mem_of_mem_erase hi
+            rw [S_polynomial_of_equal_degree (hp_deg i hi_supp) (hp_deg s hs)]
 
-      have expand_sum2 : ∑ i ∈ p.support.erase s, (p i - ((d i) * (d s)⁻¹) • p s)
-          = ∑ i ∈ p.support.erase s, p i + ( - ∑ i ∈ p.support.erase s, (d i * ((d s)⁻¹))) • p s := by
-            rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
+        -- Step 2: Distribute the `lc i` scalar into the parenthesis.
+        _ = ∑ i ∈ (p.support.erase s), (lc i • (C (lc i)⁻¹ * p i) - lc i • (C (lc s)⁻¹ * p s)) := by
+            apply Finset.sum_congr rfl; intro i _; rw [smul_sub]
 
-      rw [expand_sum1, expand_sum2]
-      have h_coeff_ps : - ∑ i ∈ p.support.erase s, d i * (d s)⁻¹ = 1 := by
-        -- Factor out the constant `(d s)⁻¹`.
-        rw [← Finset.sum_mul]
-        have h_sum_erase : ∑ i ∈ p.support.erase s, d i = - (d s) := by
-          rw [← add_right_inj (d s), add_comm, Finset.sum_erase_add p.support d hs, h_sum_lc_zero, add_neg_cancel]
+        -- Step 3: Simplify each term inside the sum.
+        _ = ∑ i ∈ (p.support.erase s), (p i - (lc i * (lc s)⁻¹) • p s) := by
+            apply Finset.sum_congr rfl; intro i hi
+            have hi_supp : i ∈ p.support := Finset.mem_of_mem_erase hi
+            rw [C_mul', ←smul_assoc, smul_eq_mul, mul_inv_cancel₀ (h_lc_ne_zero i hi_supp), one_smul]
+            rw [sub_right_inj]
+            rw [C_mul', ←smul_assoc]
+            rfl
 
-        rw [h_sum_erase]
-        rw [neg_mul, neg_neg]
-        apply mul_inv_cancel₀
-        -- We need to prove `d s ≠ 0`.
-        exact leadingCoeff_ne_zero_iff.mpr (hp_ne_zero s hs)
-      rw [h_coeff_ps, one_smul]
-      exact Eq.symm (Finset.sum_erase_add p.support (⇑p) hs)
+        -- Step 4: Distribute the summation over the subtraction.
+        _ = (∑ i ∈ p.support.erase s, p i) - (∑ i ∈ p.support.erase s, (lc i * (lc s)⁻¹) • p s) := by
+            rw [Finset.sum_sub_distrib]
+
+        -- Step 5: Factor the constant polynomial `p s` and its scalar multiple out of the second sum.
+        _ = (∑ i ∈ p.support.erase s, p i) - ((∑ i ∈ p.support.erase s, lc i) * (lc s)⁻¹) • p s := by
+            rw [←Finset.sum_smul, Finset.sum_mul]
+
+        -- Step 6: Use the `h_sum_lc_zero` identity to simplify the coefficient sum.
+        -- We know `∑_{i≠s} lc i = -lc s`.
+        _ = (∑ i ∈ p.support.erase s, p i) + p s := by
+            have h_sum_erase : ∑ i ∈ p.support.erase s, lc i = -lc s := by
+              rw [←add_eq_zero_iff_eq_neg, Finset.sum_erase_add p.support lc hs]
+              exact h_sum_lc_zero
+            rw [h_sum_erase, neg_mul, sub_eq_add_neg, neg_smul, neg_neg]
+            simp only [add_right_inj]
+            rw [CommGroupWithZero.mul_inv_cancel (lc s) (h_lc_ne_zero s hs), one_smul]
+
+        -- Step 7: Combine the terms back into a single sum over the full support.
+        _ = ∑ i ∈ p.support, p i := by
+            exact sum_erase_add p.support (⇑p) hs
 
     -- Now, we construct the coefficient function `c` for the existential goal.
     -- The sum we proved is over `i` paired with a fixed `s`. The goal is a sum over all pairs `ij`.
-    -- We define `c ij` to be `d i` if `j=s` and `i≠s`, and 0 otherwise.
-    let c (ij : ι × ι) : k := if ij.2 = s ∧ ij.1 ∈ p.support.erase s then d ij.1 else 0
+    -- We define `c ij` to be `lc i` if `j=s` and `i≠s`, and 0 otherwise.
+    let c (ij : ι × ι) : k := if ij.2 = s ∧ ij.1 ∈ p.support.erase s then lc ij.1 else 0
     use c
     dsimp only [mem_erase, Finsupp.mem_support_iff, c]
     simp only [Finset.mem_erase, Finsupp.mem_support_iff, ite_smul, zero_smul]
     show ∑ i ∈ p.support, p i =
-    ∑ x ∈ p.support.offDiag, if x.2 = s ∧ x.1 ∈ p.support.erase s then d x.1 • S_polynomial m (p x.1) (p x.2) else 0
-    rw [h_sum_reduces]
+    ∑ x ∈ p.support.offDiag, if x.2 = s ∧ x.1 ∈ p.support.erase s then lc x.1 • S_polynomial m (p x.1) (p x.2) else 0
+    rw [← h_sum_reduces]
     rw [← Finset.sum_filter]
     have h_filter_eq : (p.support.offDiag).filter (fun x => x.2 = s ∧ x.1 ∈ p.support.erase s) =
       (p.support.erase s).image (fun i => (i, s)) := by
@@ -651,27 +660,27 @@ lemma Spolynomial_syzygy_of_degree_cancellation
     -- Since deg(f) = deg(g) = δ, the two parts of the S-poly subtraction
     -- also have degree δ and identical leading terms.
     rw [h_S_poly_simple i hi j hj]
-    have hi_unit : IsUnit (d i) := (m.isUnit_leadingCoeff_iff_nonzero (p i)).mpr (hp_ne_zero i hi)
-    have hj_unit : IsUnit (d j) := (m.isUnit_leadingCoeff_iff_nonzero (p j)).mpr (hp_ne_zero j hj)
-    have : IsRegular (d i)⁻¹ := by
+    have hi_unit : IsUnit (lc i) := (m.isUnit_leadingCoeff_iff_nonzero (p i)).mpr (hp_ne_zero i hi)
+    have hj_unit : IsUnit (lc j) := (m.isUnit_leadingCoeff_iff_nonzero (p j)).mpr (hp_ne_zero j hj)
+    have : IsRegular (lc i)⁻¹ := by
       refine IsUnit.isRegular (IsUnit.inv hi_unit)
-    have h1 : (d i)⁻¹ • (p i - ((d i) * (d j)⁻¹) • p j)
-          = (d i)⁻¹ • p i - (d j)⁻¹ • p j := by
+    have h1 : (lc i)⁻¹ • (p i - ((lc i) * (lc j)⁻¹) • p j)
+          = (lc i)⁻¹ • p i - (lc j)⁻¹ • p j := by
             rw [smul_sub]
             simp only [sub_right_inj]
             rw [←smul_assoc]
             simp only [smul_eq_mul, ←mul_assoc]
-            have : (d i)⁻¹ * (d i) = 1 := by
+            have : (lc i)⁻¹ * (lc i) = 1 := by
               exact IsUnit.inv_mul_cancel hi_unit
             simp only [this, one_mul]
-    have h2 : m.degree (p i - (d i * (d j)⁻¹) • p j)
-          = m.degree ((d i)⁻¹ • (p i - (d i * (d j)⁻¹) • p j)) := by
+    have h2 : m.degree (p i - (lc i * (lc j)⁻¹) • p j)
+          = m.degree ((lc i)⁻¹ • (p i - (lc i * (lc j)⁻¹) • p j)) := by
             rw [MonomialOrder.degree_smul this]
 
     rw [←h1, ←h2]
     have hi_deg_δ : m.degree (p i) = δ := by exact hp_deg i hi
     have hj_deg_δ : m.degree (p j) = δ := by exact hp_deg j hj
-    have h3 : p i - (d i * (d j)⁻¹) • p j
+    have h3 : p i - (lc i * (lc j)⁻¹) • p j
       = m.reduce hj_unit (p i) := by
       rw [reduce, hi_deg_δ, hj_deg_δ]
       simp
@@ -697,145 +706,6 @@ lemma Spolynomial_syzygy_of_degree_cancellation
       -- We have `0 ≤ deg < 0`, which is impossible.
       -- We use `not_lt_of_le` to formalize this contradiction.
       exact not_lt_of_ge h_deg_ge_zero h_deg_sum_lt_zero
-
-
-variable (m) [DecidableEq σ] in
-/--
-**Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Lemma 5): Cancellation Lemma**
-Suppose we have a sum P = ∑ pᵢ where all pᵢ have the same multidegree δ.
-If m.degree P < δ, then P is a linear combination of the S-polynomials S(pⱼ, pₗ),
-and each S(pⱼ, pₗ) has multidegree less than δ.
--/
-lemma exists_S_polynomial_syzygies
-    (p : Finset (MvPolynomial σ k)) -- The list of polynomials p₁, ..., pₛ
-    (hp : ∀ pi ∈ p, pi ≠ 0) -- Finset.nonempty_of_sum_ne_zero
-    (δ : σ →₀ ℕ) -- The common multidegree
-    (hδ : 0 ≺[m] δ)
-    (hp_deg : ∀ pi ∈ p, m.degree pi = δ) -- All polynomials have multidegree δ
-    (hsum   : m.degree (∑ pi ∈ p, pi) ≺[m] δ)
-    : ∀ ps ∈ p,
-      (∑ pi ∈ p, pi = ∑ pi ∈ p.erase ps, m.leadingCoeff pi • S_polynomial m pi ps
-      ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)
-      := by
-      intro ps hps
-      let p' : Finset (MvPolynomial σ k) := p.erase ps
-      have coeff_sum_zero : (∑ pi ∈ p, pi).coeff δ = 0 := by
-        apply coeff_eq_zero_of_lt
-        simpa using hsum
-      -- But (∑ pi in p, pi).coeff δ = ∑ pi in p, pi.coeff δ by coeff_sum.
-      have sum_of_coeffs : ∑ pi ∈ p, pi.coeff δ = 0 := by
-        rw [coeff_sum] at coeff_sum_zero
-        exact coeff_sum_zero
-      -- 3)  Because m.degree pi = δ for each pi ∈ p, we have pi.coeff δ = m.leadingCoeff pi.
-      have sum_lead_coeffs : ∑ pi ∈ p, m.leadingCoeff pi = 0 := by
-        have eq_coeff_lead : ∀ pi ∈ p, pi.coeff δ = m.leadingCoeff pi := by
-          intro pi hpi
-          rw [leadingCoeff, hp_deg pi hpi]
-        calc
-          ∑ pi ∈ p, m.leadingCoeff pi = ∑ pi ∈ p, coeff δ pi := by exact Eq.symm (Finset.sum_congr rfl eq_coeff_lead)
-          _ = 0 := by exact sum_of_coeffs
-
-      have sum_split : ps + (∑ pi ∈ p', pi) = (∑ pi ∈ p, pi) := by
-        -- p = p' ∪ {s}, disjointly.
-        apply Finset.add_sum_erase
-        exact hps
-
-      have S_poly_simp : ∀ pi ∈ p, ∀ pj ∈ p, S_polynomial m pi pj = ((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff pj)⁻¹) • pj := by
-        intro pi hpi pj hpj
-        unfold S_polynomial
-        have deg_sup : m.degree pi ⊔ m.degree pj = δ := by
-          simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left]
-        simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left, tsub_self,
-          monomial_zero'] -- , one_div
-        rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
-
-      have expand_sum1 : ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps
-        = ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps) := by
-          apply Finset.sum_congr rfl
-          intro x hxp'; congr
-          apply S_poly_simp
-          · exact Finset.mem_of_mem_erase hxp'
-          · exact hps
-          -- apply S_poly_simp (by exact Finset.mem_of_mem_erase hxp') hps
-      have expand_sum2 : ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps)
-        = ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps) := by
-          apply Finset.sum_congr rfl
-          intro x hxp'
-          rw [smul_sub, ←smul_assoc, ←smul_assoc]
-          simp
-          have : (m.leadingCoeff x * (m.leadingCoeff x)⁻¹) = 1 := by
-            refine IsUnit.mul_inv_cancel ?_
-            refine isUnit_leadingCoeff.mpr ?_
-            exact hp _ (by exact Finset.mem_of_mem_erase hxp')
-          rw [this]
-          simp only [one_smul]
-      have expand_sum3 : ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps)
-        = ∑ pi ∈ p', pi + ( - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹))) • ps := by
-          rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
-      have sum_lemma : - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) = 1 := by
-        rw [←add_zero (- ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)))]
-        have : (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ - (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ = 0 := by
-          exact sub_eq_zero.mpr rfl
-        rw [←this, sub_eq_neg_add, ←add_assoc]
-        unfold p'
-        rw [←neg_add]
-        rw [Finset.sum_erase_add p _ hps, ←Finset.sum_mul]
-        rw [sum_lead_coeffs]
-        simp only [zero_mul, neg_zero, zero_add] -- , p'
-        refine IsUnit.mul_inv_cancel ?_
-        refine isUnit_leadingCoeff.mpr ?_
-        exact hp ps hps
-      simp only [sum_lemma, one_smul, p'] at expand_sum3 -- Finset.sum_sub_distrib
-      rw [Finset.sum_erase_add] at expand_sum3
-      clear sum_lemma
-      constructor
-      · rw [expand_sum1, expand_sum2, expand_sum3]
-      · intro pi hpi pj hpj
-        rw [S_poly_simp pj hpj pi hpi]
-        have hi_unit : IsUnit (m.leadingCoeff pi) := (isUnit_leadingCoeff_iff_nonzero m pi).mpr (hp pi hpi)
-        have hj_unit : IsUnit (m.leadingCoeff pj) := (isUnit_leadingCoeff_iff_nonzero m pj).mpr (hp pj hpj)
-        have hji : m.degree pi ≤ m.degree pj := by
-          have h₁ : m.degree pj = δ := by exact hp_deg pj hpj
-          have h₂ : m.degree pi = δ := by exact hp_deg pi hpi
-          rw [h₂, h₁]
-        have : (m.toSyn 0 < m.toSyn δ) → δ ≠ 0 := by
-          contrapose
-          simp only [ne_eq, Decidable.not_not, map_zero, not_lt]
-          intro hδ_zero
-          rw [hδ_zero, ←m.eq_zero_iff]
-          exact AddEquiv.map_zero m.toSyn
-        have hj_deg_nz : m.degree pj ≠ 0 := by
-          rw [hp_deg pj hpj]
-          exact this hδ
-        clear this
-        have : IsRegular (m.leadingCoeff pj)⁻¹ := by
-          refine isRegular_iff_ne_zero.mpr ?_
-          exact inv_ne_zero (by exact leadingCoeff_ne_zero_iff.mpr (hp pj hpj))
-        have h1' : m.degree (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
-          = m.degree ((m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)) := by
-            rw [MonomialOrder.degree_smul this]
-        have h2' : (m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
-          = (m.leadingCoeff pj)⁻¹ • pj - (m.leadingCoeff pi)⁻¹ • pi := by
-            rw [smul_sub]
-            simp only [sub_right_inj]
-            rw [←smul_assoc]
-            simp only [smul_eq_mul, ←mul_assoc]
-            have : (m.leadingCoeff pj)⁻¹ * (m.leadingCoeff pj) = 1 := by
-              exact IsUnit.inv_mul_cancel hj_unit
-            simp only [this, one_mul]
-        rw [←h2', ←h1']
-        have hi_deg_δ : m.degree pj = δ := by exact hp_deg pj hpj
-        have hj_deg_δ : m.degree pi = δ := by exact hp_deg pi hpi
-        have h3' : pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi
-          = m.reduce hi_unit pj := by
-          rw [reduce, hi_deg_δ, hj_deg_δ]
-          simp
-          rw [←MvPolynomial.C_mul, MvPolynomial.C_mul', mul_comm]
-        rw [h3']
-        have : m.degree pj = δ := by exact hp_deg pj hpj
-        rw [←hi_deg_δ]
-        apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
-      exact hps
 
 variable (m) in
 /--
@@ -2064,5 +1934,221 @@ lemma grobner_basis_remove_redundant
   (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
   IsGroebnerBasis m I (G.erase p) := by sorry
 
+variable [DecidableEq σ] in
+lemma grobner_basis_remove_redundant₀
+  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
+  (hG : IsGroebnerBasis m I G)
+  (hpG : p ∈ G)
+  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
+  IsGroebnerBasis m I (G.erase p) := by
+
+  -- Let G' be the smaller basis for clarity.
+  let G' := G.erase p
+
+  -- We need to prove the three properties of a Gröbner basis for G'.
+  -- 1. `G'` is zero-free.
+  have hG'_zero_free : ∀ g ∈ G', g ≠ 0 := by
+    intro g hg_in_G'
+    -- An element of `G.erase p` is also an element of `G`.
+    have hg_in_G : g ∈ G := Finset.mem_of_mem_erase hg_in_G'
+    -- Now use the property from the original basis `hG`.
+    exact hG.1 g hg_in_G
+
+  -- 2. `G'` is a subset of the ideal `I`.
+  have hG'_subset_I : (G' : Set (MvPolynomial σ k)) ⊆ I := by
+    -- We will show `G' ⊆ G` and `G ⊆ I`.
+    apply Set.Subset.trans
+    · -- First goal: `↑G' ⊆ ↑G`.
+      apply Finset.coe_subset.mpr
+      exact Finset.erase_subset p G
+    · -- Second goal: `↑G ⊆ I`.
+      exact hG.2.1
+
+  -- 3. The ideal of leading terms of `G'` is the initial ideal of `I`.
+  have h_lt_ideal_eq : Ideal.span (G'.image (leadingTerm m)) = initialIdeal m I := by
+    -- From `hG`, we know `<LT(G)> = initialIdeal I`.
+    -- So we just need to prove `<LT(G')> = <LT(G)>`.
+    rw [← hG.2.2]
+
+    -- We prove equality by proving inclusion in both directions.
+    apply le_antisymm
+
+    · -- First direction: `<LT(G')> ⊆ <LT(G)>`.
+      -- This is true because `G' ⊆ G`.
+      apply Ideal.span_mono
+      apply Finset.coe_subset.mpr
+      apply Finset.image_subset_image
+      exact Finset.erase_subset p G
+
+    · -- Second direction: `<LT(G)> ⊆ <LT(G')>`.
+      -- We need to show every generator `LT(g)` for `g ∈ G` is in `<LT(G')>`.
+      rw [Ideal.span_le, Finset.coe_image, Set.subset_def]
+      intro lt_g h_lt_g_mem
+
+      -- Unpack the image to get `g`.
+      rcases h_lt_g_mem with ⟨g, hg_in_G, rfl⟩
+
+      -- We now have a `g ∈ G`. We need to show `LT(g) ∈ <LT(G')>`.
+      -- We split by cases: either `g = p` or `g ≠ p`.
+      by_cases h_g_is_p : g = p
+
+      · -- Case 1: `g = p`.
+        -- We need to show `LT(p) ∈ <LT(G')>`.
+        subst h_g_is_p
+        exact hLT
+
+      · -- Case 2: `g ≠ p`.
+        -- Since `g ∈ G` and `g ≠ p`, we have `g ∈ G.erase p`, which is `g ∈ G'`.
+        have hg_in_G' : g ∈ G' := Finset.mem_erase.mpr ⟨h_g_is_p, hg_in_G⟩
+
+        -- Since `g ∈ G'`, its leading term `LT(g)` is a generator of `<LT(G')>`.
+        apply Ideal.subset_span
+        apply Finset.mem_image_of_mem
+        exact hg_in_G'
+
+  -- Now we have all three properties, so we can construct the final proof.
+  exact ⟨hG'_zero_free, ⟨hG'_subset_I, h_lt_ideal_eq⟩⟩
+
 end Field
 end MvPolynomial
+
+
+--------------------- old version -----------------------
+
+-- variable (m) [DecidableEq σ] in
+-- /--
+-- **Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Lemma 5): Cancellation Lemma**
+-- Suppose we have a sum P = ∑ pᵢ where all pᵢ have the same multidegree δ.
+-- If m.degree P < δ, then P is a linear combination of the S-polynomials S(pⱼ, pₗ),
+-- and each S(pⱼ, pₗ) has multidegree less than δ.
+-- -/
+-- lemma exists_S_polynomial_syzygies
+--     (p : Finset (MvPolynomial σ k)) -- The list of polynomials p₁, ..., pₛ
+--     (hp : ∀ pi ∈ p, pi ≠ 0) -- Finset.nonempty_of_sum_ne_zero
+--     (δ : σ →₀ ℕ) -- The common multidegree
+--     (hδ : 0 ≺[m] δ)
+--     (hp_deg : ∀ pi ∈ p, m.degree pi = δ) -- All polynomials have multidegree δ
+--     (hsum   : m.degree (∑ pi ∈ p, pi) ≺[m] δ)
+--     : ∀ ps ∈ p,
+--       (∑ pi ∈ p, pi = ∑ pi ∈ p.erase ps, m.leadingCoeff pi • S_polynomial m pi ps
+--       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)
+--       := by
+--       intro ps hps
+--       let p' : Finset (MvPolynomial σ k) := p.erase ps
+--       have coeff_sum_zero : (∑ pi ∈ p, pi).coeff δ = 0 := by
+--         apply coeff_eq_zero_of_lt
+--         simpa using hsum
+--       -- But (∑ pi in p, pi).coeff δ = ∑ pi in p, pi.coeff δ by coeff_sum.
+--       have sum_of_coeffs : ∑ pi ∈ p, pi.coeff δ = 0 := by
+--         rw [coeff_sum] at coeff_sum_zero
+--         exact coeff_sum_zero
+--       -- 3)  Because m.degree pi = δ for each pi ∈ p, we have pi.coeff δ = m.leadingCoeff pi.
+--       have sum_lead_coeffs : ∑ pi ∈ p, m.leadingCoeff pi = 0 := by
+--         have eq_coeff_lead : ∀ pi ∈ p, pi.coeff δ = m.leadingCoeff pi := by
+--           intro pi hpi
+--           rw [leadingCoeff, hp_deg pi hpi]
+--         calc
+--           ∑ pi ∈ p, m.leadingCoeff pi = ∑ pi ∈ p, coeff δ pi := by exact Eq.symm (Finset.sum_congr rfl eq_coeff_lead)
+--           _ = 0 := by exact sum_of_coeffs
+
+--       have sum_split : ps + (∑ pi ∈ p', pi) = (∑ pi ∈ p, pi) := by
+--         -- p = p' ∪ {s}, disjointly.
+--         apply Finset.add_sum_erase
+--         exact hps
+
+--       have S_poly_simp : ∀ pi ∈ p, ∀ pj ∈ p, S_polynomial m pi pj = ((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff pj)⁻¹) • pj := by
+--         intro pi hpi pj hpj
+--         unfold S_polynomial
+--         have deg_sup : m.degree pi ⊔ m.degree pj = δ := by
+--           simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left]
+--         simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left, tsub_self,
+--           monomial_zero'] -- , one_div
+--         rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
+
+--       have expand_sum1 : ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps
+--         = ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps) := by
+--           apply Finset.sum_congr rfl
+--           intro x hxp'; congr
+--           apply S_poly_simp
+--           · exact Finset.mem_of_mem_erase hxp'
+--           · exact hps
+--           -- apply S_poly_simp (by exact Finset.mem_of_mem_erase hxp') hps
+--       have expand_sum2 : ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps)
+--         = ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps) := by
+--           apply Finset.sum_congr rfl
+--           intro x hxp'
+--           rw [smul_sub, ←smul_assoc, ←smul_assoc]
+--           simp
+--           have : (m.leadingCoeff x * (m.leadingCoeff x)⁻¹) = 1 := by
+--             refine IsUnit.mul_inv_cancel ?_
+--             refine isUnit_leadingCoeff.mpr ?_
+--             exact hp _ (by exact Finset.mem_of_mem_erase hxp')
+--           rw [this]
+--           simp only [one_smul]
+--       have expand_sum3 : ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps)
+--         = ∑ pi ∈ p', pi + ( - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹))) • ps := by
+--           rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
+--       have sum_lemma : - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) = 1 := by
+--         rw [←add_zero (- ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)))]
+--         have : (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ - (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ = 0 := by
+--           exact sub_eq_zero.mpr rfl
+--         rw [←this, sub_eq_neg_add, ←add_assoc]
+--         unfold p'
+--         rw [←neg_add]
+--         rw [Finset.sum_erase_add p _ hps, ←Finset.sum_mul]
+--         rw [sum_lead_coeffs]
+--         simp only [zero_mul, neg_zero, zero_add] -- , p'
+--         refine IsUnit.mul_inv_cancel ?_
+--         refine isUnit_leadingCoeff.mpr ?_
+--         exact hp ps hps
+--       simp only [sum_lemma, one_smul, p'] at expand_sum3 -- Finset.sum_sub_distrib
+--       rw [Finset.sum_erase_add] at expand_sum3
+--       clear sum_lemma
+--       constructor
+--       · rw [expand_sum1, expand_sum2, expand_sum3]
+--       · intro pi hpi pj hpj
+--         rw [S_poly_simp pj hpj pi hpi]
+--         have hi_unit : IsUnit (m.leadingCoeff pi) := (isUnit_leadingCoeff_iff_nonzero m pi).mpr (hp pi hpi)
+--         have hj_unit : IsUnit (m.leadingCoeff pj) := (isUnit_leadingCoeff_iff_nonzero m pj).mpr (hp pj hpj)
+--         have hji : m.degree pi ≤ m.degree pj := by
+--           have h₁ : m.degree pj = δ := by exact hp_deg pj hpj
+--           have h₂ : m.degree pi = δ := by exact hp_deg pi hpi
+--           rw [h₂, h₁]
+--         have : (m.toSyn 0 < m.toSyn δ) → δ ≠ 0 := by
+--           contrapose
+--           simp only [ne_eq, Decidable.not_not, map_zero, not_lt]
+--           intro hδ_zero
+--           rw [hδ_zero, ←m.eq_zero_iff]
+--           exact AddEquiv.map_zero m.toSyn
+--         have hj_deg_nz : m.degree pj ≠ 0 := by
+--           rw [hp_deg pj hpj]
+--           exact this hδ
+--         clear this
+--         have : IsRegular (m.leadingCoeff pj)⁻¹ := by
+--           refine isRegular_iff_ne_zero.mpr ?_
+--           exact inv_ne_zero (by exact leadingCoeff_ne_zero_iff.mpr (hp pj hpj))
+--         have h1' : m.degree (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
+--           = m.degree ((m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)) := by
+--             rw [MonomialOrder.degree_smul this]
+--         have h2' : (m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
+--           = (m.leadingCoeff pj)⁻¹ • pj - (m.leadingCoeff pi)⁻¹ • pi := by
+--             rw [smul_sub]
+--             simp only [sub_right_inj]
+--             rw [←smul_assoc]
+--             simp only [smul_eq_mul, ←mul_assoc]
+--             have : (m.leadingCoeff pj)⁻¹ * (m.leadingCoeff pj) = 1 := by
+--               exact IsUnit.inv_mul_cancel hj_unit
+--             simp only [this, one_mul]
+--         rw [←h2', ←h1']
+--         have hi_deg_δ : m.degree pj = δ := by exact hp_deg pj hpj
+--         have hj_deg_δ : m.degree pi = δ := by exact hp_deg pi hpi
+--         have h3' : pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi
+--           = m.reduce hi_unit pj := by
+--           rw [reduce, hi_deg_δ, hj_deg_δ]
+--           simp
+--           rw [←MvPolynomial.C_mul, MvPolynomial.C_mul', mul_comm]
+--         rw [h3']
+--         have : m.degree pj = δ := by exact hp_deg pj hpj
+--         rw [←hi_deg_δ]
+--         apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
+--       exact hps
