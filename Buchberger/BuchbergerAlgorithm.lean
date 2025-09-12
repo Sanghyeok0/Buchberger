@@ -31,7 +31,7 @@ lemma normalForm_not_divisible_by_basis
   (G : Finset (MvPolynomial σ k)) (hG : ∀ g ∈ G, g ≠ 0) (p : MvPolynomial σ k)
   (d : σ →₀ ℕ) (hd_in_support : d ∈ (normalForm m hG p).support) :
   ∀ b ∈ G, ¬ (m.degree b ≤ d) := by
-  have h_remainder_prop := (normalForm_spec' m hG p).2.2
+  have h_remainder_prop := (normalForm_spec m hG p).2.2
 
   specialize h_remainder_prop d hd_in_support
 
@@ -111,6 +111,250 @@ lemma leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
 
   exact (forbid g hgG) hα_le
 
+variable (m) [DecidableEq σ] in
+noncomputable def NonZero_Rem_Spoly (G : Finset (MvPolynomial σ k))
+  (hG : ∀ g ∈ G, g ≠ 0) : Finset (MvPolynomial σ k) :=
+  (G.offDiag.image (fun pq => normalForm m hG (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
+
+variable (m) [DecidableEq σ] in
+lemma extend_decreases {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0) (h_nonempty : NonZero_Rem_Spoly m G hG ≠ ∅) :
+  -- let R (G₁ G₂ : Finset (MvPolynomial σ k)) : Prop :=
+  --   Ideal.span (G₁.image (leadingTerm m)) > @Ideal.span (MvPolynomial σ k) _ (G₂.image (leadingTerm m))
+  Ideal.span ((G ∪ NonZero_Rem_Spoly m G hG).image (leadingTerm m)) > @Ideal.span (MvPolynomial σ k) _  (G.image (leadingTerm m))
+  -- R (G ∪ NonZero_Rem_Spoly m hG) G
+  := by
+  apply lt_of_le_of_ne
+  · apply Ideal.span_mono
+    simp only [coe_image]
+    refine Set.image_subset m.leadingTerm ?_
+    rw [coe_union]
+    exact Set.subset_union_left
+  · intro h_eq
+    obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
+    have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
+      unfold NonZero_Rem_Spoly at hr
+      simp only [mem_filter, mem_image, mem_offDiag] at hr
+      obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
+      rw [←hpq.2]
+      apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+      rw [hpq.2]
+      exact hr_nezero
+    have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
+      simp only [coe_image] at h_eq
+      rw [h_eq]
+      apply Ideal.subset_span
+      simp only [Set.mem_image, mem_coe]
+      use r
+      exact ⟨Finset.mem_union_right _ hr, rfl⟩
+    exact hLT_r_notin hLT_r_in
+
+variable (m) [DecidableEq σ] in
+lemma lt_ideal_span_of_rem_spoly_nonempty {G : Finset (MvPolynomial σ k)}
+    (hG : ∀ g ∈ G, g ≠ 0) (h_nonempty : NonZero_Rem_Spoly m G hG ≠ ∅) :
+    Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))) <
+    Ideal.span ((fun g => m.leadingTerm g) '' ((G ∪ NonZero_Rem_Spoly m G hG) : Set (MvPolynomial σ k))) := by
+  apply lt_of_le_of_ne
+  · -- 1) Monotonicity: ⟨LT(G)⟩ ≤ ⟨LT(G ∪ R)⟩.
+    rw [←Finset.coe_union]
+    apply Ideal.span_mono
+    refine Set.image_mono ?_
+    simp only [Finset.coe_union, Set.subset_union_left]
+  · -- 2) Strictness: ⟨LT(G)⟩ ≠ ⟨LT(G ∪ R)⟩.
+    intro h_ideals_eq
+    obtain ⟨r, hrR⟩ : ∃ r, r ∈ (NonZero_Rem_Spoly m G hG) := by
+      exact Finset.nonempty_iff_ne_empty.mpr h_nonempty
+    have hlt_r_notin :
+      m.leadingTerm r ∉ Ideal.span ((fun g => m.leadingTerm g) '' (G : Set _)) := by
+        unfold NonZero_Rem_Spoly at hrR
+        simp only [Finset.mem_filter, Finset.mem_image, Finset.mem_offDiag] at hrR
+        obtain ⟨pq, -, hr_eq_normalForm⟩ := hrR.1
+        rw [←hr_eq_normalForm]
+        apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
+        rw [hr_eq_normalForm]
+        exact hrR.2
+    have h_lt_r_in_old_ideal : m.leadingTerm r ∈ Ideal.span ((fun g ↦ m.leadingTerm g) '' ↑G) := by
+      rw [h_ideals_eq]
+      simp only [←coe_union]
+      apply Ideal.subset_span
+      simp only [Set.mem_image]
+      use r
+      exact ⟨mem_union_right G hrR, rfl⟩
+    exact hlt_r_notin h_lt_r_in_old_ideal
+
+variable (m) [DecidableEq σ] in
+noncomputable def Buchberger_Step {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0) [Finite σ] : Finset (MvPolynomial σ k) :=
+
+  if h_Rem_empty : NonZero_Rem_Spoly m G hG = ∅ then
+    G
+  else
+    have hG' : ∀ g ∈ G ∪ (NonZero_Rem_Spoly m G hG), g ≠ 0 := by
+      intro g hG_mem
+      rcases Finset.mem_union.mp hG_mem with hgG | hgR
+      · exact hG g hgG
+      · unfold NonZero_Rem_Spoly at hgR; simp only [mem_filter] at hgR; exact hgR.2
+    Buchberger_Step hG'
+  termination_by
+  WellFounded.wrap
+    (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+    (Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))))
+  decreasing_by
+    rw [Finset.coe_union]
+    apply lt_ideal_span_of_rem_spoly_nonempty m hG h_Rem_empty
+
+variable (m) [DecidableEq σ] [Finite σ] in
+lemma Buchberger_Step_property (G : Finset (MvPolynomial σ k))
+  (hG : ∀ g ∈ G, g ≠ 0) :
+  G ⊆ Buchberger_Step m hG ∧
+  ∀ g ∈ Buchberger_Step m hG, g ≠ 0 := by
+    unfold Buchberger_Step
+    by_cases h_Rem_empty : NonZero_Rem_Spoly m G hG = ∅
+
+    · -- Base Case: The recursion terminates. The function returns G.
+      rw [dif_pos h_Rem_empty]
+      constructor
+      · exact Finset.Subset.refl G
+      · exact hG
+
+    · -- Inductive Step: The function makes a recursive call.
+      rw [dif_neg h_Rem_empty]
+
+      let G' := G ∪ NonZero_Rem_Spoly m G hG
+      have hG' : ∀ g ∈ G', g ≠ 0 := by
+        intro g hg_mem; rcases Finset.mem_union.mp hg_mem with (hgG | hgR)
+        · exact hG g hgG
+        · unfold NonZero_Rem_Spoly at hgR; simp at hgR; exact hgR.2
+
+      dsimp only [Lean.Elab.WF.paramLet]
+      have ih := Buchberger_Step_property G' hG'
+
+      constructor
+      · -- First goal: G ⊆ Buchberger_Step m hG'
+        trans G' -- Use G' as the intermediate set for transitivity
+        · -- Subgoal 1: G ⊆ G'
+          exact subset_union_left
+        · -- Subgoal 2: G' ⊆ Buchberger_Step m hG'
+          exact ih.1
+      · -- Second goal: ∀ g ∈ Buchberger_Step m hG', g ≠ 0
+        exact ih.2
+
+termination_by
+  WellFounded.wrap
+  (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+  (Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))))
+decreasing_by
+  simp only [coe_union, gt_iff_lt, Subtype.coe_lt_coe]
+  apply lt_ideal_span_of_rem_spoly_nonempty m hG h_Rem_empty
+
+
+
+
+variable (m) [DecidableEq σ] [Finite σ] in
+lemma Buchberger_Step_span_property {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0)
+  {I : Ideal (MvPolynomial σ k)}
+  (hspan : I = Ideal.span G)
+  :
+  I = Ideal.span (Buchberger_Step m hG) := by
+    unfold Buchberger_Step
+    by_cases h_Rem_empty : NonZero_Rem_Spoly m G hG = ∅
+
+    · -- Base Case: The recursion terminates. The function returns G.
+      rw [dif_pos h_Rem_empty]
+      exact hspan
+
+    · -- Inductive Step: The function makes a recursive call.
+      rw [dif_neg h_Rem_empty]
+
+      let G' := G ∪ NonZero_Rem_Spoly m G hG
+      have hG' : ∀ g ∈ G', g ≠ 0 := by
+        intro g hg_mem; rcases Finset.mem_union.mp hg_mem with (hgG | hgR)
+        · exact hG g hgG
+        · unfold NonZero_Rem_Spoly at hgR; simp at hgR; exact hgR.2
+
+      have hspan' : I = Ideal.span G' := by
+        unfold G'
+        rw [hspan]
+        apply le_antisymm
+        · -- `Ideal.span G ⊆ Ideal.span (G ∪ R)` is trivial.
+          apply Ideal.span_mono
+          simp only [coe_union, Set.subset_union_left]
+        · -- For `Ideal.span (G ∪ R) ⊆ Ideal.span G`, we show all generators are in `Ideal.span G`.
+          rw [Ideal.span_le]
+          simp only [coe_union, Set.union_subset_iff]
+          constructor
+          · exact Ideal.subset_span
+          · unfold NonZero_Rem_Spoly
+            simp only [coe_filter, mem_image, mem_offDiag]
+            rw [Set.subset_def]
+            intro r hr_in_Rem
+            obtain ⟨⟨pq, hpq_in_offDiag, hr_eq_normalForm⟩, hr_ne_zero⟩ := hr_in_Rem
+            rw [← hr_eq_normalForm]
+            let S := S_polynomial m pq.1 pq.2
+            have h_spec := normalForm_spec m hG S
+            let q := quotients m hG S
+            let q_sum := q.sum (fun g (h : MvPolynomial σ k) => h * g.val)
+            have h_r_eq_sub : r = S - q_sum := by
+              have : S = q_sum + r := by
+                rw [h_spec.1]
+                unfold q_sum q quotients
+                congr
+              exact eq_sub_of_add_eq' (id (Eq.symm this))
+            rw [hr_eq_normalForm, h_r_eq_sub]
+            apply Ideal.sub_mem
+            · -- First goal: `S ∈ Ideal.span ↑G`.
+              let I_G := @Ideal.span (MvPolynomial σ k) _ G
+              have hp_in_I : pq.1 ∈ I_G := Ideal.subset_span (hpq_in_offDiag.1)
+              have hq_in_I : pq.2 ∈ I_G := Ideal.subset_span (hpq_in_offDiag.2.1)
+              exact Ideal.sub_mem _ (Ideal.mul_mem_left _ _ hp_in_I) (Ideal.mul_mem_left _ _ hq_in_I)
+
+            · -- Second goal: `q_sum ∈ Ideal.span ↑G`.
+              unfold q_sum
+              rw [Finsupp.sum]
+              apply sum_mem
+              intro g_sub _
+              apply Ideal.mul_mem_left
+              apply Ideal.subset_span
+              exact g_sub.property
+
+      have ih := Buchberger_Step_span_property hG' hspan'
+      exact ih
+
+termination_by
+  WellFounded.wrap
+  (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+  (Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))))
+decreasing_by
+  simp only [coe_union, gt_iff_lt, Subtype.coe_lt_coe]
+  apply lt_ideal_span_of_rem_spoly_nonempty m hG h_Rem_empty
+
+
+variable (m) [DecidableEq σ] [Finite σ] in
+lemma NonZero_Rem_Spoly_of_Buchberger_Step_is_empty {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0) :
+  NonZero_Rem_Spoly m (Buchberger_Step m hG) (Buchberger_Step_property m G hG).2 = ∅ := by
+  unfold Buchberger_Step
+  by_cases h_Rem_empty : NonZero_Rem_Spoly m G hG = ∅
+  · simp [dif_pos h_Rem_empty]
+    exact h_Rem_empty
+  · simp [dif_neg h_Rem_empty]
+    let G' := G ∪ NonZero_Rem_Spoly m G hG
+    have hG' : ∀ g ∈ G', g ≠ 0 := by
+      intro g hg_mem; rcases Finset.mem_union.mp hg_mem with (hgG | hgR)
+      · exact hG g hgG
+      · unfold NonZero_Rem_Spoly at hgR; simp at hgR; exact hgR.2
+    have ih := NonZero_Rem_Spoly_of_Buchberger_Step_is_empty hG'
+    exact ih
+
+termination_by
+  WellFounded.wrap
+  (IsNoetherian.wf (MvPolynomial.isNoetherianRing : IsNoetherian (MvPolynomial σ k) (MvPolynomial σ k)))
+  (Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))))
+decreasing_by
+  simp only [coe_union, gt_iff_lt, Subtype.coe_lt_coe]
+  apply lt_ideal_span_of_rem_spoly_nonempty m hG h_Rem_empty
+
 
 variable (m) [DecidableEq σ] in
 theorem Buchberger_Alg [Finite σ]
@@ -118,10 +362,43 @@ theorem Buchberger_Alg [Finite σ]
   {I : Ideal (MvPolynomial σ k)}
   (hF : ∀ f ∈ F, f ≠ 0)
   (hspan : I = Ideal.span F) :
+  F ⊆ Buchberger_Step m hF ∧
+  IsGroebnerBasis m I (Buchberger_Step m hF) := by
+  constructor
+  · -- F ⊆ Buchberger_Step m hF
+    exact (Buchberger_Step_property m F hF).1
+  · let G := Buchberger_Step m hF
+    have hG := (Buchberger_Step_property m F hF).2
+    have hspan' : I = Ideal.span G := Buchberger_Step_span_property m hF hspan
+
+    apply (Buchberger_criterion m hG hspan').mpr
+    intro g₁ g₂ hg₁ hg₂ hneq
+    let r := normalForm m hG (S_polynomial m g₁ g₂)
+    by_contra hr_nonzero
+    have hr_in : r ∈ NonZero_Rem_Spoly m G hG := by
+      unfold NonZero_Rem_Spoly
+      simp only [mem_filter, mem_image]
+      refine ⟨?_, hr_nonzero⟩
+      use ⟨g₁, g₂⟩
+      simp only [mem_offDiag]
+      exact ⟨⟨hg₁, ⟨hg₂, hneq⟩⟩, rfl⟩
+
+    have Rem_fix_empty : NonZero_Rem_Spoly m G hG = ∅ :=
+      NonZero_Rem_Spoly_of_Buchberger_Step_is_empty m hF
+
+    rw [Rem_fix_empty] at hr_in
+    exact Finset.notMem_empty r hr_in
+
+
+variable (m) [DecidableEq σ] in
+theorem Buchberger_Alg_oneline [Finite σ]
+  {F : Finset (MvPolynomial σ k)}
+  {I : Ideal (MvPolynomial σ k)}
+  (hF : ∀ f ∈ F, f ≠ 0)
+  (hspan : I = Ideal.span F) :
   ∃ G : Finset (MvPolynomial σ k),
   F ⊆ G ∧
   IsGroebnerBasis m I G := by
-
   -- 1. State packages the set with the invariant "all entries nonzero".
   let State := { G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0 }
 
@@ -149,7 +426,6 @@ theorem Buchberger_Alg [Finite σ]
     R (extend s) s := by
     unfold R H
     dsimp only [OrderDual.toDual]
-    obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
     apply lt_of_le_of_ne
     · apply Ideal.span_mono
       simp only [coe_image]
@@ -158,6 +434,7 @@ theorem Buchberger_Alg [Finite σ]
       rw [coe_union]
       exact Set.subset_union_left
     · intro h_eq
+      obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
       have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s.val) := by
         unfold NonZero_Rem_Spoly at hr
         simp only [mem_filter, mem_image, mem_offDiag] at hr
@@ -274,7 +551,7 @@ theorem Buchberger_Alg [Finite σ]
           rw [← hr_eq_normalForm]
 
           let S := S_polynomial m pq.1 pq.2
-          have h_spec := normalForm_spec' m s.property S
+          have h_spec := normalForm_spec m s.property S
           let q := quotients m s.property S
           let q_sum := q.sum (fun (g : ↥s.val) (h : MvPolynomial σ k) => h * g.val)
 
@@ -357,3 +634,23 @@ theorem Buchberger_Alg [Finite σ]
     exact Finset.notMem_empty r hr_in
 
   exact ⟨h_F_sub_G, h_G_is_GB⟩
+
+section Example
+
+-- 1. Set up the context: Q[x, y] with lexicographic order
+abbrev σ₀ := Fin 2
+abbrev k₀ := ℚ
+abbrev P₀ := MvPolynomial σ₀ k₀
+
+-- Define lexicographic order m, where X 0 > X 1
+noncomputable def m₀ : MonomialOrder σ₀ := lex
+
+-- Handy notations for variables x and y
+noncomputable def X₀ : P₀ := MvPolynomial.X 0
+noncomputable def Y₀ : P₀ := MvPolynomial.X 1
+
+-- 2. Define the initial set of polynomials F = {f₁, f₂}
+-- f₁ = x²y - 1
+noncomputable def f₁ : P₀ := X₀^2 * Y₀ - 1
+-- f₂ = xy² - x
+noncomputable def f₂ : P₀ := X₀ * Y₀^2 - X₀

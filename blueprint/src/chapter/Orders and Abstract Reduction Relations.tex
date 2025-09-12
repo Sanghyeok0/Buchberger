@@ -136,7 +136,26 @@
     Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.
 \end{proposition}
 \begin{proof}
-  \leanok %확인 필요
+  We define the sequence $\{n_i\}_{i \in \mathbb{N}}$ recursively, and by simultaneous induction on $i$ we verify the following properties:
+  \begin{enumerate}[(i)]
+      \item $a_{n_i} \preceq a_{n_{i+1}}$ for all $i \in \mathbb{N}$, and
+      \item for all $i \in \mathbb{N}$, the set $\{n \in \mathbb{N} \mid a_{n_i} \preceq a_n\}$ is infinite.
+  \end{enumerate}
+  For $i=0$, let $\{b_1, \dots, b_k\}$ be a finite basis of the set $\{a_n \mid n \in \mathbb{N}\}$, and for each $j$ with $1 \le j \le k$, set
+  \[
+  B_j = \{n \in \mathbb{N} \mid b_j \preceq a_n\}.
+  \]
+  Then $\bigcup_{j=1}^k B_j = \mathbb{N}$ by the choice of $B$. 
+  Since the union of finitely many finite sets is finite, we can find a $B_j$ which is infinite. 
+  Moreover, $b_j = a_m$ for some $m \in \mathbb{N}$, and we set $n_0 = m$. 
+  For $i+1$, we consider the set
+  \[
+  U_i = \{a_n \mid a_{n_i} \preceq a_n, n_i < n\}.
+  \]
+  By condition (ii) for $i$, the set $\{n \in \mathbb{N} \mid a_n \in U_i\}$ is infinite. 
+  Choosing some finite basis of $U_i$, we can, as before, find an element $a_m$ in this basis such that $a_m \preceq a_n$ for infinitely many different $n \in \mathbb{N}$, and we take $n_{i+1} = m$. 
+  Conditions (i) and (ii) obviously continue to hold. 
+  It now follows easily from condition (i) and the transitivity of $\preceq$ that $\{n_i\}_{i \in \mathbb{N}}$ has the desired property.
 \end{proof}
 
 \begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
@@ -168,7 +187,13 @@
     Then a monomial $x^\beta$ lies in $I$ if and only if $x^\beta$ is divisible by $x^\alpha$ for some $\alpha \in A$.
 \end{lemma}
 \begin{proof}
-  \leanok %확인 필요
+  \leanok
+  If $x^\beta$ is a multiple of $x^\alpha$ for some $\alpha \in A$, then $x^\beta \in I$ by the definition of ideal. 
+  Conversely, if $x^\beta \in I$, then $x^\beta = \sum_{i=1}^s h_i x^{\alpha(i)}$, where $h_i \in k[x_1, \dots, x_n]$ and $\alpha(i) \in A$. 
+  If we expand each $h_i$ as a sum of terms, we obtain
+  \[
+  x^\beta = \sum_{i=1}^s h_i x^{\alpha(i)} = \sum_{i=1}^s \left(\sum_j c_{i,j} x^{\beta(i,j)}\right) x^{\alpha(i)} = \sum_{i,j} c_{i,j} x^{\beta(i,j)} x^{\alpha(i)}.
+  \]
 \end{proof}
 
 \begin{theorem}\label{thm:Dickson} % [Becker-Weispfenning1993] 163p
@@ -185,12 +210,6 @@
 \begin{proof}
   \leanok %확인 필요
 \end{proof}
-
-\begin{theorem}
-    \uses{thm:Dickson}
-    \leanok %확인 필요
-    Test
-\end{theorem}
 
 \begin{theorem}[Dickson's Lemma (MvPolynomial)]
     \label{thm:Dickson_MvPolynomial}

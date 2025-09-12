@@ -169,25 +169,25 @@ lemma normalForm_spec (m : MonomialOrder σ)
   -- `spec_r` is exactly the goal of the lemma.
   exact spec_r
 
-omit [DecidableEq k] in
-/--
-This lemma states that the `quotients` and `normalForm` functions satisfy the properties
-guaranteed by the division algorithm.
--/
-lemma normalForm_spec' (m : MonomialOrder σ)
-  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
-  -- Property 1: The division equation
-  f = (Finsupp.linearCombination _ (fun (b : B) ↦ (b : MvPolynomial σ k)) (quotients m hB f)) + (normalForm m hB f) ∧
-  -- Property 2: The degree condition
-  (∀ (p : B), m.degree ((p : MvPolynomial σ k) * (quotients m hB f) p) ≼[m] m.degree f) ∧
-  -- Property 3: The remainder condition (irreducibility)
-  (∀ c ∈ (normalForm m hB f).support, ∀ b ∈ B, ¬ m.degree b ≤ c) := by
-  -- The proof is by applying `Exists.choose_spec` twice.
-  let H_exists := division_algorithm_existence m hB f
-  let spec_q := Exists.choose_spec H_exists
-  let spec_r := Exists.choose_spec spec_q
-  -- `spec_r` is exactly the goal of the lemma.
-  exact spec_r
+-- omit [DecidableEq k] in
+-- /--
+-- This lemma states that the `quotients` and `normalForm` functions satisfy the properties
+-- guaranteed by the division algorithm.
+-- -/
+-- lemma normalForm_spec' (m : MonomialOrder σ)
+--   {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+--   -- Property 1: The division equation
+--   f = (Finsupp.linearCombination _ (fun (b : B) ↦ (b : MvPolynomial σ k)) (quotients m hB f)) + (normalForm m hB f) ∧
+--   -- Property 2: The degree condition
+--   (∀ (p : B), m.degree ((p : MvPolynomial σ k) * (quotients m hB f) p) ≼[m] m.degree f) ∧
+--   -- Property 3: The remainder condition (irreducibility)
+--   (∀ c ∈ (normalForm m hB f).support, ∀ b ∈ B, ¬ m.degree b ≤ c) := by
+--   -- The proof is by applying `Exists.choose_spec` twice.
+--   let H_exists := division_algorithm_existence m hB f
+--   let spec_q := Exists.choose_spec H_exists
+--   let spec_r := Exists.choose_spec spec_q
+--   -- `spec_r` is exactly the goal of the lemma.
+--   exact spec_r
 
 omit [DecidableEq k] in
 /--  If `normalForm m B hB f = 0`, then in fact
@@ -1435,7 +1435,7 @@ theorem Buchberger_criterion
             specialize hS_poly (gᵢ : MvPolynomial σ k) (gⱼ : MvPolynomial σ k) hgᵢ hgⱼ (by exact Subtype.coe_ne_coe.mpr h_ne)
 
             -- This is the representation from the division algorithm.
-            have h_spec := normalForm_spec' m hG S_poly
+            have h_spec := normalForm_spec m hG S_poly
 
             -- Use the fact that the normal form is zero.
             rw [hS_poly] at h_spec
@@ -1642,7 +1642,7 @@ theorem Buchberger_criterion
             by_cases hS_poly_zero : S_polynomial m gᵢ.val gⱼ.val = 0
             · specialize h_γ_S_poly_gᵢ_gⱼ_repr ij hi hj h_ne
               have h_gₗAₗ_deg_zero : m.toSyn (m.degree (gₗ.val * A_ij gₗ)) = m.toSyn 0 := by
-                have h_spec := normalForm_spec' m hG S_gij
+                have h_spec := normalForm_spec m hG S_gij
                 have := h_spec.2.1 gₗ
                 unfold S_gij at this
                 nth_rw 2 [hS_poly_zero] at this

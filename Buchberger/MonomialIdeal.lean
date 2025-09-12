@@ -204,7 +204,7 @@ lemma mem_monomialIdeal_iff_divisible {A : Set (σ →₀ ℕ)} {β : σ →₀ 
     exact h
 
 /-이름 수정 필요-/ -- image_leading_monomial_eq_leading_monomial_image
-lemma Mvpoly_to_mono {I : Ideal (MvPolynomial σ R)} :
+lemma leading_monomial_set_eq_image_LM_set {I : Ideal (MvPolynomial σ R)} :
   { f | ∃ g ∈ I, g ≠ 0 ∧ monomial (m.degree g) (1 : R) = f } = (fun s
 => monomial s (1 : R)) '' LM_set m I := -- { d | ∃ g ∈ I, g ≠ 0 ∧ m.degree g = d } :=
 by
@@ -319,7 +319,7 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   -- 1. Show initialIdeal m I is spanned by monomials with coefficient 1
   rw [initialIdeal_is_monomial_ideal' I]
   rw [Ideal.FG]
-  rw [Mvpoly_to_mono]
+  rw [leading_monomial_set_eq_image_LM_set]
   have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma_MV k (LM_set m I)
   obtain ⟨b, h_span⟩ := h_fg
   use b
