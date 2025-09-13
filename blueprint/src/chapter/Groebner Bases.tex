@@ -112,6 +112,7 @@
     \[ f \in I \iff \rem(f, G) = 0. \]
 \end{corollary}
 \begin{proof}
+  \leanok
   If the remainder is zero, then we have already observed that $f \in I$. 
   Conversely, given $f \in I$, then $f = f + 0$ satisfies the two conditions of Proposition~\ref{prop:GR_Unique_Remainder}. 
   It follows that $0$ is the remainder of $f$ on division by $G$.
@@ -349,6 +350,7 @@
   \end{itemize}
 \end{theorem}
 \begin{proof}
+  \leanok
   We begin with some frequently used notation. If $G = \{ g_1, \ldots, g_t \}$, 
   then $\langle G \rangle$ and $\langle \operatorname{LT}(G) \rangle$ will denote the following ideals:
   \[
@@ -393,4 +395,10 @@
     Let $p \in G$ be a polynomial such that $\LT(p) \in \langle \LT(G \setminus \{p\}) \rangle.$  
     Then $G \setminus \{p\}$ is also a Gr{\"o}bner basis for $I$.
 \end{lemma}
+\begin{proof}
+  \leanok
+  We know that $\langle\operatorname{LT}(G)\rangle = \langle\operatorname{LT}(I)\rangle$. 
+  If $\operatorname{LT}(p) \in \langle\operatorname{LT}(G \setminus \{p\})\rangle$, then we have $\langle\operatorname{LT}(G \setminus \{p\})\rangle = \langle\operatorname{LT}(G)\rangle$.
+  By definition, it follows that $G \setminus \{p\}$ is also a Gr\"{o}bner basis for $I$.
+\end{proof}
     
