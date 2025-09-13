@@ -465,7 +465,9 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
 
 variable (m) in
 /-- The S-polynomial. -/
-noncomputable def S_polynomial (f g : MvPolynomial σ k) : MvPolynomial σ k :=
+noncomputable def S_polynomial
+  (f g : MvPolynomial σ k)
+  : MvPolynomial σ k :=
   monomial (m.degree f ⊔ m.degree g - m.degree f) ((m.leadingCoeff f)⁻¹ : k) * f
   - monomial (m.degree f ⊔ m.degree g - m.degree g) (( m.leadingCoeff g)⁻¹ : k) * g
 
@@ -845,7 +847,6 @@ lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
     · -- First term of the subtraction.
       -- `(monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) (lc_gᵢ⁻¹) * gᵢ)`
       rw [← mul_assoc] -- Group the monomials together
-
       -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
       rw [monomial_mul, one_mul]
       congr 1
@@ -855,7 +856,6 @@ lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
         · exact le_sup_left
 
     · rw [← mul_assoc] -- Group the monomials together
-
       -- We need to prove `(monomial aᵢ lc_gᵢ⁻¹) = (monomial (δ - γ) 1) * (monomial (γ - m.degree gᵢ) lc_gᵢ⁻¹)`.
       rw [monomial_mul, one_mul]
       congr 1

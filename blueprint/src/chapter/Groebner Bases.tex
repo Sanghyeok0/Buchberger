@@ -51,6 +51,7 @@
     \end{enumerate}
 \end{theorem}
 \begin{proof}
+\leanok
 \begin{enumerate}
     \item The leading monomials $\text{LM}(g)$ of elements $g \in I \setminus \{0\}$ generate the monomial ideal $\langle \text{LM}(g) \mid g \in I \setminus \{0\} \rangle$. 
       Since $\text{LM}(g)$ and $\text{LT}(g)$ differ by a nonzero constant, this ideal equals $\langle \text{LT}(g) \mid g \in I \setminus \{0\} \rangle = \langle \text{LT}(I) \rangle$. 
@@ -193,12 +194,35 @@
   \uses{def:S-polynomial}
   \lean{MvPolynomial.Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial}
   \leanok %확인 필요
-  Suppose that $c_i x^{\alpha^{(i)}} g_i$ and $c_j x^{\alpha^{(j)}} g_j$ have multidegree $\delta$. Then
+  Suppose that $p_i = c_i x^{\alpha^{(i)}} g_i$ and $p_j = c_j x^{\alpha^{(j)}} g_j$ have the same multidegree $\delta$. Then
   \[
-  S(x^{\alpha^{(i)}} g_i, x^{\alpha^{(j)}} g_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
+  S(p_i, p_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
   \]
   where $x^{\gamma_{ij}} = \operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
 \end{lemma}
+\begin{proof}
+  \leanok
+  By hypothesis, $\operatorname{multideg}(p_i) = \operatorname{multideg}(p_j) = \delta$, which implies $\delta = \alpha^{(i)} + \operatorname{multideg}(g_i)$ and $\delta = \alpha^{(j)} + \operatorname{multideg}(g_j)$.
+  The leading terms are $\operatorname{LT}(p_i) = c_i \operatorname{LC}(g_i) x^\delta$ and $\operatorname{LT}(p_j) = c_j \operatorname{LC}(g_j) x^\delta$.
+  Let $\gamma_{ij}$ be the exponent of $\operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
+
+  On the one hand, the left-hand side simplifies to:
+  \begin{align*}
+  S(p_i, p_j) &= \frac{x^\delta}{\operatorname{LT}(p_i)} p_i - \frac{x^\delta}{\operatorname{LT}(p_j)} p_j \\
+  &= \frac{x^\delta}{c_i \operatorname{LC}(g_i) x^\delta} (c_i x^{\alpha^{(i)}} g_i) - \frac{x^\delta}{c_j \operatorname{LC}(g_j) x^\delta} (c_j x^{\alpha^{(j)}} g_j) \\
+  &= \frac{1}{\operatorname{LC}(g_i)} x^{\alpha^{(i)}} g_i - \frac{1}{\operatorname{LC}(g_j)} x^{\alpha^{(j)}} g_j.
+  \end{align*}
+
+  On the other hand, the right-hand side expands to:
+  \begin{align*}
+  x^{\delta - \gamma_{ij}} S(g_i, g_j)
+  &= x^{\delta - \gamma_{ij}} \left( \frac{x^{\gamma_{ij}}}{\operatorname{LT}(g_i)} g_i - \frac{x^{\gamma_{ij}}}{\operatorname{LT}(g_j)} g_j \right) \\
+  &= \frac{x^{\delta}}{\operatorname{LC}(g_i)x^{\operatorname{multideg}(g_i)}} g_i - \frac{x^{\delta}}{\operatorname{LC}(g_j)x^{\operatorname{multideg}(g_j)}} g_j \\
+  &= \frac{1}{\operatorname{LC}(g_i)} x^{\delta - \operatorname{multideg}(g_i)} g_i - \frac{1}{\operatorname{LC}(g_j)} x^{\delta - \operatorname{multideg}(g_j)} g_j \\
+  &= \frac{1}{\operatorname{LC}(g_i)} x^{\alpha^{(i)}} g_i - \frac{1}{\operatorname{LC}(g_j)} x^{\alpha^{(j)}} g_j.
+  \end{align*}
+  The two sides are equal, which completes the proof.
+\end{proof}
 
 \begin{theorem}[Buchberger's Criterion] % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
     \label{thm:Buchberger’s_Criterion} 
@@ -231,16 +255,20 @@
   \]
   is minimal. The minimal $\delta$ exists by the well-ordering property of our monomial ordering. By (3), it follows that $\text{multideg}(f) \le \delta$.
 
-  If equality occurs, then $\text{multideg}(f) = \text{multideg}(h_i g_i)$ for some $i$. This easily implies that $\text{LT}(f)$ is divisible by $\text{LT}(g_i)$. Then $\text{LT}(f) \in \langle\text{LT}(g_1), \dots, \text{LT}(g_t)\rangle$, which is what we want to prove.
+  If equality occurs, then $\text{multideg}(f) = \text{multideg}(h_i g_i)$ for some $i$. 
+  This easily implies that $\text{LT}(f)$ is divisible by $\text{LT}(g_i)$. Then $\text{LT}(f) \in \langle\text{LT}(g_1), \dots, \text{LT}(g_t)\rangle$, which is what we want to prove.
 
-  It remains to consider the case when the minimal $\delta$ satisfies $\text{multideg}(f) < \delta$. We will use $S(g_i, g_j) \overline{\hspace{1.5em}}^G 0$ for $i \ne j$ to find a new expression for $f$ that decreases $\delta$. This will contradict the minimality of $\delta$ and complete the proof.
+  It remains to consider the case when the minimal $\delta$ satisfies $\text{multideg}(f) < \delta$. 
+  We will use $S(g_i, g_j) \overline{\hspace{1.5em}}^G 0$ for $i \ne j$ to find a new expression for $f$ that decreases $\delta$. 
+  This will contradict the minimality of $\delta$ and complete the proof.
 
   Given an expression $f = \sum_{i=1}^t h_i g_i$ with minimal $\delta$, we begin by isolating the part of the sum where multidegree $\delta$ occurs:
   \begin{align} \tag{4}
   f &= \sum_{\text{multideg}(h_i g_i) = \delta} h_i g_i + \sum_{\text{multideg}(h_i g_i) < \delta} h_i g_i \\
   &= \sum_{\text{multideg}(h_i g_i) = \delta} \text{LT}(h_i) g_i + \sum_{\text{multideg}(h_i g_i) = \delta} (h_i - \text{LT}(h_i)) g_i + \sum_{\text{multideg}(h_i g_i) < \delta} h_i g_i. \nonumber
   \end{align}
-  The monomials appearing in the second and third sums on the second line all have multidegree $<\delta$. Then $\text{multideg}(f) < \delta$ means that the first sum on the second line also has multidegree $<\delta$.
+  The monomials appearing in the second and third sums on the second line all have multidegree $<\delta$. 
+  Then $\text{multideg}(f) < \delta$ means that the first sum on the second line also has multidegree $<\delta$.
 
   The key to decreasing $\delta$ is to rewrite the first sum in two stages: use Lemma~\ref{lem:Spolynomial_syzygy_of_degree_cancellation} to rewrite the first sum in terms of S-polynomials, and then use $S(g_i, g_j) \overline{\hspace{1.5em}}^G 0$ to rewrite the S-polynomials without cancellation.
 
@@ -248,7 +276,9 @@
   \begin{equation} \tag{5}
   \sum_{\text{multideg}(h_i g_i) = \delta} \text{LT}(h_i) g_i
   \end{equation}
-  satisfies the hypothesis of Lemma~\ref{lem:Spolynomial_syzygy_of_degree_cancellation} since each $p_i = \text{LT}(h_i) g_i$ has multidegree $\delta$ and the sum has multidegree $<\delta$. Hence, the first sum is a linear combination with coefficients in $k$ of the S-polynomials $S(p_i, p_j)$. In Exercise~\ref{lem:S-polynomials_and_Monomial_Multiplication}, you will verify that
+  satisfies the hypothesis of Lemma~\ref{lem:Spolynomial_syzygy_of_degree_cancellation} since each $p_i = \text{LT}(h_i) g_i$ has multidegree $\delta$ and the sum has multidegree $<\delta$.
+  Hence, the first sum is a linear combination with coefficients in $k$ of the S-polynomials $S(p_i, p_j)$.
+  In Exercise~\ref{lem:S-polynomials_and_Monomial_Multiplication}, you will verify that
   \[
   S(p_i, p_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
   \]

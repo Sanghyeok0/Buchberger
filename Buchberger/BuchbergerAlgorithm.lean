@@ -117,39 +117,6 @@ noncomputable def NonZero_Rem_Spoly (G : Finset (MvPolynomial σ k))
   (G.offDiag.image (fun pq => normalForm m hG (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
 
 variable (m) [DecidableEq σ] in
-lemma extend_decreases {G : Finset (MvPolynomial σ k)}
-  (hG : ∀ g ∈ G, g ≠ 0) (h_nonempty : NonZero_Rem_Spoly m G hG ≠ ∅) :
-  -- let R (G₁ G₂ : Finset (MvPolynomial σ k)) : Prop :=
-  --   Ideal.span (G₁.image (leadingTerm m)) > @Ideal.span (MvPolynomial σ k) _ (G₂.image (leadingTerm m))
-  Ideal.span ((G ∪ NonZero_Rem_Spoly m G hG).image (leadingTerm m)) > @Ideal.span (MvPolynomial σ k) _  (G.image (leadingTerm m))
-  -- R (G ∪ NonZero_Rem_Spoly m hG) G
-  := by
-  apply lt_of_le_of_ne
-  · apply Ideal.span_mono
-    simp only [coe_image]
-    refine Set.image_subset m.leadingTerm ?_
-    rw [coe_union]
-    exact Set.subset_union_left
-  · intro h_eq
-    obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
-    have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
-      unfold NonZero_Rem_Spoly at hr
-      simp only [mem_filter, mem_image, mem_offDiag] at hr
-      obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
-      rw [←hpq.2]
-      apply leadingTerm_normalForm_not_mem_ideal_span_leadingTerm
-      rw [hpq.2]
-      exact hr_nezero
-    have hLT_r_in : m.leadingTerm r ∈ Ideal.span ((fun f ↦ m.leadingTerm f) '' G) := by
-      simp only [coe_image] at h_eq
-      rw [h_eq]
-      apply Ideal.subset_span
-      simp only [Set.mem_image, mem_coe]
-      use r
-      exact ⟨Finset.mem_union_right _ hr, rfl⟩
-    exact hLT_r_notin hLT_r_in
-
-variable (m) [DecidableEq σ] in
 lemma lt_ideal_span_of_rem_spoly_nonempty {G : Finset (MvPolynomial σ k)}
     (hG : ∀ g ∈ G, g ≠ 0) (h_nonempty : NonZero_Rem_Spoly m G hG ≠ ∅) :
     Ideal.span ((fun g => m.leadingTerm g) '' (G : Set (MvPolynomial σ k))) <
@@ -183,9 +150,10 @@ lemma lt_ideal_span_of_rem_spoly_nonempty {G : Finset (MvPolynomial σ k)}
     exact hlt_r_notin h_lt_r_in_old_ideal
 
 variable (m) [DecidableEq σ] in
-noncomputable def Buchberger_Step {G : Finset (MvPolynomial σ k)}
-  (hG : ∀ g ∈ G, g ≠ 0) [Finite σ] : Finset (MvPolynomial σ k) :=
-
+noncomputable def Buchberger_Step
+  {G : Finset (MvPolynomial σ k)}
+  (hG : ∀ g ∈ G, g ≠ 0) [Finite σ]
+  : Finset (MvPolynomial σ k) :=
   if h_Rem_empty : NonZero_Rem_Spoly m G hG = ∅ then
     G
   else
@@ -634,23 +602,3 @@ theorem Buchberger_Alg_oneline [Finite σ]
     exact Finset.notMem_empty r hr_in
 
   exact ⟨h_F_sub_G, h_G_is_GB⟩
-
-section Example
-
--- 1. Set up the context: Q[x, y] with lexicographic order
-abbrev σ₀ := Fin 2
-abbrev k₀ := ℚ
-abbrev P₀ := MvPolynomial σ₀ k₀
-
--- Define lexicographic order m, where X 0 > X 1
-noncomputable def m₀ : MonomialOrder σ₀ := lex
-
--- Handy notations for variables x and y
-noncomputable def X₀ : P₀ := MvPolynomial.X 0
-noncomputable def Y₀ : P₀ := MvPolynomial.X 1
-
--- 2. Define the initial set of polynomials F = {f₁, f₂}
--- f₁ = x²y - 1
-noncomputable def f₁ : P₀ := X₀^2 * Y₀ - 1
--- f₂ = xy² - x
-noncomputable def f₂ : P₀ := X₀ * Y₀^2 - X₀
