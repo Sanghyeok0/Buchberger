@@ -146,7 +146,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
         · exact hbB
         · have : toAntisymmetrization ((· : M) ≤ ·) b = toAntisymmetrization ((· : M) ≤ ·) c → ((· : M) ≤ ·) b c := by
             rw [toAntisymmetrization, Quotient.eq]
-            simp only [AntisymmRel]
+            -- simp only [AntisymmRel]
             intro h
             exact h.1
 

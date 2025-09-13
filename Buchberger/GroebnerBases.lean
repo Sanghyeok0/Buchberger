@@ -5,10 +5,36 @@ import Mathlib.LinearAlgebra.Span.Defs
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Algebra.Order.Sub.Unbundled.Hom
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
--- import Mathlib.Algebra.Ring.Defs
 import Buchberger.Finset
 import Buchberger.MonomialIdeal
--- import Buchberger.Order2
+
+/-!
+# The Division Algorithm and Buchberger's Criterion
+
+This file defines the multivariate division algorithm (`normalForm`) and proves
+the main theorem of Gröbner basis theory: Buchberger's Criterion.
+
+## Main Definitions
+- `MvPolynomial.normalForm`: Computes the remainder of a polynomial `f` upon division
+  by a set of polynomials `B`. This is often called the "normal form" of `f`.
+- `MvPolynomial.IsGroebnerBasis`: Defines a Gröbner basis `G` for an ideal `I` as a
+  basis whose leading terms generate the initial ideal of `I`.
+- `MonomialOrder.S_polynomial`: The S-polynomial of two polynomials `f` and `g`.
+
+## Main Results
+- `MvPolynomial.normalForm_spec`: Guarantees that the `normalForm` function satisfies
+  the properties of the division algorithm (the division equation, the degree condition,
+  and the remainder condition).
+- `MvPolynomial.normalForm_exists_unique`: Shows that for a Gröbner basis, the remainder
+  is unique.
+- `MvPolynomial.mem_Ideal_iff_GB_normalForm_eq_zero`: A polynomial `f` is in an ideal `I`
+  if and only if its normal form with respect to a Gröbner basis of `I` is zero.
+- `MonomialOrder.Spolynomial_syzygy_of_degree_cancellation`: The crucial "Cancellation Lemma"
+  used in the proof of Buchberger's Criterion.
+- `MvPolynomial.Buchberger_criterion`: The main theorem. A basis `G` of an ideal `I` is a
+  Gröbner basis if and only if the S-polynomial of every pair of elements in `G`
+  reduces to zero.
+-/
 
 variable {σ : Type*} -- [DecidableEq σ]
 variable {m : MonomialOrder σ}
@@ -90,41 +116,11 @@ lemma degree_sum_le (s : Finset ι) (f : ι → MvPolynomial σ R) :
 
 end Semiring
 
-section CommRing
-
-variable {R : Type*} [CommRing R]
-
-noncomputable def normalForm_general
-  (B : Set (MvPolynomial σ R))
-  (hB : ∀ b ∈ B, IsUnit (m.leadingCoeff b))
-  (f : MvPolynomial σ R) : MvPolynomial σ R := by
-  choose gcomb r hr using MonomialOrder.div_set hB f
-  exact r
-
-end CommRing
 end MonomialOrder
-
 namespace MvPolynomial
 section Field
 
 variable {k : Type*} [Field k] [DecidableEq k]
-
-/-
-## TODO
-normalForm과 remainder를 하나로 합치기
--/
-
--- variable (m) in
--- noncomputable def normalForm
---   (B : Set (MvPolynomial σ k))
---   (hB : ∀ b ∈ B, b ≠ 0)
---   (f : MvPolynomial σ k) : MvPolynomial σ k := by
---   choose gcomb r hr using
---     MonomialOrder.div_set
---       (fun b hb => (isUnit_leadingCoeff_iff_nonzero m b).mpr (hB b hb))
---       f
---   -- (*)
---   exact r
 
 omit [DecidableEq k] in
 theorem division_algorithm_existence (m : MonomialOrder σ)
@@ -168,26 +164,6 @@ lemma normalForm_spec (m : MonomialOrder σ)
   let spec_r := Exists.choose_spec spec_q
   -- `spec_r` is exactly the goal of the lemma.
   exact spec_r
-
--- omit [DecidableEq k] in
--- /--
--- This lemma states that the `quotients` and `normalForm` functions satisfy the properties
--- guaranteed by the division algorithm.
--- -/
--- lemma normalForm_spec' (m : MonomialOrder σ)
---   {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
---   -- Property 1: The division equation
---   f = (Finsupp.linearCombination _ (fun (b : B) ↦ (b : MvPolynomial σ k)) (quotients m hB f)) + (normalForm m hB f) ∧
---   -- Property 2: The degree condition
---   (∀ (p : B), m.degree ((p : MvPolynomial σ k) * (quotients m hB f) p) ≼[m] m.degree f) ∧
---   -- Property 3: The remainder condition (irreducibility)
---   (∀ c ∈ (normalForm m hB f).support, ∀ b ∈ B, ¬ m.degree b ≤ c) := by
---   -- The proof is by applying `Exists.choose_spec` twice.
---   let H_exists := division_algorithm_existence m hB f
---   let spec_q := Exists.choose_spec H_exists
---   let spec_r := Exists.choose_spec spec_q
---   -- `spec_r` is exactly the goal of the lemma.
---   exact spec_r
 
 omit [DecidableEq k] in
 /--  If `normalForm m B hB f = 0`, then in fact
@@ -267,18 +243,6 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
       Finset.mem_image_of_mem (fun g ↦ leadingTerm m g) hg_in_G
     exact (Ideal.mem_span (leadingTerm m g)).mpr fun p a ↦ a hgen
 
-variable [Fintype σ] [DecidableEq σ] in
-/--
-§5 Corollary 6.
-Fix a monomial order on \(k[x_1,\dots,x_n]\). Then every ideal \(I\)
-has a Gröbner basis.
-Furthermore, any Gröbner basis for \(I\) is a generating set of \(I\).
--/
-theorem grobner_basis_exists (I : Ideal (MvPolynomial σ k)) :
-  ∃ G : Finset (MvPolynomial σ k), IsGroebnerBasis m I G := by
-  -- have h_fin : Ideal.FG (initialIDeal m I) := Hilbert_basis_initial I
-sorry
-
 variable [DecidableEq σ] in
 /--
 Proposition.  If `G` is a Gröbner basis for `I`, then every `f` admits
@@ -345,20 +309,9 @@ theorem normalForm_exists_unique
       apply Ideal.subset_span
       exact ⟨r - r', dI, hne, rfl⟩
     have hlm_in : monomial (m.degree (r - r')) 1 ∈ initialIdeal m I := by
-      -- have hC : IsUnit (m.leadingCoeff (r - r')) := by
-      --   exact (isUnit_leadingCoeff_iff_nonzero m (r - r')).mpr hne
-      have h₁ : (monomial (m.degree (r - r')) (1 : k)) = C (m.leadingCoeff (r - r'))⁻¹ * (leadingTerm m (r - r')):= by
-        simp only [leadingTerm, C_mul_monomial, inv_mul_cancel₀ (MonomialOrder.leadingCoeff_ne_zero_iff.mpr hne)]
-      -- have h₁: leadingTerm m (r - r') = (MvPolynomial.C (m.leadingCoeff (r - r'))) * (monomial (m.degree (r - r')) (1 : k)) := by
-      --   simp [leadingTerm, C_mul_monomial]
-      rw [initialIdeal]
-
-      have : leadingTerm m (r - r') ∈ initialIdeal m I
-        → C (m.leadingCoeff (r - r'))⁻¹ * (leadingTerm m (r - r')) ∈ initialIdeal m I := by exact fun a ↦ Ideal.mul_mem_left (initialIdeal m I) (C (m.leadingCoeff (r - r'))⁻¹) hlt_in
-      rw [initialIdeal] at *
-      have : C (m.leadingCoeff (r - r'))⁻¹ * leadingTerm m (r - r') ∈ Ideal.span {f | ∃ g ∈ I, g ≠ 0 ∧ leadingTerm m g = f} := by exact this hlt_in
-      rw [h₁]
-      exact this
+      rw [initialIdeal_is_monomial_ideal']
+      apply Ideal.subset_span
+      use (r - r'), dI, hne
     -- extract an exponent α dividing `m.degree d`
     have hmono : monomial (m.degree (r - r')) 1 ∈ monomialIdeal k ↑(Finset.image (fun g ↦ m.degree g) G) := by
       simp only [IsGroebnerBasis.initialIdeal_eq_monomialIdeal hGB, Finset.coe_image] at hlm_in
@@ -470,35 +423,6 @@ noncomputable def S_polynomial
   : MvPolynomial σ k :=
   monomial (m.degree f ⊔ m.degree g - m.degree f) ((m.leadingCoeff f)⁻¹ : k) * f
   - monomial (m.degree f ⊔ m.degree g - m.degree g) (( m.leadingCoeff g)⁻¹ : k) * g
-
-variable (m) in
-omit [DecidableEq k] in
-lemma Spolynomial_zero_of_linearly_dependent
-  (f g : MvPolynomial σ k) (h_ne : f ≠ 0)
-  (h_dep : ∃ c : k, c ≠ 0 ∧ g = C c * f) :
-  S_polynomial m f g = 0 := by
-  obtain ⟨c, hc_ne_zero, rfl⟩ := h_dep
-  have h_deg_eq : m.degree (C c * f) = m.degree f := by
-    rw [degree_mul (C_ne_zero.mpr hc_ne_zero) h_ne]
-    simp only [degree_C, zero_add]
-  have h_lc_eq : m.leadingCoeff (C c * f) = c * m.leadingCoeff f := by
-    -- We need this to prove `IsRegular (m.leadingCoeff (C c))`.
-    have C_eq : C c = monomial (0 : σ →₀ ℕ) c := by exact rfl
-    have h_lc_C_ne_zero : m.leadingCoeff (C c) ≠ 0 := by
-      rw [leadingCoeff_ne_zero_iff, C_ne_zero]; exact hc_ne_zero
-
-    have : IsRegular (m.leadingCoeff (C c)) := by
-      apply isRegular_of_ne_zero h_lc_C_ne_zero
-
-    rw [leadingCoeff_mul_of_isRegular_left this h_ne]
-    rw [C_eq, leadingCoeff_monomial c]
-
-  unfold S_polynomial
-  rw [h_deg_eq, h_lc_eq]
-  simp only [le_refl, sup_of_le_left ,tsub_self, monomial_zero', mul_inv_rev, C_mul, mul_assoc]
-  nth_rw 2 [←mul_assoc]
-  rw [←C_mul, inv_mul_cancel₀ hc_ne_zero]
-  simp only [C_1, one_mul, sub_self]
 
 omit [DecidableEq k] in
 /--
@@ -1884,7 +1808,6 @@ theorem Buchberger_criterion
                 · rw [ite_cond_eq_false ((h_min g - m.leadingTerm (h_min g)) * g.val) 0 (eq_false h)]
                   simp only [degree_zero, map_zero]
                   exact h_min_le_bot
-                -- h_P₂term_deg_lt : ∀ g ∈ G_δ, m.toSyn (m.degree ((h_min g - m.leadingTerm (h_min g)) * ↑g)) < δ_syn_min
 
 
             · -- show m.toSyn (m.degree (h_P₃_finsupp g * ↑g)) < δ_syn_min
@@ -1898,11 +1821,9 @@ theorem Buchberger_criterion
               · rw [ite_cond_eq_false ((h_min g) * g.val) 0 (eq_false h)]
                 simp only [degree_zero, map_zero]
                 exact h_min_le_bot
-              -- h_P₃term_deg_lt : ∀ g ∈ G.attach \ G_δ, m.toSyn (m.degree (h_min g * ↑g)) < δ_syn_min
 
           have h_new_in : δ_new_min ∈ RepMaxSynDegrees := by
             use h_new
-            -- h_f_eq_new : f = h_new.sum (fun g h => h * g.val)
             -- δ_new_min was defined to be the sup for h_new, so the equality is `rfl` by definition
             refine ⟨?_, rfl⟩
             have : h_new.sum (fun g h ↦ h * ↑g) = ∑ g ∈ G.attach, h_new g * ↑g := by
@@ -1923,7 +1844,6 @@ theorem Buchberger_criterion
             rw [←this]; exact h_f_eq_new
 
           have h_min_property := WellFounded.not_lt_min (by exact wellFounded_lt) RepMaxSynDegrees h_RepMaxSynDegrees_nonempty h_new_in
-          -- unfold δ_syn_min at δ_new_min_lt_δ_syn_min
           exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
 
 variable [DecidableEq σ] in
@@ -2003,144 +1923,3 @@ lemma grobner_basis_remove_redundant
 
 end Field
 end MvPolynomial
-
-
---------------------- old version -----------------------
-
--- variable (m) [DecidableEq σ] in
--- /--
--- **Lemma 5 (Cox, Little, O'Shea, Ch 2, §6, Lemma 5): Cancellation Lemma**
--- Suppose we have a sum P = ∑ pᵢ where all pᵢ have the same multidegree δ.
--- If m.degree P < δ, then P is a linear combination of the S-polynomials S(pⱼ, pₗ),
--- and each S(pⱼ, pₗ) has multidegree less than δ.
--- -/
--- lemma exists_S_polynomial_syzygies
---     (p : Finset (MvPolynomial σ k)) -- The list of polynomials p₁, ..., pₛ
---     (hp : ∀ pi ∈ p, pi ≠ 0) -- Finset.nonempty_of_sum_ne_zero
---     (δ : σ →₀ ℕ) -- The common multidegree
---     (hδ : 0 ≺[m] δ)
---     (hp_deg : ∀ pi ∈ p, m.degree pi = δ) -- All polynomials have multidegree δ
---     (hsum   : m.degree (∑ pi ∈ p, pi) ≺[m] δ)
---     : ∀ ps ∈ p,
---       (∑ pi ∈ p, pi = ∑ pi ∈ p.erase ps, m.leadingCoeff pi • S_polynomial m pi ps
---       ∧ ∀ pi ∈ p, ∀ pj ∈ p, m.degree (S_polynomial m pj pi) ≺[m] δ)
---       := by
---       intro ps hps
---       let p' : Finset (MvPolynomial σ k) := p.erase ps
---       have coeff_sum_zero : (∑ pi ∈ p, pi).coeff δ = 0 := by
---         apply coeff_eq_zero_of_lt
---         simpa using hsum
---       -- But (∑ pi in p, pi).coeff δ = ∑ pi in p, pi.coeff δ by coeff_sum.
---       have sum_of_coeffs : ∑ pi ∈ p, pi.coeff δ = 0 := by
---         rw [coeff_sum] at coeff_sum_zero
---         exact coeff_sum_zero
---       -- 3)  Because m.degree pi = δ for each pi ∈ p, we have pi.coeff δ = m.leadingCoeff pi.
---       have sum_lead_coeffs : ∑ pi ∈ p, m.leadingCoeff pi = 0 := by
---         have eq_coeff_lead : ∀ pi ∈ p, pi.coeff δ = m.leadingCoeff pi := by
---           intro pi hpi
---           rw [leadingCoeff, hp_deg pi hpi]
---         calc
---           ∑ pi ∈ p, m.leadingCoeff pi = ∑ pi ∈ p, coeff δ pi := by exact Eq.symm (Finset.sum_congr rfl eq_coeff_lead)
---           _ = 0 := by exact sum_of_coeffs
-
---       have sum_split : ps + (∑ pi ∈ p', pi) = (∑ pi ∈ p, pi) := by
---         -- p = p' ∪ {s}, disjointly.
---         apply Finset.add_sum_erase
---         exact hps
-
---       have S_poly_simp : ∀ pi ∈ p, ∀ pj ∈ p, S_polynomial m pi pj = ((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff pj)⁻¹) • pj := by
---         intro pi hpi pj hpj
---         unfold S_polynomial
---         have deg_sup : m.degree pi ⊔ m.degree pj = δ := by
---           simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left]
---         simp only [hp_deg pi hpi, hp_deg pj hpj, le_refl, sup_of_le_left, tsub_self,
---           monomial_zero'] -- , one_div
---         rw [MvPolynomial.C_mul', MvPolynomial.C_mul']
-
---       have expand_sum1 : ∑ pi ∈ p', (m.leadingCoeff pi) • S_polynomial m pi ps
---         = ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps) := by
---           apply Finset.sum_congr rfl
---           intro x hxp'; congr
---           apply S_poly_simp
---           · exact Finset.mem_of_mem_erase hxp'
---           · exact hps
---           -- apply S_poly_simp (by exact Finset.mem_of_mem_erase hxp') hps
---       have expand_sum2 : ∑ pi ∈ p', m.leadingCoeff pi • (((m.leadingCoeff pi)⁻¹) • pi - ((m.leadingCoeff ps)⁻¹) • ps)
---         = ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps) := by
---           apply Finset.sum_congr rfl
---           intro x hxp'
---           rw [smul_sub, ←smul_assoc, ←smul_assoc]
---           simp
---           have : (m.leadingCoeff x * (m.leadingCoeff x)⁻¹) = 1 := by
---             refine IsUnit.mul_inv_cancel ?_
---             refine isUnit_leadingCoeff.mpr ?_
---             exact hp _ (by exact Finset.mem_of_mem_erase hxp')
---           rw [this]
---           simp only [one_smul]
---       have expand_sum3 : ∑ pi ∈ p', (pi - (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) • ps)
---         = ∑ pi ∈ p', pi + ( - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹))) • ps := by
---           rw [Finset.sum_sub_distrib, neg_smul, Finset.sum_smul, sub_eq_add_neg]
---       have sum_lemma : - ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)) = 1 := by
---         rw [←add_zero (- ∑ pi ∈ p', (m.leadingCoeff pi * ((m.leadingCoeff ps)⁻¹)))]
---         have : (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ - (m.leadingCoeff ps) * (m.leadingCoeff ps)⁻¹ = 0 := by
---           exact sub_eq_zero.mpr rfl
---         rw [←this, sub_eq_neg_add, ←add_assoc]
---         unfold p'
---         rw [←neg_add]
---         rw [Finset.sum_erase_add p _ hps, ←Finset.sum_mul]
---         rw [sum_lead_coeffs]
---         simp only [zero_mul, neg_zero, zero_add] -- , p'
---         refine IsUnit.mul_inv_cancel ?_
---         refine isUnit_leadingCoeff.mpr ?_
---         exact hp ps hps
---       simp only [sum_lemma, one_smul, p'] at expand_sum3 -- Finset.sum_sub_distrib
---       rw [Finset.sum_erase_add] at expand_sum3
---       clear sum_lemma
---       constructor
---       · rw [expand_sum1, expand_sum2, expand_sum3]
---       · intro pi hpi pj hpj
---         rw [S_poly_simp pj hpj pi hpi]
---         have hi_unit : IsUnit (m.leadingCoeff pi) := (isUnit_leadingCoeff_iff_nonzero m pi).mpr (hp pi hpi)
---         have hj_unit : IsUnit (m.leadingCoeff pj) := (isUnit_leadingCoeff_iff_nonzero m pj).mpr (hp pj hpj)
---         have hji : m.degree pi ≤ m.degree pj := by
---           have h₁ : m.degree pj = δ := by exact hp_deg pj hpj
---           have h₂ : m.degree pi = δ := by exact hp_deg pi hpi
---           rw [h₂, h₁]
---         have : (m.toSyn 0 < m.toSyn δ) → δ ≠ 0 := by
---           contrapose
---           simp only [ne_eq, Decidable.not_not, map_zero, not_lt]
---           intro hδ_zero
---           rw [hδ_zero, ←m.eq_zero_iff]
---           exact AddEquiv.map_zero m.toSyn
---         have hj_deg_nz : m.degree pj ≠ 0 := by
---           rw [hp_deg pj hpj]
---           exact this hδ
---         clear this
---         have : IsRegular (m.leadingCoeff pj)⁻¹ := by
---           refine isRegular_iff_ne_zero.mpr ?_
---           exact inv_ne_zero (by exact leadingCoeff_ne_zero_iff.mpr (hp pj hpj))
---         have h1' : m.degree (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
---           = m.degree ((m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)) := by
---             rw [MonomialOrder.degree_smul this]
---         have h2' : (m.leadingCoeff pj)⁻¹ • (pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi)
---           = (m.leadingCoeff pj)⁻¹ • pj - (m.leadingCoeff pi)⁻¹ • pi := by
---             rw [smul_sub]
---             simp only [sub_right_inj]
---             rw [←smul_assoc]
---             simp only [smul_eq_mul, ←mul_assoc]
---             have : (m.leadingCoeff pj)⁻¹ * (m.leadingCoeff pj) = 1 := by
---               exact IsUnit.inv_mul_cancel hj_unit
---             simp only [this, one_mul]
---         rw [←h2', ←h1']
---         have hi_deg_δ : m.degree pj = δ := by exact hp_deg pj hpj
---         have hj_deg_δ : m.degree pi = δ := by exact hp_deg pi hpi
---         have h3' : pj - ((m.leadingCoeff pj) * (m.leadingCoeff pi)⁻¹) • pi
---           = m.reduce hi_unit pj := by
---           rw [reduce, hi_deg_δ, hj_deg_δ]
---           simp
---           rw [←MvPolynomial.C_mul, MvPolynomial.C_mul', mul_comm]
---         rw [h3']
---         have : m.degree pj = δ := by exact hp_deg pj hpj
---         rw [←hi_deg_δ]
---         apply MonomialOrder.degree_reduce_lt hi_unit hji hj_deg_nz
---       exact hps

@@ -2,8 +2,8 @@
 
 \section{Piecewise}
 
-\begin{lemma}[prod ite not mem]
-    \lean{Finset.prod_ite_not_mem}\label{lem:prod_ite_not_mem}
+\begin{lemma}[prod ite not mem]\label{lem:prod_ite_not_mem}
+    \lean{Finset.prod_ite_not_mem}
     \leanok
     Let $s, t$ be finite sets of indices in $\iota$, and let $f \colon \iota \to M$. 
     Then
@@ -18,6 +18,7 @@
     \]
 \end{lemma}
 \begin{proof}
+    \leanok
     We split the product over the disjoint union $s = (s \setminus t) \cup (s \cap t)$.
     \begin{align*}
     \prod_{x \in s} 
@@ -50,6 +51,7 @@
     \]
 \end{lemma}
 \begin{proof}
+    \leanok
     We split the sum over the disjoint union $s = (s \setminus t) \cup (s \cap t)$.
     \begin{align*}
     \sum_{x \in s} 

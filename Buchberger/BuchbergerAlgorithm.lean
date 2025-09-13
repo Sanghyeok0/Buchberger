@@ -1,6 +1,37 @@
 import Buchberger.GroebnerBases
 
+/-!
+# The Buchberger Algorithm
 
+This file contains the formalization of the Buchberger algorithm, which computes a
+Gröbner basis for any ideal in a polynomial ring over a field.
+
+The algorithm is proven correct in two distinct styles:
+1.  **Explicit Recursion (`Buchberger_Step`, `Buchberger_Alg`):** An explicit recursive
+    function is defined, and its termination and correctness are proven using helper
+    lemmas about its properties (invariants).
+2.  **Well-Founded Recursion (`Buchberger_Alg_wf`):** A more abstract approach using
+    `WellFounded.fix`, which is a common and powerful pattern in `mathlib`. This
+    separates the one-step logic of the algorithm from the recursion mechanism itself.
+
+Termination for both proofs is guaranteed by Hilbert's Basis Theorem, which ensures
+that the strictly increasing chain of initial ideals generated at each step must
+eventually stabilize.
+
+## Main Definitions
+- `MvPolynomial.NonZero_Rem_Spoly`: A helper function that computes the set of S-polynomials
+  which do not reduce to zero with respect to the current basis.
+- `MvPolynomial.Buchberger_Step`: A recursive function implementing one step of the
+  explicit version of the Buchberger algorithm.
+
+## Main Results
+- `MvPolynomial.lt_ideal_span_of_rem_spoly_nonempty`: The key lemma for the termination proof,
+  showing that adding non-zero remainders strictly increases the initial ideal.
+- `MvPolynomial.Buchberger_Alg`: The main theorem (first version), proving that the
+  explicit recursive algorithm terminates and returns a valid Gröbner basis.
+- `MvPolynomial.Buchberger_Alg_wf`: The main theorem (second version), proving the same
+  result using well-founded recursion.
+-/
 
 variable {σ : Type*}
 variable {m : MonomialOrder σ}
@@ -359,7 +390,7 @@ theorem Buchberger_Alg [Finite σ]
 
 
 variable (m) [DecidableEq σ] in
-theorem Buchberger_Alg_oneline [Finite σ]
+theorem Buchberger_Alg_wf [Finite σ]
   {F : Finset (MvPolynomial σ k)}
   {I : Ideal (MvPolynomial σ k)}
   (hF : ∀ f ∈ F, f ≠ 0)
@@ -379,18 +410,18 @@ theorem Buchberger_Alg_oneline [Finite σ]
 
   ------------------------------------------------------------------------------------------------------------------
     -- the "new" S-polys at a state
-  let NonZero_Rem_Spoly (s : {G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0}) : Finset (MvPolynomial σ k) :=
+  let NonZero_Rem_Spoly_wf (s : {G : Finset (MvPolynomial σ k) // ∀ g ∈ G, g ≠ 0}) : Finset (MvPolynomial σ k) :=
     (s.val.offDiag.image (fun pq => normalForm m s.property (S_polynomial m pq.1 pq.2))).filter (· ≠ 0)
 
   -- extend a state by adjoining new S-polys
   let extend (s : {G // ∀ g ∈ G, g ≠ (0 : (MvPolynomial σ k))}) : {G // ∀ g ∈ G, g ≠ (0 : (MvPolynomial σ k))} :=
-    ⟨s.val ∪ NonZero_Rem_Spoly s, by
+    ⟨s.val ∪ NonZero_Rem_Spoly_wf s, by
       intro g hg
       rcases Finset.mem_union.mp hg with hgs | hgR
       · exact s.property g hgs
-      · unfold NonZero_Rem_Spoly at hgR; simp only [mem_filter] at hgR; exact hgR.2⟩
+      · unfold NonZero_Rem_Spoly_wf at hgR; simp only [mem_filter] at hgR; exact hgR.2⟩
 
-  have extend_decreases (s : {G // ∀ g ∈ G, g ≠ 0}) (h_nonempty : NonZero_Rem_Spoly s ≠ ∅) :
+  have extend_decreases (s : {G // ∀ g ∈ G, g ≠ 0}) (h_nonempty : NonZero_Rem_Spoly_wf s ≠ ∅) :
     R (extend s) s := by
     unfold R H
     dsimp only [OrderDual.toDual]
@@ -404,7 +435,7 @@ theorem Buchberger_Alg_oneline [Finite σ]
     · intro h_eq
       obtain ⟨r, hr⟩ := Nonempty.exists_mem (nonempty_iff_ne_empty.mpr h_nonempty)
       have hLT_r_notin : m.leadingTerm r ∉ Ideal.span ((fun f ↦ m.leadingTerm f) '' s.val) := by
-        unfold NonZero_Rem_Spoly at hr
+        unfold NonZero_Rem_Spoly_wf at hr
         simp only [mem_filter, mem_image, mem_offDiag] at hr
         obtain ⟨⟨pq, hpq⟩, hr_nezero⟩ := hr
         rw [←hpq.2]
@@ -427,10 +458,10 @@ theorem Buchberger_Alg_oneline [Finite σ]
     let G := G_sub.val
     let hG := G_sub.property
 
-    if h_Rem_empty : NonZero_Rem_Spoly G_sub = ∅ then
+    if h_Rem_empty : NonZero_Rem_Spoly_wf G_sub = ∅ then
       G_sub
     else
-      -- prove strict decrease of the measure when NonZero_Rem_Spoly G ≠ ∅
+      -- prove strict decrease of the measure when NonZero_Rem_Spoly_wf G ≠ ∅
       have h_decreasing := extend_decreases G_sub h_Rem_empty
 
       rec_call (extend G_sub) h_decreasing
@@ -458,15 +489,15 @@ theorem Buchberger_Alg_oneline [Finite σ]
 
     rw [WellFounded.fix_eq]
     unfold buchberger_step_fn
-    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
+    by_cases h_Rem_empty : NonZero_Rem_Spoly_wf s = ∅
     · rw [dif_pos h_Rem_empty]
     · rw [dif_neg h_Rem_empty]
-      have h_s_sub_union : s.val ⊆ s.val ∪ NonZero_Rem_Spoly s := subset_union_left
-      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
+      have h_s_sub_union : s.val ⊆ s.val ∪ NonZero_Rem_Spoly_wf s := subset_union_left
+      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly_wf s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
           | inl hg_in_G => exact hG g hg_in_G
-          | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+          | inr hg_in_Rem => unfold NonZero_Rem_Spoly_wf at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
       have h_decreasing := extend_decreases s h_Rem_empty
       specialize IH (extend s) h_decreasing
       exact Finset.Subset.trans h_s_sub_union IH
@@ -490,15 +521,15 @@ theorem Buchberger_Alg_oneline [Finite σ]
     let hG := s.property
     rw [WellFounded.fix_eq]
     dsimp only [Lean.Elab.WF.paramLet, dite_eq_ite, buchberger_step_fn]
-    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
+    by_cases h_Rem_empty : NonZero_Rem_Spoly_wf s = ∅
     · rw [if_pos h_Rem_empty]
     · rw [if_neg h_Rem_empty]
-      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
+      have : ∀ g ∈ ↑s ∪ NonZero_Rem_Spoly_wf s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
           | inl hg_in_G => exact hG g hg_in_G
-          | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
-      let s' : State := ⟨s.val ∪ NonZero_Rem_Spoly s, this⟩
+          | inr hg_in_Rem => unfold NonZero_Rem_Spoly_wf at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+      let s' : State := ⟨s.val ∪ NonZero_Rem_Spoly_wf s, this⟩
       have h_decreasing := extend_decreases s h_Rem_empty
 
       rw [← ih (extend s) h_decreasing]
@@ -511,7 +542,7 @@ theorem Buchberger_Alg_oneline [Finite σ]
         simp only [coe_union, Set.union_subset_iff]
         constructor
         · exact Ideal.subset_span
-        · unfold NonZero_Rem_Spoly
+        · unfold NonZero_Rem_Spoly_wf
           simp only [coe_filter, mem_image, mem_offDiag]
           rw [Set.subset_def]
           intro r hr_in_Rem
@@ -552,25 +583,25 @@ theorem Buchberger_Alg_oneline [Finite σ]
   ----------------------------------------------------------------
   -- 4) Use Buchberger criterion: show all S-polynomials reduce to 0.
   ----------------------------------------------------------------
-  have Rem_fix_empty : NonZero_Rem_Spoly (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
+  have Rem_fix_empty : NonZero_Rem_Spoly_wf (h_wf.fix buchberger_step_fn F₀_sub) = ∅ := by
     -- Do induction on arbitrary starting state s, specialize at F₀_sub
-    apply h_wf.induction (C := fun s => NonZero_Rem_Spoly (h_wf.fix buchberger_step_fn s) = ∅) F₀_sub
+    apply h_wf.induction (C := fun s => NonZero_Rem_Spoly_wf (h_wf.fix buchberger_step_fn s) = ∅) F₀_sub
     intro s ih
     have hfix := WellFounded.fix_eq h_wf buchberger_step_fn s
 
-    by_cases h_Rem_empty : NonZero_Rem_Spoly s = ∅
-    · -- stable case: fix s = s, so NonZero_Rem_Spoly (fix s) = NonZero_Rem_Spoly s = ∅
+    by_cases h_Rem_empty : NonZero_Rem_Spoly_wf s = ∅
+    · -- stable case: fix s = s, so NonZero_Rem_Spoly_wf (fix s) = NonZero_Rem_Spoly_wf s = ∅
       have : (h_wf.fix buchberger_step_fn s) = s := by
         rw [WellFounded.fix_eq]
         dsimp only [Lean.Elab.WF.paramLet, dite_eq_ite, buchberger_step_fn]
         rw [if_pos h_Rem_empty]
-      simp only [NonZero_Rem_Spoly, this, h_Rem_empty]
-    · -- recursive case: s ∪ NonZero_Rem_Spoly s and use IH
-      have h_all_nonzero : ∀ g ∈ s.val ∪ NonZero_Rem_Spoly s, g ≠ 0 := by
+      simp only [NonZero_Rem_Spoly_wf, this, h_Rem_empty]
+    · -- recursive case: s ∪ NonZero_Rem_Spoly_wf s and use IH
+      have h_all_nonzero : ∀ g ∈ s.val ∪ NonZero_Rem_Spoly_wf s, g ≠ 0 := by
         intro g hg
         cases mem_union.mp hg with
         | inl hg_in_s => exact s.property g hg_in_s
-        | inr hg_in_Rem => unfold NonZero_Rem_Spoly at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
+        | inr hg_in_Rem => unfold NonZero_Rem_Spoly_wf at hg_in_Rem; rw [mem_filter] at hg_in_Rem; exact hg_in_Rem.2
       -- prove strict decrease
       have h_decreasing := extend_decreases s h_Rem_empty
 
@@ -588,9 +619,9 @@ theorem Buchberger_Alg_oneline [Finite σ]
     intro p q hp hq h_ne
     let r := normalForm m hG_nonzero (S_polynomial m p q)
     by_contra hr_nonzero
-    -- r would be in NonZero_Rem_Spoly of final state
-    have hr_in : r ∈ NonZero_Rem_Spoly G_sub := by
-      dsimp only [NonZero_Rem_Spoly]
+    -- r would be in NonZero_Rem_Spoly_wf of final state
+    have hr_in : r ∈ NonZero_Rem_Spoly_wf G_sub := by
+      dsimp only [NonZero_Rem_Spoly_wf]
       simp only [mem_filter, mem_image, mem_offDiag]
       refine ⟨⟨(p, q), ?_, rfl⟩, ?_⟩
       · -- show (p, q) ∈ offDiag
