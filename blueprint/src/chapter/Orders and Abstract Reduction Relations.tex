@@ -127,7 +127,7 @@
     
 \begin{proposition}\label{prop:wqoAscendingSubsequence} % [Becker-Weispfenning1993] 160p Proposition 4.45
     \lean{WellQuasiOrdered.exists_monotone_subseq}
-    \leanok
+    \mathlibok
     \uses{prop:wqoEquivalent}
     Let $\preceq$ be a well- quasi-order on $M$, and let $\{a_n\}_{n \in \mathbb{N}}$ be a sequence of elements of $M$.
     Then there exists a strictly ascending sequence $\{n_i\}_{i \in \mathbb{N}}$ of natural numbers such that $a_{n_i} \preceq a_{n_j}$ for all $i < j$.
@@ -176,6 +176,13 @@
   \]
   where the $\max$ is taken with respect to the monomial order.
 \end{lemma}
+\begin{proof}
+  Let $M = \max_{i \in s} \{ \operatorname{multideg}(h_i) \}$. 
+  Any monomial $x^b$ appearing in the sum $\sum_{i \in s} h_i$ must be a monomial in at least one of the summands, say $h_{i_0}$ for some $i_0 \in s$.
+  By definition, the multidegree of any such term is bounded by the multidegree of the polynomial it belongs to, so $b \le \operatorname{multideg}(h_{i_0})$.
+  Also by definition, $\operatorname{multideg}(h_{i_0}) \le M$.
+  Therefore, $b \le M$ for any monomial $x^b$ in the sum. This implies that the multidegree of the sum itself cannot exceed $M$.
+\end{proof}
 
 \begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
     \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}

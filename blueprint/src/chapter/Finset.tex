@@ -17,6 +17,23 @@
     \prod_{x \in s \setminus t} f(x).
     \]
 \end{lemma}
+\begin{proof}
+    We split the product over the disjoint union $s = (s \setminus t) \cup (s \cap t)$.
+    \begin{align*}
+    \prod_{x \in s} 
+    \begin{cases}
+    1, & \text{if } x \in t \\
+    f(x), & \text{otherwise}
+    \end{cases}
+    &=
+    \left( \prod_{x \in s \setminus t} f(x) \right)
+    \cdot
+    \left( \prod_{x \in s \cap t} 1 \right) \\
+    &= \prod_{x \in s \setminus t} f(x).
+    \end{align*}
+    The first equality holds because for any $x \in s \setminus t$, the term is $f(x)$, while for any $x \in s \cap t$, the term is $1$. 
+    The product of ones is one.
+\end{proof}
 
 \begin{lemma}[sum ite not mem]\label{lem:sum_ite_not_mem}
     \lean{Finset.sum_ite_not_mem}
@@ -32,3 +49,20 @@
     \sum_{x \in s \setminus t} f(x).
     \]
 \end{lemma}
+\begin{proof}
+    We split the sum over the disjoint union $s = (s \setminus t) \cup (s \cap t)$.
+    \begin{align*}
+    \sum_{x \in s} 
+    \begin{cases}
+    0, & \text{if } x \in t \\
+    f(x), & \text{otherwise}
+    \end{cases}
+    &=
+    \left( \sum_{x \in s \setminus t} f(x) \right)
+    +
+    \left( \sum_{x \in s \cap t} 0 \right) \\
+    &= \sum_{x \in s \setminus t} f(x).
+    \end{align*}
+    The first equality holds because for any $x \in s \setminus t$, the term is $f(x)$, while for any $x \in s \cap t$, the term is $0$. 
+    The sum of zeros is zero.
+\end{proof}
