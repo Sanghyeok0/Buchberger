@@ -711,7 +711,6 @@ lemma degree_S_polynomial_lt_lcm (f g : MvPolynomial σ k) (hf : f ≠ 0) (hg : 
   exact max_lt h_deg_lt1 h_deg_lt2
 
 
-
 variable (m) in
 /--
 **(Cox, Little, O'Shea, Ch 2, §6, Exercise 8)
