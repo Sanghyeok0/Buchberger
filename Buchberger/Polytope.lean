@@ -3,13 +3,14 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Analysis.Convex.Cone.Basic
 import Mathlib.LinearAlgebra.Matrix.DotProduct
 import Mathlib.Analysis.Convex.Extreme
+import Mathlib.Analysis.Convex.Basic
 import Mathlib.Data.Matrix.Mul
 import Mathlib.Analysis.InnerProductSpace.PiL2
 
 -- Let `ι` be the type indexing the dimensions of our space (e.g., `Fin n` for ℝⁿ).
 variable {ι m n : Type*} [Fintype ι] [Fintype m] [Fintype n]
 
-open Matrix
+open Matrix Set
 
 namespace PolyhedralGeometry
 
@@ -39,6 +40,62 @@ structure Polyhedron (m ι : Type*) where
   /-- The set of points in ℝⁿ satisfying the inequalities A • x ≤ b. -/
   toSet : Set (ι → ℝ) := { x | A *ᵥ x ≤ b }
 
+lemma mem_polyhedron_iff (P : Polyhedron m ι) (x : ι → ℝ) :
+  x ∈ P.toSet ↔ P.A *ᵥ x ≤ P.b := by sorry
+
+/--
+A Polyhedron is a convex set.
+-/
+theorem Polyhedron.convex (P : Polyhedron m ι) : Convex ℝ P.toSet := by
+  have h_def : P.toSet = ⋂ i : m, { x | P.A i ⬝ᵥ x ≤ P.b i } := by
+    ext x
+    simp only [mem_iInter, mem_setOf_eq]
+    -- The inequality `A *ᵥ x ≤ b` is defined element-wise.
+    show x ∈ P.toSet ↔ ∀ (i : m), P.A i ⬝ᵥ x ≤ P.b i
+    unfold Polyhedron.toSet
+    show x ∈ P.5 ↔ ∀ (i : m), P.A i ⬝ᵥ x ≤ P.b i
+    sorry
+  rw [h_def]
+  -- The intersection of a family of convex sets is convex.
+  apply convex_iInter
+  -- Now we just need to prove that each set in the intersection is convex.
+  intro i
+  -- The map `x ↦ P.A i ⬝ᵥ x` is a linear map.
+  -- let f : (ι → ℝ) →ₗ[ℝ] ℝ := {
+  --   toFun := fun x => P.A i ⬝ᵥ x
+  --   map_add' := by
+  --     intro x y
+  --     -- Prove f(x + y) = f(x) + f(y)
+  --     simp [dotProduct_add]
+  --   map_smul' := by
+  --     intro r x
+  --     -- Prove f(r • x) = r • f(x)
+  --     simp [dotProduct_smul, smul_eq_mul]
+  -- }
+  let f := fun x : (ι → ℝ) => P.A i ⬝ᵥ x
+  have hf : IsLinearMap ℝ f := {
+    map_add := by intro x y; exact dotProduct_add (P.A i) x y
+    map_smul := by intro r x; exact dotProduct_smul r (P.A i) x
+  }
+  -- The set `{x | f x ≤ P.b i}` is a closed half-space.
+  -- `convex_halfspace_le` proves that such a set is convex.
+  exact convex_halfSpace_le hf (P.b i)
+
+lemma Polyhedron.toSet_convex (P : Polyhedron m ι) : Convex ℝ P.toSet := by
+  -- P.toSet := { x | P.A *ᵥ x ≤ P.b }
+  -- express as intersection of halfspaces: P.toSet = ⋂ i, { x | (P.A i) ⬝ᵥ x ≤ P.b i }
+  have : P.toSet = ⋂ (i : m), { x | (P.A i) ⬝ᵥ x ≤ P.b i } := by
+    funext x
+    dsimp [Set.mem_setOf_eq, Matrix.mulVec]
+    -- the above line depends on how Matrix.* is defined; if needed, use `simp`:
+    sorry
+  rw [this]
+  -- apply convex_iInter with explicit 𝕜, E to help inference
+  apply convex_iInter (𝕜 := ℝ) (E := ι → ℝ)
+  intro i
+  -- each halfspace { x | a x ≤ b } is convex
+  sorry
+
 /--
 A **Polyhedral Cone** is a special case of a polyhedron where b = 0.
 -/
@@ -53,6 +110,10 @@ structure PolyhedralCone (m ι : Type*) extends (Polyhedron m ι) where
 structure Polytope (ι : Type*) where
   vertices : Finset (ι → ℝ)
   toSet : Set (ι → ℝ) := convexHull ℝ vertices
+
+lemma Polytope.toSet_convex (P : Polytope ι) : Convex ℝ P.toSet := by
+  -- P.toSet = convexHull ℝ P.vertices by definition
+  sorry
 
 -- instance : Coe (Polytope ι) (Set (ι → ℝ)) where
 --   coe P := convexHull ℝ (P.vertices : Set (ι → ℝ))
@@ -94,8 +155,8 @@ sorry
 -- theorem exists_polytope_cone_sum_decomposition (P : Polyhedron m ι) :
 --   ∃ (Q : Polytope ι) (C : PolyhedralCone n ι),
 --     -- **Corrected Line**: Using explicit coercions `(Q : Set ...)` for robustness.
---     (∀ (C' : PolyhedralCone n ι), P.toSet = (Q.toSet : Set (ι → ℝ)) + (C'.toSet : Set (ι → ℝ)) → C' = C) ∧
---     (P : Set (ι → ℝ)) = (Q : Set (ι → ℝ)) + (C : Set (ι → ℝ)) :=
+
+--     (P.toSet : Set (ι → ℝ)) = (Q.toSet) + (C.toSet) :=
 -- sorry
 
 -- /--

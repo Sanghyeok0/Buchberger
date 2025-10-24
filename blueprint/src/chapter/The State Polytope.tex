@@ -8,7 +8,7 @@ has the property that its vertices are in a natural bijection with the distinct 
 ideals $\mathrm{in}_{<}(I)$.
 
 \begin{definition}[Polyhedron]\label{def:polyhedron}
-    \lean{PolyhedralGeometry.HPolyhedron}
+    \lean{PolyhedralGeometry.Polyhedron}
     \leanok
     A \emph{polyhedron} is a finite intersection of closed half-spaces in $\mathbb{R}^n$. Thus a polyhedron $P$ can be written as $P = \{ \mathbf{x} \in \mathbb{R}^n : A \cdot \mathbf{x} \le \mathbf{b} \}$, where $A$ is a matrix with $n$ columns.
 \end{definition}
@@ -24,11 +24,11 @@ P = \operatorname{pos}(\{\mathbf{u}_1, \dots, \mathbf{u}_m\}) := \{ \lambda_1 \m
     A polyhedron of the form \eqref{eq:polyhedral_cone_V_rep} is called a \emph{(polyhedral) cone}.
 \end{definition}
 
-\begin{lemma}[Characterization of Cone Membership]\label{lem:mem_polyhedral_cone}
-    \lean{PolyhedralGeometry.mem_polyhedralCone_iff_exists_nonneg_coeffs}
-    % The corresponding Lean lemma has `sorry`, so `\leanok` is omitted.
-    A point $\mathbf{x}$ is in a polyhedral cone if and only if it is a non-negative linear combination of its generators, as defined in \eqref{eq:polyhedral_cone_V_rep}.
-\end{lemma}
+% \begin{lemma}[Characterization of Cone Membership]\label{lem:mem_polyhedral_cone}
+%     \lean{PolyhedralGeometry.mem_polyhedralCone_iff_exists_nonneg_coeffs}
+%     % The corresponding Lean lemma has `sorry`, so `\leanok` is omitted.
+%     A point $\mathbf{x}$ is in a polyhedral cone if and only if it is a non-negative linear combination of its generators, as defined in \eqref{eq:polyhedral_cone_V_rep}.
+% \end{lemma}
 
 Here and throughout this book $\mathbb{R}_+$ denotes the non-negative reals. The \emph{polar} of a cone $C$ is defined as
 \[
