@@ -82,37 +82,37 @@ lemma degree_sum_le_syn {ι : Type*} (s : Finset ι) (h : ι → MvPolynomial σ
   apply @Finset.le_sup _ _ _ _ s fun i ↦ m.toSyn (m.degree (h i))
   exact hi_s
 
-variable {ι : Type*} [DecidableEq ι] in
-lemma degree_sum_le (s : Finset ι) (f : ι → MvPolynomial σ R) :
-    m.degree (∑ i ∈ s, f i) ≼[m] s.sup (fun i => m.degree (f i)) := by
-  -- We proceed by induction on the finset `s`.
-  induction s using Finset.induction_on with
-  | empty =>
-    simp only [Finset.sum_empty, m.degree_zero, map_zero, Finset.sup_empty, zero_le]
-    --exact StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl (m.toSyn ⊥)
-  | insert i s hi_not_in_s ih =>
-    by_cases h_s_empty : s = ∅
-    · -- If s is empty, then `insert i s` is just `{i}`.
-      subst h_s_empty
-      simp only [insert_empty_eq, Finset.sum_singleton, Finset.sup_singleton, le_refl]
-    -- Inductive step: s' = insert i s, where s is not empty.
-    have h_s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty h_s_empty
-    have h_insert_nonempty : (insert i s).Nonempty := by exact Finset.insert_nonempty i s
-    -- `∑_{j∈s'} f j = f i + ∑_{j∈s} f j`
-    rw [Finset.sum_insert hi_not_in_s]
-    have : m.toSyn (m.degree ((f i) + (∑ j ∈ s, f j))) ≤ max (m.toSyn (m.degree (f i))) (m.toSyn (m.degree (∑ j ∈ s, f j))) := m.degree_add_le
-    apply le_trans this
-    rw [max_le_iff]
-    constructor
-    · -- m.toSyn (m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
-      apply toSyn_monotone
-      have : i ∈ (insert i s) := by exact Finset.mem_insert_self i s
-      apply Finset.le_sup this
-    · -- m.toSyn (s.sup fun i ↦ m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
-      apply le_trans ih
-      apply toSyn_monotone
-      refine Finset.sup_mono ?_
-      exact Finset.subset_insert i s
+-- variable {ι : Type*} [DecidableEq ι] in
+-- lemma degree_sum_le (s : Finset ι) (f : ι → MvPolynomial σ R) :
+--     m.degree (∑ i ∈ s, f i) ≼[m] s.sup (fun i => m.degree (f i)) := by
+--   -- We proceed by induction on the finset `s`.
+--   induction s using Finset.induction_on with
+--   | empty =>
+--     simp only [Finset.sum_empty, m.degree_zero, map_zero, Finset.sup_empty, zero_le]
+--     --exact StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl (m.toSyn ⊥)
+--   | insert i s hi_not_in_s ih =>
+--     by_cases h_s_empty : s = ∅
+--     · -- If s is empty, then `insert i s` is just `{i}`.
+--       subst h_s_empty
+--       simp only [insert_empty_eq, Finset.sum_singleton, Finset.sup_singleton, le_refl]
+--     -- Inductive step: s' = insert i s, where s is not empty.
+--     have h_s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty h_s_empty
+--     have h_insert_nonempty : (insert i s).Nonempty := by exact Finset.insert_nonempty i s
+--     -- `∑_{j∈s'} f j = f i + ∑_{j∈s} f j`
+--     rw [Finset.sum_insert hi_not_in_s]
+--     have : m.toSyn (m.degree ((f i) + (∑ j ∈ s, f j))) ≤ max (m.toSyn (m.degree (f i))) (m.toSyn (m.degree (∑ j ∈ s, f j))) := m.degree_add_le
+--     apply le_trans this
+--     rw [max_le_iff]
+--     constructor
+--     · -- m.toSyn (m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
+--       apply toSyn_monotone
+--       have : i ∈ (insert i s) := by exact Finset.mem_insert_self i s
+--       apply Finset.le_sup this
+--     · -- m.toSyn (s.sup fun i ↦ m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
+--       apply le_trans ih
+--       apply toSyn_monotone
+--       refine Finset.sup_mono ?_
+--       exact Finset.subset_insert i s
 
 end Semiring
 

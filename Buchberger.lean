@@ -5,3 +5,4 @@ import Buchberger.Order
 import Buchberger.MonomialIdeal
 import Buchberger.GroebnerBases
 import Buchberger.BuchbergerAlgorithm
+import Buchberger.Polytope

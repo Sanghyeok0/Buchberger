@@ -75,7 +75,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
     haveI : Fintype (minClasses N) := hfin.fintype
     let S := (minClasses N).toFinset
     -- pick a representative from each class in S
-    have pick : ∀ c ∈ S, ∃ b, b ∈ N ∧ (∀ x ∈ N, ¬(x < b)) ∧ toAntisymmetrization ((· : M) ≤ ·) b = c := by
+    have pick : ∀ c ∈ S, ∃ b, b ∈ N ∧ (∀ x ∈ N, ¬(x < b)) ∧ @toAntisymmetrization M (· ≤ ·) _ b = c := by
       -- if c ∈ S then c ∈ minClasses N, so c = Quotient.mk b for some minimal b
       intro c hc
       --simp only [Set.mem_setOf_eq]
@@ -108,7 +108,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
         -- similarly pick one minimal class in S'
         have ⟨γ, hγ_in_S'⟩ : S'.Nonempty := by
             exact @Set.Aesop.toFinset_nonempty_of_nonempty (Antisymmetrization M (· ≤ ·)) (minClasses N') (by exact hfin'.fintype) hnonempty'
-        have pick' : ∀ c ∈ S', ∃ d, d ∈ N' ∧ (∀ x ∈ N', ¬(x < d)) ∧ toAntisymmetrization ((· : M) ≤ ·) d = c := by
+        have pick' : ∀ c ∈ S', ∃ d, d ∈ N' ∧ (∀ x ∈ N', ¬(x < d)) ∧ @toAntisymmetrization M (· ≤ ·) _ d = c := by
           intro c hc'
           simp only [minClasses, Set.mem_toFinset, Set.mem_image, Set.mem_setOf_eq, S'] at hc'
           obtain ⟨x, hx⟩ := hc'
@@ -131,20 +131,20 @@ lemma finite_min_classes_implies_hasDicksonProperty
           --have h_minclass_fin: Fintype ↑(minClasses N) := by exact hfin.fintype --를 적으면 오히려 증명 안됨
           exact Set.mem_toFinset.mpr (h_min_sub (by exact (Set.Finite.mem_toFinset hfin').mp hγ_in_S'))
 
-        have hbc' : ∃ b ∈ B, toAntisymmetrization ((· : M) ≤ ·) b = toAntisymmetrization ((· : M) ≤ ·) c := by
+        have hbc' : ∃ b ∈ B, @toAntisymmetrization M (· ≤ ·) _ b = @toAntisymmetrization M (· ≤ ·) _ c := by
           use rep γ hγS
           constructor
           · -- rep γ hc'S is one of your basis elements
             simp only [Finset.coe_attach, Set.image_univ, Set.mem_range, Subtype.exists, B]
             exact BEx.intro γ hγS rfl
           · calc
-              toAntisymmetrization ((· : M) ≤ ·) (rep γ hγS) = γ := (rep_spec γ hγS).2.2
-              _ = toAntisymmetrization ((· : M) ≤ ·) c := (repS'_spec γ hγ_in_S').2.2.symm
+              @toAntisymmetrization M (· ≤ ·) _ (rep γ hγS) = γ := (rep_spec γ hγS).2.2
+              _ = @toAntisymmetrization M (· ≤ ·) _ c := (repS'_spec γ hγ_in_S').2.2.symm
         obtain ⟨b, hbB, hb_eq⟩ := hbc'
         use b
         constructor
         · exact hbB
-        · have : toAntisymmetrization ((· : M) ≤ ·) b = toAntisymmetrization ((· : M) ≤ ·) c → ((· : M) ≤ ·) b c := by
+        · have : @toAntisymmetrization M (· ≤ ·) _ b = @toAntisymmetrization M (· ≤ ·) _ c → (·  ≤ ·) b c := by
             rw [toAntisymmetrization, Quotient.eq]
             -- simp only [AntisymmRel]
             intro h
@@ -235,14 +235,14 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     -- 5) from `mem` we know `g_classes n ∈ toAntisymmetrization '' S`,
     --    so `∃ m ∈ S, toAntisymmetrization m = g_classes n`
     choose g hg_spec using fun n =>
-      show ∃ m ∈ S, toAntisymmetrization ((· : M) ≤ ·) m = g_classes n
+      show ∃ m ∈ S, @toAntisymmetrization M (· ≤ ·) _ m = g_classes n
         from by simpa [minClasses, QN] using mem n
 
     -- unpack -- (range of g : ℕ → M) ⊆ N
     have g_in_N    : ∀ n,      (g n) ∈ N       := fun n => (hg_spec n).1.1
     have g_minimal : ∀ n x, x ∈ N → ¬ x < g n := fun n x hNx hlt =>
       (hg_spec n).1.2 x hNx hlt
-    have g_eq      : ∀ n, toAntisymmetrization ((· : M) ≤ ·) (g n) = g_classes n := fun n => (hg_spec n).2
+    have g_eq      : ∀ n, @toAntisymmetrization M (· ≤ ·) _ (g n) = g_classes n := fun n => (hg_spec n).2
 
     -- 6) now apply WQO to the real sequence `g : ℕ → M`
     have ⟨i, j, hij, hle⟩ := h_wqo.wqo g
@@ -251,7 +251,7 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     by_cases heq : g i = g j
     · -- if they were equal then `g_classes i = g_classes j`, contradicting injectivity
       have hgceq : g_classes i = g_classes j := by
-        have : toAntisymmetrization ((· : M) ≤ ·) (g i) = toAntisymmetrization _ (g j) := by
+        have : @toAntisymmetrization M (· ≤ ·) _ (g i) = toAntisymmetrization _ (g j) := by
           exact congrArg (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) heq
         rw [(hg_spec i).2, (hg_spec j).2] at this
         exact this
@@ -274,7 +274,7 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     have : ∃ a ∈ N, ∀ x ∈ N, ¬ x < a := @WellFounded.has_min M (· < ·) (wellFounded_lt) N hN
     obtain ⟨a, ha⟩ := this
     dsimp only [minClasses, Set.Nonempty]
-    use toAntisymmetrization ((· : M) ≤ ·) a
+    use @toAntisymmetrization M (· ≤ ·) _ a
     exact Set.mem_image_of_mem (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) ha
 
 /--
