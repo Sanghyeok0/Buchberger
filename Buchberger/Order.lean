@@ -87,7 +87,7 @@ lemma finite_min_classes_implies_hasDicksonProperty
 
     -- Turn `S` into a `Finset M` of actual reps
     let rep' (x : Subtype fun c => c ∈ S) : M := rep x.1 x.2
-    let B : Set M := (fun x => rep x.1 x.2) '' S.attach.toSet
+    let B : Set M := (fun x => rep x.1 x.2) '' SetLike.coe S.attach
     -- S.attach : Finset { c // c ∈ S } and S.attach.toSet : Set { c // c ∈ S }
 
     use B

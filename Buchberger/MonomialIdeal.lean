@@ -291,7 +291,7 @@ theorem Dickson_lemma_MV (S : Set (σ →₀ ℕ)) :
   obtain ⟨B', hB'fin, ⟨hB'sub, hB'basis⟩⟩ := Dickson_lemma S
   let B := @Set.toFinset (σ →₀ ℕ) B' (by exact hB'fin.fintype)
   use Finset.image (fun x ↦ (monomial x) (1:R) ) B
-  have hBsub : B.toSet ⊆ S := by
+  have hBsub : SetLike.coe B ⊆ S := by
     rw [Set.coe_toFinset]
     exact hB'sub
   have hBbasis : ∀ a ∈ S, ∃ b ∈ B, b ≤ a := by

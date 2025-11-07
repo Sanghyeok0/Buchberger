@@ -33,15 +33,29 @@ A **Polyhedron** is defined by the data of its H-representation (A, b).
 -/
 @[ext]
 structure Polyhedron (m ι : Type*) where
-  m_fin :Fintype m
+  m_fin : Fintype m
   ι_fin : Fintype ι
   A : Matrix m ι ℝ
   b : m → ℝ
   /-- The set of points in ℝⁿ satisfying the inequalities A • x ≤ b. -/
   toSet : Set (ι → ℝ) := { x | A *ᵥ x ≤ b }
 
-lemma mem_polyhedron_iff (P : Polyhedron m ι) (x : ι → ℝ) :
-  x ∈ P.toSet ↔ P.A *ᵥ x ≤ P.b := by sorry
+lemma mem_polyhedron_iff (P : Polyhedron m ι) :
+  P.toSet = { x | P.A *ᵥ x ≤ P.b } := by
+  ext x
+  -- 양방향으로 증명
+  constructor
+  · intro h
+    -- h : x ∈ P.toSet
+    -- toSet 정의를 펼치면 { x | A *ᵥ x ≤ b }
+    unfold Polyhedron.toSet at h
+    refine mem_setOf.mpr ?_
+    sorry
+  · intro h
+    -- h : P.A *ᵥ x ≤ P.b
+    unfold Polyhedron.toSet
+    sorry
+
 
 /--
 A Polyhedron is a convex set.
@@ -52,8 +66,7 @@ theorem Polyhedron.convex (P : Polyhedron m ι) : Convex ℝ P.toSet := by
     simp only [mem_iInter, mem_setOf_eq]
     -- The inequality `A *ᵥ x ≤ b` is defined element-wise.
     show x ∈ P.toSet ↔ ∀ (i : m), P.A i ⬝ᵥ x ≤ P.b i
-    unfold Polyhedron.toSet
-    show x ∈ P.5 ↔ ∀ (i : m), P.A i ⬝ᵥ x ≤ P.b i
+
     sorry
   rw [h_def]
   -- The intersection of a family of convex sets is convex.
