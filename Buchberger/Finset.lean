@@ -1,5 +1,4 @@
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
-import Mathlib.Data.Finset.Piecewise
 
 variable {ι κ M β γ : Type*} {s : Finset ι}
 

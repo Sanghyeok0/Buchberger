@@ -1,6 +1,4 @@
 import Mathlib.Order.WellQuasiOrder
-import Mathlib.Order.Defs.Unbundled -- For def Minimal
-import Mathlib.Data.Set.Card
 
 variable {M : Type*} [Preorder M] -- M equipped with a quasi-order (preorder) ≤
 

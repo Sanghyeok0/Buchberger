@@ -1,12 +1,8 @@
-import Mathlib.Algebra.MvPolynomial.Division
+import Buchberger.Order
+import Mathlib.Data.Finsupp.PWO
+import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.MonomialOrder
-import Mathlib.RingTheory.Finiteness.Defs
-import Mathlib.Order.Basic
-import Mathlib.Data.Fin.SuccPred
-import Mathlib.Order.Fin.Tuple
-import Mathlib.Data.Finsupp.PWO
-import Buchberger.Order
 
 /-!
 # Initial Ideals and Dickson's Lemma

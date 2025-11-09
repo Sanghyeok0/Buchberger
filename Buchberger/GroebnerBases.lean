@@ -1,13 +1,7 @@
-import Mathlib.RingTheory.MvPolynomial.Groebner
-import Mathlib.RingTheory.Noetherian.Defs
-import Mathlib.RingTheory.Ideal.Operations
-import Mathlib.LinearAlgebra.Span.Defs
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.Algebra.Order.Sub.Unbundled.Hom
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Buchberger.Finset
 import Buchberger.MonomialIdeal
-
+import Mathlib.RingTheory.Ideal.Basic
+import Mathlib.RingTheory.MvPolynomial.Groebner
 /-!
 # The Division Algorithm and Buchberger's Criterion
 
@@ -186,7 +180,7 @@ We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the
 Gröbner basis of the zero ideal.
 -/
 def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
-  (∀ g ∈ G, g ≠ 0) ∧ G.toSet ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = initialIdeal m I
+  (∀ g ∈ G, g ≠ 0) ∧ SetLike.coe G ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = initialIdeal m I
 
 variable [DecidableEq σ] in
 lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
@@ -342,9 +336,9 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
   (f : MvPolynomial σ k) :
   f ∈ I ↔ normalForm m hGB.1 f = 0 := by
   -- The hypothesis that all elements of G are non-zero
-  have hG_nonzero : ∀ g ∈ G.toSet, g ≠ 0 := fun g hg => hGB.1 g hg
+  have hG_nonzero : ∀ g ∈ SetLike.coe G, g ≠ 0 := fun g hg => hGB.1 g hg
   -- The hypothesis that all elements of G have unit leading coefficients
-  have hG_unit_lc : ∀ g ∈ G.toSet, IsUnit (m.leadingCoeff g) := fun g hg =>
+  have hG_unit_lc : ∀ g ∈ SetLike.coe G, IsUnit (m.leadingCoeff g) := fun g hg =>
     (isUnit_leadingCoeff_iff_nonzero m g).mpr (hG_nonzero g hg)
 
   -- The uniqueness of the remainder is key.
@@ -575,7 +569,7 @@ lemma Spolynomial_syzygy_of_degree_cancellation
         · -- Second, `ij.2 = s ∧ ij.1 ∈ p.support.erase s`.
           exact ⟨rfl, hi_in_erase⟩
     rw [h_filter_eq]
-    have h_inj : (p.support.erase s).toSet.InjOn (fun i => (i, s))  := by
+    have h_inj : (SetLike.coe (p.support.erase s)).InjOn (fun i => (i, s))  := by
       intro x _ y _ h_eq
       -- `(x, s) = (y, s)` implies `x = y`.
       exact (Prod.ext_iff.mp h_eq).1
@@ -812,7 +806,7 @@ theorem Buchberger_criterion
         intro hGB g₁ g₂ hg₁ hg₂ hneq
         apply (mem_Ideal_iff_GB_normalForm_eq_zero hGB _).mp
         rw [S_polynomial]
-        have hG_sub_I : G.toSet ⊆ I := by rw [hGI]; exact Ideal.subset_span
+        have hG_sub_I : SetLike.coe G ⊆ I := by rw [hGI]; exact Ideal.subset_span
         exact sub_mem (Ideal.mul_mem_left _ _ (hG_sub_I hg₁)) (Ideal.mul_mem_left _ _ (hG_sub_I hg₂))
       · -- (⇐) If all S-polynomials reduce to 0, then G is a Gröbner basis.
         intro hS_poly
@@ -978,7 +972,7 @@ theorem Buchberger_criterion
             simp only [monomial_zero', isUnit_map_iff, isUnit_iff_ne_zero, ne_eq,
               leadingCoeff_eq_zero_iff]
             exact hG g₀.val hg₀_val_in_G
-          have : Ideal.span ((fun g ↦ m.leadingTerm g) '' G.toSet) = ⊤ := by
+          have : Ideal.span ((fun g ↦ m.leadingTerm g) '' SetLike.coe G) = ⊤ := by
             apply Ideal.eq_top_of_isUnit_mem _ _ h_unit_g₀
             apply Ideal.subset_span
             rw [Set.mem_image]
@@ -1922,3 +1916,5 @@ lemma grobner_basis_remove_redundant
 
 end Field
 end MvPolynomial
+
+#min_imports
