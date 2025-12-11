@@ -1,5 +1,5 @@
 import Buchberger.Finset
-import Buchberger.MonomialIdeal
+import Buchberger.MonomialIdeal_old
 import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.RingTheory.MvPolynomial.Groebner
 /-!
@@ -180,16 +180,16 @@ We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the
 Gröbner basis of the zero ideal.
 -/
 def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
-  (∀ g ∈ G, g ≠ 0) ∧ SetLike.coe G ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = leadingTermIdeal m I
+  (∀ g ∈ G, g ≠ 0) ∧ SetLike.coe G ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = initialIdeal m I
 
 variable [DecidableEq σ] in
 lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB : IsGroebnerBasis m I G) :
-  leadingTermIdeal m I = monomialIdeal k (G.image fun g => m.degree g) := by
+  initialIdeal m I = monomialIdeal k (G.image fun g => m.degree g) := by
   -- by hypothesis the leading‐term span equals the initial ideal
-  have h_span : leadingTermIdeal m I = Ideal.span (G.image fun g => leadingTerm m g) := by
-    simpa [leadingTermIdeal] using (hGB.2.2).symm
+  have h_span : initialIdeal m I = Ideal.span (G.image fun g => leadingTerm m g) := by
+    simpa [initialIdeal] using (hGB.2.2).symm
   -- rewrite both sides into span …  and monomialIdeal
   rw [h_span, monomialIdeal]; clear h_span
   apply le_antisymm
@@ -298,23 +298,18 @@ theorem normalForm_exists_unique
     have dI : r - r' ∈ I := by
       rw [hrg]
       exact (Submodule.sub_mem_iff_left I hgI).mpr hg'I
-    have hlt_in : leadingTerm m (r - r') ∈ leadingTermIdeal m I := by
-      unfold leadingTermIdeal
+    have hlt_in : leadingTerm m (r - r') ∈ initialIdeal m I := by
+      unfold initialIdeal
       apply Ideal.subset_span
-      rw [LT_set]
-      simp only [Set.mem_setOf_eq]
       exact ⟨r - r', dI, hne, rfl⟩
-    have hlm_in : monomial (m.degree (r - r')) 1 ∈ leadingTermIdeal m I := by
-      rw [leadingTermIdeal_is_initialIdeal, initialIdeal]
+    have hlm_in : monomial (m.degree (r - r')) 1 ∈ initialIdeal m I := by
+      rw [initialIdeal_is_monomial_ideal']
       apply Ideal.subset_span
-      simp only [Set.mem_image]
-      refine ⟨m.degree (r - r'), ?_, rfl⟩
-      rw [LM_set]
-      exact ⟨r - r', dI, hne, rfl⟩
+      use (r - r'), dI, hne
     -- extract an exponent α dividing `m.degree d`
     have hmono : monomial (m.degree (r - r')) 1 ∈ monomialIdeal k ↑(Finset.image (fun g ↦ m.degree g) G) := by
-      rw [IsGroebnerBasis.initialIdeal_eq_monomialIdeal hGB] at hlm_in
-      exact hlm_in
+      simp only [IsGroebnerBasis.initialIdeal_eq_monomialIdeal hGB, Finset.coe_image] at hlm_in
+      simp only [Finset.coe_image, hlm_in]
     have : ∃ α ∈ (Finset.image (fun g ↦ m.degree g) G), α ≤ m.degree (r - r') := by
       apply mem_monomialIdeal_iff_divisible.mp hmono
     obtain ⟨α, hα⟩ := this
@@ -820,9 +815,8 @@ theorem Buchberger_criterion
         refine ⟨hG, hG_sub_I, ?_⟩
         by_cases hG_empty : G = ∅
         · simp only [hG_empty, coe_empty, Ideal.span_empty] at hGI
-          rw [leadingTermIdeal, hGI, hG_empty, LT_set]
-          simp only [image_empty, coe_empty, Ideal.span_empty, Submodule.mem_bot, ne_eq, exists_eq_left, not_true_eq_false, leadingTerm_zero,
-            false_and, Set.setOf_false, Ideal.span_empty]
+          rw [initialIdeal, hGI, hG_empty]
+          simp
         -- We need to show `initialIdeal m I = Ideal.span (LT(G))`.
         -- The inclusion `Ideal.span(LT(G)) ⊆ initialIdeal m I` is straightforward.
         apply le_antisymm
@@ -835,7 +829,7 @@ theorem Buchberger_criterion
           exact ⟨by exact hG_sub_I hg_in_G, by exact hG g hg_in_G, rfl⟩
         -- The difficult inclusion: `initialIdeal m I ⊆ Ideal.span (LT(G))`.
         -- This means for any non-zero `f ∈ I`, we must show `LT(f) ∈ ⟨LT(G)⟩`.
-        rw [leadingTermIdeal, Ideal.span_le]
+        rw [initialIdeal, Ideal.span_le]
         rw [Set.subset_def]
         intro LTf h_LTf_in_initI
         obtain ⟨f, hfI, hf_ne, hLTf⟩ := h_LTf_in_initI
@@ -1876,7 +1870,7 @@ lemma grobner_basis_remove_redundant
       exact hG.2.1
 
   -- 3. The ideal of leading terms of `G'` is the initial ideal of `I`.
-  have h_lt_ideal_eq : Ideal.span (G'.image (leadingTerm m)) = leadingTermIdeal m I := by
+  have h_lt_ideal_eq : Ideal.span (G'.image (leadingTerm m)) = initialIdeal m I := by
     -- From `hG`, we know `<LT(G)> = initialIdeal I`.
     -- So we just need to prove `<LT(G')> = <LT(G)>`.
     rw [← hG.2.2]

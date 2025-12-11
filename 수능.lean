@@ -503,6 +503,7 @@ example
   norm_num
 
 
+
 /-
 7. 함수 f(x) = (1/3)x³ - 2x² - 12x + 4가 x = α에서 극대이고
    x = β에서 극소일 때, β - α의 값은? (단, α와 β는 상수이다.) [3점]
@@ -602,6 +603,55 @@ example
   sorry
 
 
+/-
+8. 삼차함수 f(x)가 모든 실수 x에 대하여
+   xf(x) - f(x) = 3x^4 - 3x
+   를 만족시킬 때, ∫_{-2}^{2} f(x)dx의 값은? [3점]
+   ① 12 ② 16 ③ 20 ④ 24 ⑤ 28
+-/
+
+example (f : ℝ → ℝ)
+  (h_cont : Continuous f) -- 삼차함수이므로 연속
+  (h_cond : ∀ x, x * f x - f x = 3 * x^4 - 3 * x) :
+  ∫ x in (-2)..2, f x = 16 := by
+
+  -- [1단계] 주어진 식을 정리하여 f(x) 구하기
+  have h_f : ∀ x, f x = 3 * x^3 + 3 * x^2 + 3 * x := by
+    intro x
+    by_cases hx : x = 1
+    · rw [hx]
+      ring_nf
+      show f 1 = 9
+      rw [←Continuous.limUnder_eq h_cont 1]
+      show limUnder (𝓝 1) f = 9
+      unfold limUnder
+      have h_factor : (x - 1) * f x = (x - 1) * (3 * x^3 + 3 * x^2 + 3 * x) := by
+        trans (x * f x - f x)
+        · ring
+        trans (3 * x ^ 4 - 3 * x)
+        · exact h_cond x
+        ring
+      sorry
+
+    · -- x ≠ 1 인 경우
+      have h_factor : (x - 1) * f x = (x - 1) * (3 * x^3 + 3 * x^2 + 3 * x) := by
+        trans (x * f x - f x)
+        · ring
+        trans (3 * x ^ 4 - 3 * x)
+        · exact h_cond x
+        ring
+      apply (mul_right_inj' (sub_ne_zero.mpr hx)).mp
+      exact h_factor
+  -- [2단계] 적분식에 f(x) 대입하기
+  simp_rw [h_f]
+  -- [3단계] 부정적분(원시함수) F 정의
+  let F := fun x : ℝ => (3/4) * x^4 + x^3 + (3/2) * x^2
+  -- [4단계] F'(x)가 피적분함수와 같음을 증명
+  have h_deriv : ∀ x, HasDerivAt F (3 * x^3 + 3 * x^2 + 3 * x) x := by
+    intro x
+    unfold F
+    sorry
+  sorry
 
 example
   {α β : ℝ}
