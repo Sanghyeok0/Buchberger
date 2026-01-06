@@ -34,7 +34,7 @@ jobs:
         run: ~/.elan/bin/lake exe cache get || true
 
       - name: Build project
-        run: ~/.elan/bin/lake build Buchberger
+        run: ~/.elan/bin/lake build
 
       - name: Cache mathlib API docs
         uses: actions/cache@v4
