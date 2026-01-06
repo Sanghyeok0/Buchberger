@@ -1,0 +1,112 @@
+\chapter{Monomial Ideal} 
+
+\section{Orderings on the Monomials in $k[x_1,\ldots,x_n]$}
+
+\begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
+  \lean{MonomialOrder.degree_sum_le}
+  \leanok 
+  Let $f, g \in k[x_1, \dots, x_n]$ be nonzero polynomials. Then:
+  \begin{enumerate}
+      \item $\operatorname{multideg}(fg) = \operatorname{multideg}(f) + \operatorname{multideg}(g)$.
+      \item If $f + g \neq 0$, then $\operatorname{multideg}(f + g) \le \max(\operatorname{multideg}(f), \operatorname{multideg}(g))$. 
+        If, in \textit{addition}, $\operatorname{multideg}(f) \neq \operatorname{multideg}(g)$, then \textit{equality occurs}.
+  \end{enumerate}
+\end{lemma}
+
+\begin{lemma}\label{lem:degree_sum_le_syn}
+  \lean{MonomialOrder.degree_sum_le_syn}
+  \leanok 
+  Let $\iota$ be an index set and $s \subset \iota$ a finite subset. For each $i \in s$, let $h_i \in k[x_1,\dots,x_n]$. 
+  Then the following inequality holds:
+  \[
+  \operatorname{multideg}\left(\sum_{i \in s} h_i\right) \le \max_{i \in s} \left\{ \operatorname{multideg}(h_i) \right\}
+  \]
+  where the $\max$ is taken with respect to the monomial order.
+\end{lemma}
+\begin{proof}
+  \leanok
+  Let $M = \max_{i \in s} \{ \operatorname{multideg}(h_i) \}$. 
+  Any monomial $x^b$ appearing in the sum $\sum_{i \in s} h_i$ must be a monomial in at least one of the summands, say $h_{i_0}$ for some $i_0 \in s$.
+  By definition, the multidegree of any such term is bounded by the multidegree of the polynomial it belongs to, so $b \le \operatorname{multideg}(h_{i_0})$.
+  Also by definition, $\operatorname{multideg}(h_{i_0}) \le M$.
+  Therefore, $b \le M$ for any monomial $x^b$ in the sum. This implies that the multidegree of the sum itself cannot exceed $M$.
+\end{proof}
+
+\section{Monomial Ideals and Dickson’s Lemma}
+
+\begin{definition}[Monomial ideal]\label{def:monomial-ideal} % [Cox] 70p Definition 1
+  \lean{MvPolynomial.monomialIdeal}
+  \leanok
+  An ideal \(I \subseteq k[x_1,\dots,x_n]\) is called a \emph{monomial ideal} if there is a
+  subset \(A \subseteq \mathbb{Z}_{\ge 0}^n\) (possibly infinite) such that \(I\) consists of all
+  polynomials which can be written as finite sums of the form
+  \[
+    \sum_{\alpha \in A} h_\alpha x^\alpha,
+    \qquad h_\alpha \in k[x_1,\dots,x_n].
+  \]
+  In this case we write
+  \[
+    I = \langle x^\alpha \mid \alpha \in A \rangle .
+  \]
+\end{definition}
+
+\begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
+    \uses{def:monomial-ideal}
+    \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}
+    \leanok 
+    Let $I = \langle x^\alpha \mid \alpha \in A \rangle$ be a monomial ideal.
+    Then a monomial $x^\beta$ lies in $I$ if and only if $x^\beta$ is divisible by $x^\alpha$ for some $\alpha \in A$.
+\end{lemma}
+\begin{proof}
+  \leanok
+  If $x^\beta$ is a multiple of $x^\alpha$ for some $\alpha \in A$, then $x^\beta \in I$ by the definition of ideal. 
+  Conversely, if $x^\beta \in I$, then $x^\beta = \sum_{i=1}^s h_i x^{\alpha(i)}$, where $h_i \in k[x_1, \dots, x_n]$ and $\alpha(i) \in A$. 
+  If we expand each $h_i$ as a sum of terms, we obtain
+  \[
+  x^\beta = \sum_{i=1}^s h_i x^{\alpha(i)} = \sum_{i=1}^s \left(\sum_j c_{i,j} x^{\beta(i,j)}\right) x^{\alpha(i)} = \sum_{i,j} c_{i,j} x^{\beta(i,j)} x^{\alpha(i)}.
+  \]
+\end{proof}
+
+\begin{theorem}\label{thm:Dickson} % [Becker-Weispfenning1993] 163p
+    \uses{prop:wqoEquivalent, prop:wqoAscendingSubsequence}
+    \lean{MonomialOrder.Dickson_lemma}
+    \leanok 
+    Let $(\mathbb{N}^n, \le')$ be the direct product of $n$ copies of the natural numbers $(\mathbb{N}, \le)$ with their natural ordering. 
+    Then $(\mathbb{N}^n, \le')$ is a Dickson partially ordered set. 
+    More explicitly, every subset $S \subseteq \mathbb{N}^n$ has a finite subset $B$ such that for every $(m_1, \dots, m_n) \in S$, there exists $(k_1, \dots, k_n) \in B$ with
+    \[
+    k_i \le m_i \quad \text{for } 1 \le i \le n.
+    \]
+\end{theorem}
+\begin{proof}
+    \leanok 
+    By Proposition 4.42, a quasi-ordered set has the Dickson property if and only if it is well-quasi-ordered.
+    Thus, it suffices to show that for any sequence in $\mathbb{N}^n$ there exist indices $i<j$ such that
+    $\mathbf{x}_i \le' \mathbf{x}_j$.
+
+    Let $\{\mathbf{x}_k\}_{k\in\mathbb{N}}$ be an arbitrary sequence in $\mathbb{N}^n$.
+    By a standard result ($(\mathbb{N}^n,\le')$ is partially well-ordered),
+    there exists a strictly increasing map $g:\mathbb{N}\to\mathbb{N}$ such that
+    \[
+    \mathbf{x}_{g(0)} \le' \mathbf{x}_{g(1)} \le' \mathbf{x}_{g(2)} \le' \cdots .
+    \]
+    Set $i \coloneqq g(0)$ and $j \coloneqq g(1)$. Then $i<j$ and, by monotonicity,
+    $\mathbf{x}_i \le' \mathbf{x}_j$. Hence $(\mathbb{N}^n,\le')$ is well-quasi-ordered, and therefore
+    has the Dickson property by Proposition~4.42.
+\end{proof}
+
+\begin{theorem}[Dickson's Lemma (MvPolynomial)]
+    \label{thm:Dickson_MvPolynomial}
+    \uses{thm:Dickson}
+    \lean{MonomialOrder.Dickson_lemma_MV}
+    \leanok 
+    % Every subset $S \subseteq \mathbb{N}^n$ has only finitely many minimal elements with respect to the componentwise partial order. 
+    % In particular, every monomial ideal in $k[x_1,\dots, x_n]$ is finitely generated.
+    Let $I = \langle x^{\alpha} | \alpha \in A \rangle \subseteq k[x_1, \ldots, x_n]$ be a monomial ideal.
+    Then $I$ can be written in the form $I = \langle x^{\alpha(1)}, \ldots , {\alpha(s)} \rangle$, where
+    $\alpha(1), \ldots, \alpha(s) \in A$.
+    In particular, $I$ has a finite basis.
+\end{theorem}
+\begin{proof}
+  \leanok 
+\end{proof}

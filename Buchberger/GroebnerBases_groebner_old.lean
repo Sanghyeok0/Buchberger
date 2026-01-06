@@ -76,6 +76,38 @@ lemma degree_sum_le_syn {ι : Type*} (s : Finset ι) (h : ι → MvPolynomial σ
   apply @Finset.le_sup _ _ _ _ s fun i ↦ m.toSyn (m.degree (h i))
   exact hi_s
 
+-- variable {ι : Type*} [DecidableEq ι] in
+-- lemma degree_sum_le (s : Finset ι) (f : ι → MvPolynomial σ R) :
+--     m.degree (∑ i ∈ s, f i) ≼[m] s.sup (fun i => m.degree (f i)) := by
+--   -- We proceed by induction on the finset `s`.
+--   induction s using Finset.induction_on with
+--   | empty =>
+--     simp only [Finset.sum_empty, m.degree_zero, map_zero, Finset.sup_empty, zero_le]
+--     --exact StrictMono.minimal_preimage_bot (fun ⦃a b⦄ a ↦ a) rfl (m.toSyn ⊥)
+--   | insert i s hi_not_in_s ih =>
+--     by_cases h_s_empty : s = ∅
+--     · -- If s is empty, then `insert i s` is just `{i}`.
+--       subst h_s_empty
+--       simp only [insert_empty_eq, Finset.sum_singleton, Finset.sup_singleton, le_refl]
+--     -- Inductive step: s' = insert i s, where s is not empty.
+--     have h_s_nonempty : s.Nonempty := Finset.nonempty_of_ne_empty h_s_empty
+--     have h_insert_nonempty : (insert i s).Nonempty := by exact Finset.insert_nonempty i s
+--     -- `∑_{j∈s'} f j = f i + ∑_{j∈s} f j`
+--     rw [Finset.sum_insert hi_not_in_s]
+--     have : m.toSyn (m.degree ((f i) + (∑ j ∈ s, f j))) ≤ max (m.toSyn (m.degree (f i))) (m.toSyn (m.degree (∑ j ∈ s, f j))) := m.degree_add_le
+--     apply le_trans this
+--     rw [max_le_iff]
+--     constructor
+--     · -- m.toSyn (m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
+--       apply toSyn_monotone
+--       have : i ∈ (insert i s) := by exact Finset.mem_insert_self i s
+--       apply Finset.le_sup this
+--     · -- m.toSyn (s.sup fun i ↦ m.degree (f i)) ≤ m.toSyn ((insert i s).sup fun i ↦ m.degree (f i))
+--       apply le_trans ih
+--       apply toSyn_monotone
+--       refine Finset.sup_mono ?_
+--       exact Finset.subset_insert i s
+
 end Semiring
 
 end MonomialOrder
@@ -139,86 +171,6 @@ theorem representation_of_f_of_normalForm_zero
   rw [h0, add_zero] at this
   exact this
 
-variable (m) in
-def GroebnerBasis_prop (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
-  (G : Set (MvPolynomial σ k)) ⊆ I ∧
-  Ideal.span ((fun g => leadingTerm m g) '' (G : Set (MvPolynomial σ k))) = leadingTermIdeal m I
-
-variable (m) [DecidableEq σ] in
-lemma IsGroebnerBasis_nonzero (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) :
-  GroebnerBasis_prop m I G ↔ GroebnerBasis_prop m I (G \ {0}) := by
-  classical
-  -- shorthand
-  let LT : MvPolynomial σ k → MvPolynomial σ k := fun g => leadingTerm m g
-
-  -- Key fact: adding/removing `0` does not change the span of leading terms.
-  have hspan_sdiff :
-      Ideal.span (LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)))
-        =
-      Ideal.span (LT '' (G : Set (MvPolynomial σ k))) := by
-    apply le_antisymm
-    · -- (⊆) monotonicity: (G \ {0}) ⊆ G
-      refine Ideal.span_mono ?_
-      rintro x ⟨g, hg, rfl⟩
-      have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-        simpa using hg
-      have hgG : g ∈ G := (Finset.mem_sdiff.mp hg0).1
-      exact ⟨g, (by simpa using hgG), rfl⟩
-    · -- (⊇) each generator from G is either from (G\{0}) or is 0
-      refine Ideal.span_le.2 ?_
-      rintro x ⟨g, hgG, rfl⟩
-      have hgG' : g ∈ G := by simpa using hgG
-      by_cases h0 : g = 0
-      · subst h0
-        -- If `simp` does not rewrite this, replace `by simp` with your lemma e.g. `leadingTerm_zero`.
-        have hLT0 : LT (0 : MvPolynomial σ k) = 0 := by simp [LT]
-        -- 0 is always in the span
-        simpa only [LT, hLT0] using
-          (Ideal.zero_mem
-            (Ideal.span (LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)))))
-      · have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-          refine Finset.mem_sdiff.2 ?_
-          refine ⟨hgG', ?_⟩
-          simp [h0]
-        have hx :
-            LT g ∈ LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)) :=
-          ⟨g, (by simpa using hg0), rfl⟩
-        exact Ideal.subset_span hx
-
-  -- Now unfold the definition and use `hspan_sdiff` (and `0 ∈ I`) to move between the two versions.
-  unfold GroebnerBasis_prop
-  constructor
-  · rintro ⟨hGI, hspan⟩
-    refine ⟨?_, ?_⟩
-    · -- (G\{0}) ⊆ I
-      intro g hg
-      have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by simpa using hg
-      have hgG : g ∈ G := (Finset.mem_sdiff.mp hg0).1
-      exact hGI (by simpa using hgG)
-    · -- span of LT over (G\{0}) equals leadingTermIdeal
-      -- rewrite span(LT((G\{0}))) to span(LT(G)) using `hspan_sdiff`
-      unfold LT at hspan_sdiff
-      rw [←hspan, ←hspan_sdiff]
-      simp only [coe_sdiff, coe_singleton]
-
-  · rintro ⟨hGI0, hspan0⟩
-    refine ⟨?_, ?_⟩
-    · -- G ⊆ I (use 0 ∈ I for the missing element)
-      intro g hg
-      have hgG : g ∈ G := by simpa using hg
-      by_cases h0 : g = 0
-      · subst h0
-        simpa only using (Ideal.zero_mem I)
-      · have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-          refine Finset.mem_sdiff.2 ⟨hgG, ?_⟩
-          simp [h0]
-        exact hGI0 (by simpa using hg0)
-    · -- span of LT over G equals leadingTermIdeal
-      unfold LT at hspan_sdiff
-      rw [←hspan0, ←hspan_sdiff]
-      simp only [coe_singleton, coe_sdiff]
-
-
 variable (m) [DecidableEq σ] in
 /-- Definition 5. Groebner_basis
 A finite subset G of an ideal I is called a Gröbner basis (or standard basis)
@@ -228,8 +180,7 @@ We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the
 Gröbner basis of the zero ideal.
 -/
 def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
-  (∀ g ∈ G, g ≠ 0) ∧ GroebnerBasis_prop m I G
-
+  (∀ g ∈ G, g ≠ 0) ∧ SetLike.coe G ⊆ I ∧ Ideal.span (G.image fun g => leadingTerm m g) = leadingTermIdeal m I
 
 variable [DecidableEq σ] in
 lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
@@ -870,15 +821,14 @@ theorem Buchberger_criterion
         by_cases hG_empty : G = ∅
         · simp only [hG_empty, coe_empty, Ideal.span_empty] at hGI
           rw [leadingTermIdeal, hGI, hG_empty, LT_set]
-          simp only [coe_empty, Submodule.mem_bot, ne_eq, exists_eq_left, not_true_eq_false,
-            leadingTerm_zero, false_and, Set.setOf_false, Ideal.span_empty]
-          simp only [Set.image_empty, Ideal.span_empty]
+          simp only [image_empty, coe_empty, Ideal.span_empty, Submodule.mem_bot, ne_eq, exists_eq_left, not_true_eq_false, leadingTerm_zero,
+            false_and, Set.setOf_false, Ideal.span_empty]
         -- We need to show `initialIdeal m I = Ideal.span (LT(G))`.
         -- The inclusion `Ideal.span(LT(G)) ⊆ initialIdeal m I` is straightforward.
         apply le_antisymm
         · apply Ideal.span_mono
           intro lt_g h_lt_g_mem
-          simp only [Set.mem_image, mem_coe] at h_lt_g_mem
+          simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe] at h_lt_g_mem
           obtain ⟨g, hg_in_G, rfl⟩ := h_lt_g_mem
           refine Set.mem_setOf.mpr ?_
           use g
@@ -1031,7 +981,12 @@ theorem Buchberger_criterion
           have : Ideal.span ((fun g ↦ m.leadingTerm g) '' SetLike.coe G) = ⊤ := by
             apply Ideal.eq_top_of_isUnit_mem _ _ h_unit_g₀
             apply Ideal.subset_span
-            exact Set.mem_image_of_mem (fun g ↦ m.leadingTerm g) hg₀_val_in_G
+            rw [Set.mem_image]
+            use g₀
+            constructor
+            · -- `g₀ ∈ G.toSet` is the same as `g₀ ∈ G`, which is `hg₀_in_G`.
+              exact hg₀_val_in_G
+            · rfl
           rw [this]
           exact Submodule.mem_top
 
@@ -1046,7 +1001,6 @@ theorem Buchberger_criterion
             apply Submodule.mem_span_of_mem
             simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe]
             use g
-          simp only [coe_image] at inI_top
           rw [inI_top]
           exact trivial
 
@@ -1097,8 +1051,7 @@ theorem Buchberger_criterion
             rw [leadingTerm_mul (h_nzero_h_min_gᵢ) (hG gᵢ (Finset.coe_mem gᵢ))]
             apply Ideal.mul_mem_left
             apply Submodule.mem_span_of_mem
-            simp only [Set.mem_image, SetLike.mem_coe]
-            exact ⟨gᵢ, ⟨coe_mem gᵢ, rfl⟩⟩
+            apply Finset.mem_image_of_mem _ (Finset.coe_mem gᵢ)
 
         · have f_deg_lt : m.toSyn (m.degree f) < δ_syn_min := by
             apply (LE.le.lt_iff_ne' f_deg_le).mpr (by exact fun a ↦ h_deg_eq_δ_syn (id (Eq.symm a)))
@@ -1636,7 +1589,7 @@ theorem Buchberger_criterion
               nth_rw 1 [←add_zero (m.toSyn (δ_min - m.degree gᵢ.val ⊔ m.degree gⱼ.val))]
               rw [add_lt_add_iff_left]
               push_neg at h_γ_zero
-              rw [←MonomialOrder.bot_eq_zero, bot_lt_iff_ne_bot]
+              rw [←bot_eq_zero, bot_lt_iff_ne_bot]
               exact h_γ_zero ij
             have := h_γ_S_poly_gᵢ_gⱼ_deg_lt ij hi hj
             rw [←hδ_syn]
@@ -1934,8 +1887,8 @@ lemma grobner_basis_remove_redundant
     · -- First direction: `<LT(G')> ⊆ <LT(G)>`.
       -- This is true because `G' ⊆ G`.
       apply Ideal.span_mono
-      simp only [coe_image]
-      refine Set.image_mono ?_
+      apply Finset.coe_subset.mpr
+      apply Finset.image_subset_image
       exact Finset.erase_subset p G
 
     · -- Second direction: `<LT(G)> ⊆ <LT(G')>`.
@@ -1953,7 +1906,6 @@ lemma grobner_basis_remove_redundant
       · -- Case 1: `g = p`.
         -- We need to show `LT(p) ∈ <LT(G')>`.
         subst h_g_is_p
-        simp only [coe_image] at hLT
         exact hLT
 
       · -- Case 2: `g ≠ p`.
@@ -1962,11 +1914,13 @@ lemma grobner_basis_remove_redundant
 
         -- Since `g ∈ G'`, its leading term `LT(g)` is a generator of `<LT(G')>`.
         apply Ideal.subset_span
-        exact Set.mem_image_of_mem m.leadingTerm hg_in_G'
+        apply Finset.mem_image_of_mem
+        exact hg_in_G'
 
   -- Now we have all three properties, so we can construct the final proof.
-  simp only [coe_image] at h_lt_ideal_eq
   exact ⟨hG'_zero_free, ⟨hG'_subset_I, h_lt_ideal_eq⟩⟩
 
 end Field
 end MvPolynomial
+
+#min_imports

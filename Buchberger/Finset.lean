@@ -9,7 +9,7 @@ section CommMonoid
 variable [CommMonoid M]
 
 @[to_additive (attr := simp)]
-theorem prod_ite_not_mem (s t : Finset ι)
+lemma prod_ite_not_mem (s t : Finset ι)
   [DecidableEq ι] (f : ι → M) :
   (∏ x ∈ s, if x ∈ t then 1 else f x) = ∏ x ∈ s \ t, f x := by
   -- decompose s into (s \ t) ∪ (s ∩ t)

@@ -638,5 +638,3 @@ theorem Buchberger_Alg_wf [Finite σ]
     exact Finset.notMem_empty r hr_in
 
   exact ⟨h_F_sub_G, h_G_is_GB⟩
-
-#min_imports

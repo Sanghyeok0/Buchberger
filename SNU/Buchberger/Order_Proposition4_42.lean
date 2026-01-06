@@ -1,25 +1,6 @@
 import Mathlib.Order.WellQuasiOrder
 
-variable {M : Type*} [Preorder M] -- M equipped with a quasi-order (preorder) ≤
-
-/-!
-## Reference : [Becker-Weispfenning1993]
-
-# Formalization of Proposition 4.42
-
-This section formalizes Proposition 4.42, which states the equivalence
-of three conditions for a preorder `≤` on a set `M`:
-
-1.  **(i)** `≤` has the Dickson property (every subset has a finite basis).
-2.  **(ii)** `≤` is a Well Quasi‑Order (every infinite sequence `aₙ` has `i < j` with `aᵢ ≤ aⱼ`).
-3.  **(iii)** For every nonempty `N : Set M`, the set of min‑classes
-     `minClasses N` is finite and nonempty.
-
-We define a predicate for (i) and show its equivalence to (ii), which is
-represented by the typeclass `WellQuasiOrderedLE M`.  The equivalence is
-proven by relating both to condition (iii) using Mathlib’s
-`wellQuasiOrderedLE_iff`.
--/
+variable {M : Type*} [Preorder M]
 
 variable (M) in
 /--
@@ -350,25 +331,3 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     -- Show a ∈ MinimalElements N.
     have : a ∈ N ∧ ∀ x ∈ N, ¬ x < a := ⟨haN, hamin⟩
     simpa only [MinimalElements, Set.mem_setOf_eq] using this
-
-/--
-**Theorem (Proposition 4.42, conditions (i) and (ii)).**
-
-For a preorder `≤` on `M`, the following are equivalent:
-
-- **(i)** `≤` has the **Dickson property** (finite basis property):
-  for every subset `N ⊆ M` there exists a finite subset `B ⊆ N` such that
-  for every `a ∈ N` there exists `b ∈ B` with `b ≤ a`.
-
-- **(ii)** `≤` is a **well quasi-order** (wqo):
-  for every sequence `a : ℕ → M` there exist indices `i < j` with `a i ≤ a j`.
-
-This theorem formalises the equivalence **(i) ↔ (ii)** from Proposition 4.42.
--/
-theorem HasDicksonProperty_iff_WellQuasiOrderedLE :
-    HasDicksonProperty M ↔ WellQuasiOrderedLE M := by
-  constructor
-  · exact HasDicksonProperty.to_wellQuasiOrderedLE
-  · intro h_wqo
-    apply finite_minClasses_implies_hasDicksonProperty
-    exact h_wqo.minClasses_finite_and_nonempty

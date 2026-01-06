@@ -1,6 +1,6 @@
 \chapter{Orders and Abstract Reduction Relations} 
 
-\section{Monomial Ideals and Dickson’s Lemma}
+\section{Foundedness Properties}
 
 \begin{definition}\label{def:Orders}
     \lean{Preorder, LinearOrder}
@@ -59,32 +59,10 @@
     \]
     We write $[a]$ for the equivalence class of $a$, and denote the quotient by
     \[
-      \mathrm{Quot}(M,\sim)\;=\;\{\, [a]\mid a\in M\}.
+      \mathrm{Quot}(M,\sim)=\{\, [a]\mid a\in M\}.
     \]
 \end{definition}
-    
-\begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
-    \uses{def:eq_rel}
-    \lean{minClasses}
-    \leanok 
-    Let $N\subseteq M$.  An element $b\in N$ is called \emph{minimal in $N$} if
-    \[
-      \forall\,y\in N,\;y\le b \;\Longrightarrow\; b\le y.
-    \]
-    We denote by
-    \[
-      \operatorname{Minimal}(N)
-      \;=\;
-      \{\,b\in N \mid \forall\,y\in N,\;y\le b\to b\le y\}
-    \]
-    the set of all minimal elements of $N$.  The \emph{min–classes} of $N$ are then
-    \[
-      \operatorname{minClasses}(N)
-      \;=\;
-      \bigl\{\, [b]\in \mathrm{Quot}(M,\sim)\;\bigm|\;b\in \operatorname{Minimal}(N)\bigr\}.
-    \]
-\end{definition}
-    
+
 \begin{definition}\label{def:wqo}
     \lean{HasDicksonProperty}
     \leanok 
@@ -96,10 +74,73 @@
         \item A \textbf{well partial order}, or a wpo, is a wqo that is a proper ordering relation, i.e., it is antisymmetric.
     \end{enumerate}
 \end{definition}
-    
+
+\begin{definition}[Minimal elements and min–classes]\label{def:min–classes}
+    \uses{def:eq_rel}
+    \lean{minClasses}
+    \leanok 
+    Let $N \subseteq M$. An element $a \in N$ is called \emph{minimal in $N$} if there is no $b \in N$ such that $b < a$ (where $<$ is the strict part of the quasi-order).
+    We denote the set of all minimal elements of $N$ by:
+    \[
+      \operatorname{Minimal}(N) = \{ a \in N \mid \forall b \in N, \neg(b < a) \}
+    \]
+    The \emph{min–classes} of $N$ are the intersections of $N$ with the $\sim$-equivalence classes of its minimal elements:
+    \[
+      \operatorname{minClasses}(N) = \{ [a]_{\sim} \cap N \mid a \in \operatorname{Minimal}(N) \}
+    \]
+\end{definition}
+
+\begin{lemma}\label{lem:minClasses_restrict_le_subset}
+    \uses{def:min–classes}
+    \lean{minClasses_restrict_le_subset}
+    \leanok
+    Let $N \subseteq M$ and let $a \in N$.  Consider the restricted subset
+    \[
+      N_{\le a} \coloneqq \{\, d \in N \mid d \le a \,\}.
+    \]
+    Then every min–class of $N_{\le a}$ is also a min–class of $N$, i.e.
+    \[
+      \operatorname{minClasses}(N_{\le a})
+      \subseteq
+      \operatorname{minClasses}(N).
+    \]
+\end{lemma}
+\begin{proof}
+  \leanok
+  Let $[d] \in \operatorname{minClasses}(N_{\le a})$.
+  By definition of $\operatorname{minClasses}$ there exists
+  an element $d$ such that
+  \[
+    d \in N_{\le a}
+    \qquad\text{and}\qquad
+    \forall x \in N_{\le a},\; \neg(x < d).
+  \]
+  Thus $d \in N$ and $d \le a$, and for every $x \in N$ with $x \le a$
+  we have $\neg(x < d)$.
+
+  We claim that $[d] \in \operatorname{minClasses}(N)$.
+  For this it suffices to show that $d \in N$ (which we already know)
+  and that there is no $x \in N$ with $x < d$.
+
+  So let $x \in N$ and assume, for a contradiction, that $x < d$.
+  Then in particular $x \le d$, and since $d \le a$,
+  by transitivity we obtain $x \le a$.
+  Hence $x \in N_{\le a}$, and the minimality condition of $d$ in
+  $N_{\le a}$ tells us that $\neg(x < d)$, contradicting $x < d$.
+
+  Therefore no such $x$ exists, so $d$ is also minimal in $N$.
+  Consequently $[d] \in \operatorname{minClasses}(N)$, and hence
+  \[
+    \operatorname{minClasses}(N_{\le a})
+    \subseteq
+    \operatorname{minClasses}(N).
+  \]
+\end{proof}
+
+
 \begin{proposition}\label{prop:wqoEquivalent} % [Becker-Weispfenning1993] 160p Proposition 4.42
     \uses{def:wqo, def:min–classes}
-    \lean{HasDicksonProperty.to_wellQuasiOrderedLE, WellQuasiOrderedLE.minClasses_finite_and_nonempty, finite_min_classes_implies_hasDicksonProperty}
+    \lean{HasDicksonProperty.to_wellQuasiOrderedLE, WellQuasiOrderedLE.minClasses_finite_and_nonempty, finite_minClasses_implies_hasDicksonProperty}
     \leanok 
     Let $\preceq$ be a quasi-order on $M$ with associated equivalence relation $\sim$. 
     Then the following are equivalent:
@@ -110,7 +151,47 @@
     \end{enumerate}
 \end{proposition}
 \begin{proof}
-  \leanok 
+  \leanok
+   (i)$\Longrightarrow$(ii): Set $N = \{a_n \mid n \in \mathbb{N}\}$ and let $B$ be a finite basis of $N$. Pick $j \in \mathbb{N}$ such that $j > i$ for all $i \in \mathbb{N}$ with $a_i \in B$. 
+   Then $a_{i_0} \preceq a_j$ for some $a_{i_0} \in B$, and the choice of $j$ implies $i_0 < j$.
+
+   (ii)$\Longrightarrow$(iii): Suppose there exist infinitely many min-classes in some non-empty subset $N$ of $M$. Using the axiom of choice, we get an infinite sequence $\{a_n\}_{n \in \mathbb{N}}$ of pairwise $\sim$-inequivalent minimal elements in $N$. By our assumption (ii), $a_i \preceq a_j$ for some $i < j$. 
+   From the minimality of $a_j$, we conclude that $a_j \preceq a_i$ and so $a_i \sim a_j$, a contradiction. If, on the other hand, $N$ has no minimal element, then we can produce a strictly descending $\preceq$-chain as in the proof of Proposition 4.31, contradicting (ii).
+
+   (iii)$\Longrightarrow$(i): Let $N$ be a non-empty subset of $M$. 
+   Choosing one element out of each of the finitely many min-classes, we can find a finite subset $B$ of $N$ such that each $b \in B$ is minimal, and such that every minimal $a \in N$ is $\sim$-equivalent to some $b \in B$. We claim that $B$ is a basis of $N$. Let $a \in N$. 
+   Then the set
+   \[
+   N' = \{ d \in N \mid d \preceq a \}
+   \]
+   contains a minimal element $c$. It is easy to see that $c$ is minimal in $N$ too, and so $c \sim b$ for some $b \in B$. 
+   We now have $b \preceq c \preceq a$ and hence $b \preceq a$.
+\end{proof}
+
+\begin{theorem}\label{thm:DicksonProperty_iff_WQO}
+  \uses{prop:wqoEquivalent}
+  \lean{HasDicksonProperty_iff_WellQuasiOrderedLE}
+  \leanok
+  Let \((M,\le)\) be a preorder. Then
+  \[
+    \text{\(\le\) has the Dickson property}
+    \quad\Longleftrightarrow\quad
+    \text{\(\le\) is a well quasi-order}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  This is exactly the equivalence \((i)\Longleftrightarrow(ii)\) in Proposition
+  (Becker--Weispfenning, Proposition~4.42).
+  In our Lean development we prove the two implications as follows:
+  \begin{itemize}
+    \item \((i)\Rightarrow(ii)\) is shown by extracting a finite basis for the set
+      \(N=\{a_n\mid n\in\mathbb N\}\) and choosing \(i<j\) accordingly.
+    \item \((ii)\Rightarrow(i)\) is obtained by first proving \((ii)\Rightarrow(iii)\)
+      (finiteness and nonemptiness of min--classes for every nonempty subset),
+      and then applying \((iii)\Rightarrow(i)\).
+  \end{itemize}
 \end{proof}
     
 % \begin{corollary}\label{cor:MinimalFiniteBasis} % [Becker-Weispfenning1993] 161p Corollary 4.43
@@ -156,6 +237,8 @@
   It now follows easily from condition (i) and the transitivity of $\preceq$ that $\{n_i\}_{i \in \mathbb{N}}$ has the desired property.
 \end{proof}
 
+\section{Orderings on the Monomials in $k[x_1,\ldots,x_n]$}
+
 \begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
   \lean{MonomialOrder.degree_sum_le}
   \leanok 
@@ -185,6 +268,8 @@
   Also by definition, $\operatorname{multideg}(h_{i_0}) \le M$.
   Therefore, $b \le M$ for any monomial $x^b$ in the sum. This implies that the multidegree of the sum itself cannot exceed $M$.
 \end{proof}
+
+\section{Monomial Ideals and Dickson’s Lemma}
 
 \begin{lemma}\label{lem:mem_monomialIdeal_iff_divisible} % [Cox] 70p Lemma 2
     \lean{MonomialOrder.mem_monomialIdeal_iff_divisible}
