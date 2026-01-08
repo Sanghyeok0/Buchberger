@@ -11,7 +11,7 @@ variable {σ k : Type*} [Fintype σ] [Field k]
 
 open Ideal
 
--- Saturation 정의 (이전과 동일)
+-- Saturation 정의
 noncomputable def saturation (I J : Ideal (MvPolynomial σ k)) : Ideal (MvPolynomial σ k) :=
   ⨆ n : ℕ, I.colon (J ^ n)
 

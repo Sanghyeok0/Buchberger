@@ -1,4 +1,4 @@
-import Buchberger.Order
+import SNU.Buchberger.Order
 import Mathlib.Data.Finsupp.PWO
 
 variable {σ : Type*}

@@ -1,4 +1,4 @@
-import Buchberger.Order
+import SNU.Buchberger.Order
 import Mathlib.Data.Finsupp.PWO
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.MvPolynomial.Ideal
@@ -60,8 +60,7 @@ lemma degree_le_degree_mul (p q : MvPolynomial σ k) (hq_ne_zero : q ≠ 0) :
     exact le_add_of_nonneg_right (bot_le)
 
 variable (m) in
-/-- the leading coefficient of a multivariate polynomial with respect
-to a monomial ordering -/
+/-- the leading coefficient of a multivariate polynomial with respect to a monomial ordering -/
 noncomputable def leadingTerm (f : MvPolynomial σ R) : MvPolynomial σ R :=
   monomial (m.degree f) (m.leadingCoeff f)
 
@@ -346,25 +345,5 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma_MV k (LM_set m I)
   obtain ⟨b, h_span⟩ := h_fg
   use b
-
-/-
-## TODO
-
-* Reference: Based on material by Antoine Chambert-Loir
-
-* Prove that under `Field F`, `IsUnit (m.leadingCoeff (b i))` is
-equivalent to `b i ≠ 0`.
--/
-theorem isUnit_leadingCoeff_iff_nonzero
-  (m : MonomialOrder σ) (b : MvPolynomial σ k) :
-  IsUnit (m.leadingCoeff b) ↔ b ≠ 0 := by
-  constructor
-  · intro h
-    contrapose! h
-    rw [h, m.leadingCoeff_zero]
-    exact not_isUnit_zero
-  · intro hb
-    have h₁ : m.leadingCoeff b ≠ 0 := by exact MonomialOrder.leadingCoeff_ne_zero_iff.mpr hb
-    exact isUnit_iff_ne_zero.mpr h₁
 
 end MonomialOrder

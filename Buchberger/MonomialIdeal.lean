@@ -18,7 +18,7 @@ a cornerstone for the theory of Gröbner bases.
 - `MonomialOrder.LM_set`: The set of multidegrees of leading terms of polynomials in `I`.
 
 ## Main Results
-- `initialIdeal_is_monomial_ideal`: Proves that `initialIdeal m I` is a monomial ideal,
+- `leadingTermIdeal_is_initialIdeal`: Proves that `leadingTermIdeal m I` is a monomial ideal,
   specifically `monomialIdeal k (LM_set m I)`.
 - `Dickson_lemma`: The abstract form of Dickson's Lemma, proven by showing that the
   monomial order on `σ →₀ ℕ` is a well-quasi-order.
@@ -346,25 +346,5 @@ theorem initialIdeal_is_FG (I : Ideal (MvPolynomial σ k)) : (initialIdeal m I).
   have h_fg : (monomialIdeal k (LM_set m I)).FG := Dickson_lemma_MV k (LM_set m I)
   obtain ⟨b, h_span⟩ := h_fg
   use b
-
-/-
-## TODO
-
-* Reference: Based on material by Antoine Chambert-Loir
-
-* Prove that under `Field F`, `IsUnit (m.leadingCoeff (b i))` is
-equivalent to `b i ≠ 0`.
--/
-theorem isUnit_leadingCoeff_iff_nonzero
-  (m : MonomialOrder σ) (b : MvPolynomial σ k) :
-  IsUnit (m.leadingCoeff b) ↔ b ≠ 0 := by
-  constructor
-  · intro h
-    contrapose! h
-    rw [h, m.leadingCoeff_zero]
-    exact not_isUnit_zero
-  · intro hb
-    have h₁ : m.leadingCoeff b ≠ 0 := by exact MonomialOrder.leadingCoeff_ne_zero_iff.mpr hb
-    exact isUnit_iff_ne_zero.mpr h₁
 
 end MonomialOrder

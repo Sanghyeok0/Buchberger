@@ -1,4 +1,4 @@
-import Buchberger.Order
+import SNU.Buchberger.Order
 import Mathlib.Data.Finsupp.PWO
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.MvPolynomial.Ideal

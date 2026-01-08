@@ -1,5 +1,5 @@
-import Buchberger.Finset
-import Buchberger.MonomialIdeal
+import SNU.Buchberger.Finset
+import SNU.Buchberger.MonomialIdeal
 import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.RingTheory.MvPolynomial.Groebner
 /-!

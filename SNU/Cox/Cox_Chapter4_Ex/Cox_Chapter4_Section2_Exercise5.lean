@@ -16,12 +16,12 @@ Ch.4 §2, Exercise 5.
 variable {σ k : Type*} [Fintype σ] [Field k]
 variable {K : Type*} [Field K] [Algebra k K]
 
--- Ideals ↦ varieties is inclusion-reversing.
+-- Ideals ↦ affine algebraic sets is inclusion-reversing.
 example {I₁ I₂ : Ideal (MvPolynomial σ k)} (h : I₁ ≤ I₂) :
     MvPolynomial.zeroLocus (K := K) I₂ ⊆ MvPolynomial.zeroLocus (K := K) I₁ := by
   simpa only [ge_iff_le, Set.le_eq_subset] using (MvPolynomial.zeroLocus_anti_mono (K := K) h)
 
--- Varieties ↦ ideals is inclusion-reversing.
+-- Affine algebraic sets ↦ ideals is inclusion-reversing.
 example {V₁ V₂ : Set (σ → K)} (h : V₁ ⊆ V₂) :
     MvPolynomial.vanishingIdeal (k := k) (K := K) V₂ ≤
       MvPolynomial.vanishingIdeal (k := k) (K := K) V₁ := by

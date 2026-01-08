@@ -30,8 +30,10 @@ the main theorem of Gröbner basis theory: Buchberger's Criterion.
   reduces to zero.
 -/
 
-variable {σ : Type*}
+variable {σ : Type*} -- [DecidableEq σ]
 variable {m : MonomialOrder σ}
+
+set_option maxHeartbeats 0
 
 open MonomialOrder MvPolynomial Finset
 
@@ -83,20 +85,25 @@ section Field
 variable {k : Type*} [Field k] [DecidableEq k]
 
 omit [DecidableEq k] in
+theorem division_algorithm_existence (m : MonomialOrder σ)
+  {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
+  ∃ (g : B →₀ (MvPolynomial σ k)) (r : MvPolynomial σ k),
+    f = Finsupp.linearCombination _ (fun (p : B) ↦ (p : MvPolynomial σ k)) g + r ∧
+    (∀ (p : B), m.degree ((p : MvPolynomial σ k) * (g p)) ≼[m] m.degree f) ∧
+    (∀ c ∈ r.support, ∀ b ∈ B, ¬ m.degree b ≤ c) :=
+  MonomialOrder.div_set
+      (fun b hb => (isUnit_leadingCoeff_iff_nonzero m b).mpr (hB b hb))
+      f
+
 noncomputable def quotients (m : MonomialOrder σ)
   {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
   B →₀ MvPolynomial σ k :=
-  (MonomialOrder.div_set (m := m) (B := B)
-      (hB := fun b hb => isUnit_leadingCoeff.2 (hB b hb))
-      f).choose
+  (division_algorithm_existence m hB f).choose
 
-omit [DecidableEq k] in
 noncomputable def normalForm (m : MonomialOrder σ)
   {B : Set (MvPolynomial σ k)} (hB : ∀ b ∈ B, b ≠ 0) (f : MvPolynomial σ k) :
   MvPolynomial σ k :=
-  (MonomialOrder.div_set (m := m) (B := B)
-      (hB := fun b hb => isUnit_leadingCoeff.2 (hB b hb))
-      f).choose_spec.choose
+  (Exists.choose_spec (division_algorithm_existence m hB f)).choose
 
 omit [DecidableEq k] in
 /--
@@ -113,9 +120,12 @@ lemma normalForm_spec (m : MonomialOrder σ)
   (∀ (p : B), m.degree ((p : MvPolynomial σ k) * q p) ≼[m] m.degree f) ∧
   -- Property 3: The remainder condition (irreducibility)
   (∀ c ∈ r.support, ∀ b ∈ B, ¬ m.degree b ≤ c) := by
-  simpa only [quotients, Subtype.forall, mem_support_iff, ne_eq, normalForm] using
-    (MonomialOrder.div_set (m := m) (B := B) (hB := fun b hb =>
-        isUnit_leadingCoeff.2 (hB b hb)) f).choose_spec.choose_spec
+  -- The proof is by applying `Exists.choose_spec` twice.
+  let H_exists := division_algorithm_existence m hB f
+  let spec_q := Exists.choose_spec H_exists
+  let spec_r := Exists.choose_spec spec_q
+  -- `spec_r` is exactly the goal of the lemma.
+  exact spec_r
 
 omit [DecidableEq k] in
 /--  If `normalForm m B hB f = 0`, then in fact
@@ -130,28 +140,14 @@ theorem representation_of_f_of_normalForm_zero
   exact this
 
 variable (m) in
-/--
-**Gröbner basis property.**
-For an ideal `I` and a finite set `G`, this means:
-
-- `G ⊆ I`, and
-- `⟨ LT(G) ⟩ = ⟨ LT(I) ⟩`,
-
-where `LT(G) = { LT(g) | g ∈ G }` and `LT(I) = { LT(f) | f ∈ I \ {0} }`.
--/
 def GroebnerBasis_prop (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
   (G : Set (MvPolynomial σ k)) ⊆ I ∧
   Ideal.span ((fun g => leadingTerm m g) '' (G : Set (MvPolynomial σ k))) = leadingTermIdeal m I
 
 variable (m) [DecidableEq σ] in
-/--
-Removing `0` from `G` does not change the Gröbner basis property:
-
-`G` satisfies `G ⊆ I` and `⟨ LT(G) ⟩ = ⟨ LT(I) ⟩`
-if and only if `G \ {0}` satisfies the same conditions.
--/
-lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) :
+lemma IsGroebnerBasis_nonzero (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) :
   GroebnerBasis_prop m I G ↔ GroebnerBasis_prop m I (G \ {0}) := by
+  classical
   -- shorthand
   let LT : MvPolynomial σ k → MvPolynomial σ k := fun g => leadingTerm m g
 
@@ -174,6 +170,7 @@ lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset
       have hgG' : g ∈ G := by simpa using hgG
       by_cases h0 : g = 0
       · subst h0
+        -- If `simp` does not rewrite this, replace `by simp` with your lemma e.g. `leadingTerm_zero`.
         have hLT0 : LT (0 : MvPolynomial σ k) = 0 := by simp [LT]
         -- 0 is always in the span
         simpa only [LT, hLT0] using
@@ -182,7 +179,7 @@ lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset
       · have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
           refine Finset.mem_sdiff.2 ?_
           refine ⟨hgG', ?_⟩
-          simp only [mem_singleton, h0, not_false_eq_true]
+          simp [h0]
         have hx :
             LT g ∈ LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)) :=
           ⟨g, (by simpa using hg0), rfl⟩
@@ -192,18 +189,20 @@ lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset
   unfold GroebnerBasis_prop
   constructor
   · rintro ⟨hGI, hspan⟩
-    constructor
+    refine ⟨?_, ?_⟩
     · -- (G\{0}) ⊆ I
-      simp only [Finset.coe_sdiff, Finset.coe_singleton, Set.diff_singleton_subset_iff,
-        SetLike.mem_coe, zero_mem, Set.insert_eq_of_mem]
-      exact hGI
-    · -- ⟨ LT(G) ⟩ = ⟨ LT(I) ⟩ => ⟨ LT(G\{0}) ⟩ = ⟨ LT(I) ⟩
+      intro g hg
+      have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by simpa using hg
+      have hgG : g ∈ G := (Finset.mem_sdiff.mp hg0).1
+      exact hGI (by simpa using hgG)
+    · -- span of LT over (G\{0}) equals leadingTermIdeal
+      -- rewrite span(LT((G\{0}))) to span(LT(G)) using `hspan_sdiff`
       unfold LT at hspan_sdiff
       rw [←hspan, ←hspan_sdiff]
-      simp only [Finset.coe_sdiff, Finset.coe_singleton]
+      simp only [coe_sdiff, coe_singleton]
 
   · rintro ⟨hGI0, hspan0⟩
-    constructor
+    refine ⟨?_, ?_⟩
     · -- G ⊆ I (use 0 ∈ I for the missing element)
       intro g hg
       have hgG : g ∈ G := by simpa using hg
@@ -214,22 +213,19 @@ lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset
           refine Finset.mem_sdiff.2 ⟨hgG, ?_⟩
           simp [h0]
         exact hGI0 (by simpa using hg0)
-    · -- ⟨ LT(G\{0}) ⟩ = ⟨ LT(I) ⟩ => ⟨ LT(G) ⟩ = ⟨ LT(I) ⟩
+    · -- span of LT over G equals leadingTermIdeal
       unfold LT at hspan_sdiff
       rw [←hspan0, ←hspan_sdiff]
-      simp only [Finset.coe_singleton, Finset.coe_sdiff]
+      simp only [coe_singleton, coe_sdiff]
 
 
 variable (m) [DecidableEq σ] in
-/-- **Cox, Little, O'Shea, Ch 2, §5 Definition 5. Groebner_basis**
-A finite subset `G` of an ideal `I` is called a Gröbner basis (or standard basis) if
-
-1. `0 ∉ G`, and
-2. `G ⊆ I`, and
-3. `⟨ LT(G) ⟩ = ⟨ LT(I) ⟩` (the ideal generated by the leading terms of the elements of `G`
-equals the leading term ideal of `I`).
-
-We adopt the convention `⟨∅⟩ = {0}`, so `∅` is a Gröbner basis of the zero ideal.
+/-- Definition 5. Groebner_basis
+A finite subset G of an ideal I is called a Gröbner basis (or standard basis)
+if the ideal generated by the leading terms of the elements of G
+equals the leading term ideal of I.
+We adopt the convention that ⟨∅⟩ = {0}, so that the empty set is the
+Gröbner basis of the zero ideal.
 -/
 def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
   (∀ g ∈ G, g ≠ 0) ∧ GroebnerBasis_prop m I G
@@ -261,7 +257,7 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
       Set.mem_image_of_mem _ hdeg
     -- and the leading coefficient is a unit
     have hunit : IsUnit (m.leadingCoeff g) :=
-      isUnit_leadingCoeff.mpr (hGB.1 g hg_in_G)
+      (isUnit_leadingCoeff_iff_nonzero m g).mpr (hGB.1 g hg_in_G)
     -- conclude
     have :
       monomial (m.degree g) (m.leadingCoeff g)
@@ -281,7 +277,7 @@ lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
       unfold leadingTerm
       rw [C_mul_monomial]
       have : (m.leadingCoeff g)⁻¹ * m.leadingCoeff g = 1 := by
-        exact IsUnit.inv_mul_cancel (isUnit_leadingCoeff.mpr (gnzero g hg_in_G))
+        exact IsUnit.inv_mul_cancel ((isUnit_leadingCoeff_iff_nonzero m g).mpr (gnzero g hg_in_G))
       rw [this]
     rw [hlt]
     apply Ideal.mul_mem_left
@@ -309,7 +305,7 @@ theorem normalForm_exists_unique
   have hGset : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi) := by
     intro gi
     intro gi_in_G
-    exact isUnit_leadingCoeff.mpr (hGB.1 gi gi_in_G)
+    exact (isUnit_leadingCoeff_iff_nonzero m gi).mpr (hGB.1 gi gi_in_G)
   obtain ⟨gcomb, r, ⟨hre, hdeg, hnil⟩⟩ := m.div_set hGset f
 
   -- 2) set `g := ∑ b in gcomb.support, gcomb b • (b : MvPolynomial)`
@@ -397,7 +393,7 @@ theorem mem_Ideal_iff_GB_normalForm_eq_zero
   have hG_nonzero : ∀ g ∈ SetLike.coe G, g ≠ 0 := fun g hg => hGB.1 g hg
   -- The hypothesis that all elements of G have unit leading coefficients
   have hG_unit_lc : ∀ g ∈ SetLike.coe G, IsUnit (m.leadingCoeff g) := fun g hg =>
-    isUnit_leadingCoeff.mpr (hG_nonzero g hg)
+    (isUnit_leadingCoeff_iff_nonzero m g).mpr (hG_nonzero g hg)
 
   -- The uniqueness of the remainder is key.
   have unique_rem := normalForm_exists_unique hGB f
@@ -638,8 +634,8 @@ lemma Spolynomial_syzygy_of_degree_cancellation
     -- Since deg(f) = deg(g) = δ, the two parts of the S-poly subtraction
     -- also have degree δ and identical leading terms.
     rw [h_S_poly_simple i hi j hj]
-    have hi_unit : IsUnit (lc i) := isUnit_leadingCoeff.mpr (hp_ne_zero i hi)
-    have hj_unit : IsUnit (lc j) := isUnit_leadingCoeff.mpr (hp_ne_zero j hj)
+    have hi_unit : IsUnit (lc i) := (m.isUnit_leadingCoeff_iff_nonzero (p i)).mpr (hp_ne_zero i hi)
+    have hj_unit : IsUnit (lc j) := (m.isUnit_leadingCoeff_iff_nonzero (p j)).mpr (hp_ne_zero j hj)
     have : IsRegular (lc i)⁻¹ := by
       refine IsUnit.isRegular (IsUnit.inv hi_unit)
     have h1 : (lc i)⁻¹ • (p i - ((lc i) * (lc j)⁻¹) • p j)
