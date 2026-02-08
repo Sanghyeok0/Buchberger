@@ -275,7 +275,6 @@ theorem WellQuasiOrderedLE.minClasses_finite_and_nonempty
     use @toAntisymmetrization M (· ≤ ·) _ a
     exact Set.mem_image_of_mem (toAntisymmetrization fun x1 x2 ↦ x1 ≤ x2) ha
 
-
 /--
 **Theorem (Proposition 4.42 formalised): Dickson Property ↔ Well Quasi-Ordered.**
 Equivalence of Condition (i) and Condition (ii).

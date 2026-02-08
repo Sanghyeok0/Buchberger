@@ -68,3 +68,53 @@
     The first equality holds because for any $x \in s \setminus t$, the term is $f(x)$, while for any $x \in s \cap t$, the term is $0$. 
     The sum of zeros is zero.
 \end{proof}
+
+\section{Off-diagonal}
+
+\begin{lemma}[prod product eq prod offDiag of diag one]\label{lem:prod_product_eq_prod_offDiag_of_diag_one}
+    \lean{Finset.prod_product_eq_prod_offDiag_of_diag_one}
+    \leanok
+    Let $s$ be a finite set of indices in $\iota$, and let $F \colon \iota \times \iota \to M$
+    where $M$ is a commutative monoid.
+    Assume that the diagonal values are all $1$, i.e.
+    \[
+      \forall a \in s,\quad F(a,a)=1.
+    \]
+    Then the product of $F$ over the Cartesian product $s\times s$ equals the product over the off-diagonal part:
+    \[
+      \prod_{x\in s\times s} F(x)
+      \;=\;
+      \prod_{x\in s.\mathrm{offDiag}} F(x).
+    \]
+\end{lemma}
+
+\begin{proof}
+    \leanok
+    We use the decomposition of the square into diagonal and off-diagonal parts:
+    \[
+      s\times s \;=\; s.\mathrm{diag} \,\cup\, s.\mathrm{offDiag},
+    \]
+    and these two subsets are disjoint.
+    Hence the product over $s\times s$ splits as
+    \[
+      \prod_{x\in s\times s} F(x)
+      \;=\;
+      \left(\prod_{x\in s.\mathrm{diag}} F(x)\right)
+      \cdot
+      \left(\prod_{x\in s.\mathrm{offDiag}} F(x)\right).
+    \]
+    On the diagonal, we have $F(a,a)=1$ for all $a\in s$, so
+    \[
+      \prod_{x\in s.\mathrm{diag}} F(x)
+      = \prod_{a\in s} F(a,a)
+      = \prod_{a\in s} 1
+      = 1.
+    \]
+    Therefore,
+    \[
+      \prod_{x\in s\times s} F(x)
+      = 1 \cdot \prod_{x\in s.\mathrm{offDiag}} F(x)
+      = \prod_{x\in s.\mathrm{offDiag}} F(x),
+    \]
+    which is exactly the desired equality.
+\end{proof}

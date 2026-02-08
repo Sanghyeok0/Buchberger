@@ -1,4 +1,8 @@
-import Mathlib.Order.WellQuasiOrder
+module
+
+public import Mathlib.Order.WellQuasiOrder
+
+@[expose] public section
 
 variable {M : Type*} [Preorder M] -- M equipped with a quasi-order (preorder) ≤
 
@@ -211,8 +215,7 @@ theorem HasDicksonProperty.to_wellQuasiOrderedLE
   -- 3) From B ⊆ range f get an index‐function
   have hBfin_inx: ∀ b ∈ B.toFinset, ∃ i : ℕ, f i = b:= by
     have : ∀ b ∈ B.toFinset, b ∈ B := by
-      intro b
-      intro hb_in_Bfin
+      intro b hb_in_Bfin
       exact Set.mem_toFinset.mp hb_in_Bfin
     exact fun b a ↦ hBsub (this b a)
   choose index h_index using hBfin_inx

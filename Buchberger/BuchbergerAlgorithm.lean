@@ -1,9 +1,13 @@
-import Buchberger.GroebnerBases
-import Mathlib.Algebra.EuclideanDomain.Field
-import Mathlib.Algebra.Lie.OfAssociative
-import Mathlib.Order.BourbakiWitt
-import Mathlib.RingTheory.Henselian
-import Mathlib.RingTheory.Polynomial.Basic
+module
+
+public import Buchberger.GroebnerBases
+public import Mathlib.Algebra.EuclideanDomain.Field
+public import Mathlib.Algebra.Lie.OfAssociative
+public import Mathlib.Order.BourbakiWitt
+public import Mathlib.RingTheory.Henselian
+public import Mathlib.RingTheory.Polynomial.Basic
+
+@[expose] public section
 
 /-!
 # The Buchberger Algorithm

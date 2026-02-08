@@ -1,8 +1,12 @@
-import Buchberger.Order
-import Mathlib.Data.Finsupp.PWO
-import Mathlib.RingTheory.Finiteness.Defs
-import Mathlib.RingTheory.MvPolynomial.Ideal
-import Mathlib.RingTheory.MvPolynomial.MonomialOrder
+module
+
+public import Buchberger.Order
+public import Mathlib.Data.Finsupp.PWO
+public import Mathlib.RingTheory.Finiteness.Defs
+public import Mathlib.RingTheory.MvPolynomial.Ideal
+public import Mathlib.RingTheory.MvPolynomial.MonomialOrder
+
+@[expose] public section
 
 /-!
 # Initial Ideals and Dickson's Lemma
@@ -59,11 +63,11 @@ lemma degree_le_degree_mul (p q : MvPolynomial σ k) (hq_ne_zero : q ≠ 0) :
   · rw [m.degree_mul hp_ne_zero hq_ne_zero, map_add]
     exact le_add_of_nonneg_right (bot_le)
 
-variable (m) in
-/-- the leading coefficient of a multivariate polynomial with respect
-to a monomial ordering -/
-noncomputable def leadingTerm (f : MvPolynomial σ R) : MvPolynomial σ R :=
-  monomial (m.degree f) (m.leadingCoeff f)
+-- variable (m) in
+-- /-- the leading term of a multivariate polynomial with respect
+-- to a monomial ordering (mathlib updated)-/
+-- noncomputable def leadingTerm (f : MvPolynomial σ R) : MvPolynomial σ R :=
+--   monomial (m.degree f) (m.leadingCoeff f)
 
 /-- Multiplicativity of leading terms -/
 theorem leadingTerm_mul [IsCancelMulZero R] {f g : MvPolynomial σ R} (hf : f ≠ 0) (hg : g ≠ 0) :
@@ -72,16 +76,16 @@ theorem leadingTerm_mul [IsCancelMulZero R] {f g : MvPolynomial σ R} (hf : f �
   rw [degree_mul hf hg, leadingCoeff_mul hf hg]
   rw [MvPolynomial.monomial_mul]
 
-/-- The multidegree of the leading term `LT(f)` is equal to the degree of `f`. -/
-@[simp]
-lemma degree_leadingTerm (f : MvPolynomial σ R) :
-    m.degree (leadingTerm m f) = m.degree f := by
-  have : Decidable (m.leadingCoeff f = 0) := by exact Classical.propDecidable (m.leadingCoeff f = 0)
-  rw [leadingTerm, m.degree_monomial]
-  split_ifs with h_coeff_zero
-  · rw [m.leadingCoeff_eq_zero_iff] at h_coeff_zero
-    rw [h_coeff_zero, m.degree_zero]
-  · rfl
+-- /-- The multidegree of the leading term `LT(f)` is equal to the degree of `f`. (mathlib updated)-/
+-- @[simp]
+-- lemma degree_leadingTerm (f : MvPolynomial σ R) :
+--     m.degree (leadingTerm m f) = m.degree f := by
+--   have : Decidable (m.leadingCoeff f = 0) := by exact Classical.propDecidable (m.leadingCoeff f = 0)
+--   rw [leadingTerm, m.degree_monomial]
+--   split_ifs with h_coeff_zero
+--   · rw [m.leadingCoeff_eq_zero_iff] at h_coeff_zero
+--     rw [h_coeff_zero, m.degree_zero]
+--   · rfl
 
 variable (m) in
 lemma leadingTerm_eq_zero_imp_eq_zero
@@ -92,10 +96,11 @@ lemma leadingTerm_eq_zero_imp_eq_zero
     exact MvPolynomial.monomial_eq_zero.mp h_lt_zero
   exact m.leadingCoeff_eq_zero_iff.mp h_lc_zero
 
-variable (m) in
-@[simp]
-lemma leadingTerm_zero : m.leadingTerm (0 : MvPolynomial σ k) = 0 := by
-  rw [leadingTerm, degree_zero, leadingCoeff_zero, monomial_zero]
+--(mathlib updated)
+-- variable (m) in
+-- @[simp]
+-- lemma leadingTerm_zero : m.leadingTerm (0 : MvPolynomial σ k) = 0 := by
+--   rw [leadingTerm, degree_zero, leadingCoeff_zero, monomial_zero]
 
 variable (m) in
 @[simp]
@@ -226,7 +231,7 @@ theorem Dickson_lemma {σ : Type*} [Fintype σ] :
   refine (wellQuasiOrderedLE_def (σ →₀ ℕ)).mpr ?_
   -- Given any sequence f : ℕ → σ →₀ ℕ, PWO gives a monotone subsequence
   intro f
-  have hPWO : (Set.univ : Set (σ →₀ ℕ)).IsPWO := Finsupp.isPWO (S := Set.univ)
+  have hPWO : (Set.univ : Set (σ →₀ ℕ)).IsPWO := isPWO_of_wellQuasiOrderedLE univ
   obtain ⟨g, hg_mono⟩ := @hPWO.exists_monotone_subseq _ _ _ f (fun _ => mem_univ _)
   -- Take the first two indices i := g 0, j := g 1
   let i := g 0

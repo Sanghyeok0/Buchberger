@@ -1,4 +1,8 @@
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+module
+
+public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+
+@[expose] public section
 
 variable {ι κ M β γ : Type*} {s : Finset ι}
 
@@ -46,3 +50,17 @@ lemma prod_ite_not_mem (s t : Finset ι)
 
   -- product of 1's is 1 and multiplying by 1 is neutral
   simp only [Finset.prod_const_one, mul_one]
+
+@[to_additive]
+theorem prod_product_eq_prod_offDiag_of_diag_one (s : Finset ι) (F : ι × ι → M)
+    (hdiag : ∀ a ∈ s, F (a, a) = 1) :
+    ∏ x ∈ s ×ˢ s, F x = ∏ x ∈ s.offDiag, F x := by
+  classical
+  rw [← Finset.diag_union_offDiag s]
+  rw [Finset.prod_union (Finset.disjoint_diag_offDiag s)]
+  have hdiag_prod : (∏ x ∈ s.diag, F x) = 1 := by
+    rw [Finset.prod_diag]
+    refine Finset.prod_eq_one ?_
+    intro a ha
+    exact hdiag a ha
+  rw [hdiag_prod, one_mul]

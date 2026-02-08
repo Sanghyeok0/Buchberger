@@ -1,7 +1,12 @@
-import Buchberger.Finset
-import Buchberger.MonomialIdeal
-import Mathlib.RingTheory.Ideal.Basic
-import Mathlib.RingTheory.MvPolynomial.Groebner
+module
+
+public import Buchberger.Finset
+public import Buchberger.MonomialIdeal
+public import Mathlib.RingTheory.Ideal.Basic
+public import Mathlib.RingTheory.MvPolynomial.Groebner
+
+@[expose] public section
+
 /-!
 # The Division Algorithm and Buchberger's Criterion
 
@@ -141,7 +146,7 @@ where `LT(G) = { LT(g) | g ∈ G }` and `LT(I) = { LT(f) | f ∈ I \ {0} }`.
 -/
 def GroebnerBasis_prop (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) : Prop :=
   (G : Set (MvPolynomial σ k)) ⊆ I ∧
-  Ideal.span ((fun g => leadingTerm m g) '' (G : Set (MvPolynomial σ k))) = leadingTermIdeal m I
+  Ideal.span ((fun g => leadingTerm m g) '' G) = leadingTermIdeal m I
 
 variable (m) [DecidableEq σ] in
 /--
@@ -151,74 +156,48 @@ Removing `0` from `G` does not change the Gröbner basis property:
 if and only if `G \ {0}` satisfies the same conditions.
 -/
 lemma GroebnerBasis_prop_remove_zero (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ k)) :
-  GroebnerBasis_prop m I G ↔ GroebnerBasis_prop m I (G \ {0}) := by
-  -- shorthand
-  let LT : MvPolynomial σ k → MvPolynomial σ k := fun g => leadingTerm m g
-
-  -- Key fact: adding/removing `0` does not change the span of leading terms.
-  have hspan_sdiff :
-      Ideal.span (LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)))
-        =
-      Ideal.span (LT '' (G : Set (MvPolynomial σ k))) := by
+    GroebnerBasis_prop m I G ↔ GroebnerBasis_prop m I (G \ {0}) := by
+  -- Auxiliary lemma: removing 0 does not change the span of leading terms
+  have h_span : Ideal.span ((leadingTerm m) '' G) = Ideal.span ((leadingTerm m) '' (G \ {0} : Set (MvPolynomial σ k))) := by
     apply le_antisymm
-    · -- (⊆) monotonicity: (G \ {0}) ⊆ G
-      refine Ideal.span_mono ?_
-      rintro x ⟨g, hg, rfl⟩
-      have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-        simpa using hg
-      have hgG : g ∈ G := (Finset.mem_sdiff.mp hg0).1
-      exact ⟨g, (by simpa using hgG), rfl⟩
-    · -- (⊇) each generator from G is either from (G\{0}) or is 0
-      refine Ideal.span_le.2 ?_
-      rintro x ⟨g, hgG, rfl⟩
-      have hgG' : g ∈ G := by simpa using hgG
+    · -- (⊆) Case split: g = 0 (trivial) or g ≠ 0 (in G \ {0})
+      rw [Ideal.span_le]
+      rintro y ⟨g, hg, rfl⟩
       by_cases h0 : g = 0
-      · subst h0
-        have hLT0 : LT (0 : MvPolynomial σ k) = 0 := by simp [LT]
-        -- 0 is always in the span
-        simpa only [LT, hLT0] using
-          (Ideal.zero_mem
-            (Ideal.span (LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)))))
-      · have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-          refine Finset.mem_sdiff.2 ?_
-          refine ⟨hgG', ?_⟩
-          simp only [mem_singleton, h0, not_false_eq_true]
-        have hx :
-            LT g ∈ LT '' ((G \ ({0} : Finset (MvPolynomial σ k))) : Set (MvPolynomial σ k)) :=
-          ⟨g, (by simpa using hg0), rfl⟩
-        exact Ideal.subset_span hx
+      · rw [h0, leadingTerm_zero]; exact Ideal.zero_mem _
+      · apply Ideal.subset_span
+        exact ⟨g, by simpa only [Set.mem_diff, SetLike.mem_coe, Set.mem_singleton_iff] using ⟨hg, h0⟩, rfl⟩
+    · -- (⊇) Monotonicity: G \ {0} ⊆ G
+      apply Ideal.span_mono
+      apply Set.image_mono
+      simp only [Set.diff_singleton_subset_iff, Set.subset_insert]
 
-  -- Now unfold the definition and use `hspan_sdiff` (and `0 ∈ I`) to move between the two versions.
   unfold GroebnerBasis_prop
   constructor
-  · rintro ⟨hGI, hspan⟩
+  · -- (→) If G is a GB, so is G \ {0}
+    rintro ⟨hGI, hLT⟩
     constructor
-    · -- (G\{0}) ⊆ I
-      simp only [Finset.coe_sdiff, Finset.coe_singleton, Set.diff_singleton_subset_iff,
+    · -- G \ {0} ⊆ G ⊆ I
+      simp only [coe_sdiff, coe_singleton, Set.diff_singleton_subset_iff,
         SetLike.mem_coe, zero_mem, Set.insert_eq_of_mem]
       exact hGI
-    · -- ⟨ LT(G) ⟩ = ⟨ LT(I) ⟩ => ⟨ LT(G\{0}) ⟩ = ⟨ LT(I) ⟩
-      unfold LT at hspan_sdiff
-      rw [←hspan, ←hspan_sdiff]
-      simp only [Finset.coe_sdiff, Finset.coe_singleton]
+    · -- The spans are equal via h_span
+      simp only [coe_sdiff, coe_singleton]
+      rw [←h_span, ←hLT]
 
-  · rintro ⟨hGI0, hspan0⟩
+  · -- (←) If G \ {0} is a GB, so is G
+    rintro ⟨hGI, hLT⟩
     constructor
-    · -- G ⊆ I (use 0 ∈ I for the missing element)
+    · -- G ⊆ I (handle 0 case explicitly)
       intro g hg
-      have hgG : g ∈ G := by simpa using hg
       by_cases h0 : g = 0
-      · subst h0
-        simpa only using (Ideal.zero_mem I)
-      · have hg0 : g ∈ (G \ ({0} : Finset (MvPolynomial σ k))) := by
-          refine Finset.mem_sdiff.2 ⟨hgG, ?_⟩
-          simp [h0]
-        exact hGI0 (by simpa using hg0)
-    · -- ⟨ LT(G\{0}) ⟩ = ⟨ LT(I) ⟩ => ⟨ LT(G) ⟩ = ⟨ LT(I) ⟩
-      unfold LT at hspan_sdiff
-      rw [←hspan0, ←hspan_sdiff]
-      simp only [Finset.coe_singleton, Finset.coe_sdiff]
-
+      · rw [h0]; exact Ideal.zero_mem _
+      · apply hGI
+        simpa using ⟨hg, h0⟩
+    · -- The spans are equal via h_span
+      rw [h_span]
+      simp only [coe_sdiff, coe_singleton] at hLT
+      exact hLT
 
 variable (m) [DecidableEq σ] in
 /-- **Cox, Little, O'Shea, Ch 2, §5 Definition 5. Groebner_basis**
@@ -236,63 +215,38 @@ def IsGroebnerBasis (I : Ideal (MvPolynomial σ k)) (G : Finset (MvPolynomial σ
 
 
 variable [DecidableEq σ] in
+omit [DecidableEq k] in
 lemma IsGroebnerBasis.initialIdeal_eq_monomialIdeal
-  {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
-  (hGB : IsGroebnerBasis m I G) :
-  leadingTermIdeal m I = monomialIdeal k (G.image fun g => m.degree g) := by
-  -- by hypothesis the leading‐term span equals the initial ideal
-  have h_span : leadingTermIdeal m I = Ideal.span (G.image fun g => leadingTerm m g) := by
-    simpa [leadingTermIdeal] using (hGB.2.2).symm
-  -- rewrite both sides into span …  and monomialIdeal
-  rw [h_span, monomialIdeal]; clear h_span
-  apply le_antisymm
-  · -- (⊆) : every leadingTerm m g lies in the span of monomial α 1
-    apply Ideal.span_le.mpr
-    intro f hf
-    simp at hf
-    obtain ⟨g, hg_in_G, hgf, rfl⟩ := hf
-    rw [leadingTerm]
-    -- g ∈ G ⇒ m.degree g ∈ G.image (fun h => m.degree h)
-    have hdeg : m.degree g ∈ G.image (fun h => m.degree h) :=
-      Finset.mem_image.2 ⟨g, hg_in_G, rfl⟩
-    -- so monomial (m.degree g) 1 is a generator
-    have hmono : monomial (m.degree g) 1 ∈
-      ((fun s => monomial s (1 : k)) '' (G.image fun h => m.degree h)) :=
-      Set.mem_image_of_mem _ hdeg
-    -- and the leading coefficient is a unit
-    have hunit : IsUnit (m.leadingCoeff g) :=
-      isUnit_leadingCoeff.mpr (hGB.1 g hg_in_G)
-    -- conclude
-    have :
-      monomial (m.degree g) (m.leadingCoeff g)
-          = (C (m.leadingCoeff g)) * monomial (m.degree g) 1 := by
-          rw [C_mul_monomial]
-          rw [MulOneClass.mul_one (m.leadingCoeff g)]
-    rw [this]
+    {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
+    (hGB : IsGroebnerBasis m I G) :
+    leadingTermIdeal m I = monomialIdeal k (G.image fun g => m.degree g) := by
+  rw [hGB.2.2.symm, monomialIdeal, Finset.coe_image, Set.image_image]
+  apply le_antisymm <;> rw [Ideal.span_le] <;> rintro _ ⟨g, hg, rfl⟩
+  · -- (⊆) leadingTerm g ∈ span { monomial (deg g) 1 }
+    unfold leadingTerm
+    -- Explicitly construct the equality to assist rewriting
+    have h_decomp : monomial (m.degree g) (m.leadingCoeff g) =
+                    C (m.leadingCoeff g) * monomial (m.degree g) 1 := by
+      rw [C_mul_monomial, mul_one]
+    simp only [SetLike.mem_coe]
+    rw [h_decomp]
     apply Ideal.mul_mem_left
-    exact (Ideal.mem_span ((monomial (m.degree g)) 1)).mpr fun p a ↦ a hmono
-  · -- (⊇) : each `monomial α 1` comes from some g ∈ G
-    apply Ideal.span_le.mpr
-    intro f hf
-    simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe, exists_exists_and_eq_and] at hf
-    obtain ⟨g, hg_in_G, rfl⟩ := hf
-    obtain ⟨gnzero, hGI, hspan⟩ := hGB
-    have hlt : monomial (m.degree g) (1 : k) = C (m.leadingCoeff g)⁻¹ * leadingTerm m g := by
-      unfold leadingTerm
-      rw [C_mul_monomial]
-      have : (m.leadingCoeff g)⁻¹ * m.leadingCoeff g = 1 := by
-        exact IsUnit.inv_mul_cancel (isUnit_leadingCoeff.mpr (gnzero g hg_in_G))
-      rw [this]
-    rw [hlt]
+    exact Ideal.subset_span ⟨g, hg, rfl⟩
+  · -- (⊇) monomial (deg g) 1 ∈ span { leadingTerm g }
+    dsimp only
+    have h_lc_ne0 : m.leadingCoeff g ≠ 0 := by exact leadingCoeff_ne_zero_iff.mpr (hGB.1 g hg)
+    -- Construct equality: monomial n 1 = C (lc⁻¹) * leadingTerm g
+    have h_decomp : monomial (m.degree g) 1 = C (m.leadingCoeff g)⁻¹ * leadingTerm m g := by
+      rw [leadingTerm, C_mul_monomial, inv_mul_cancel₀ h_lc_ne0]
+    rw [h_decomp]
     apply Ideal.mul_mem_left
-    --show leadingTerm m g ∈ Ideal.span ↑(Finset.image (fun g ↦ leadingTerm m g) G)
-    have hgen : leadingTerm m g ∈ (G.image fun g => leadingTerm m g) :=
-      Finset.mem_image_of_mem (fun g ↦ leadingTerm m g) hg_in_G
-    exact (Ideal.mem_span (leadingTerm m g)).mpr fun p a ↦ a hgen
+    -- Since g ∈ G, LT(g) is in the span of LT(G)
+    apply Ideal.subset_span
+    exact ⟨g, hg, rfl⟩
 
 variable [DecidableEq σ] in
 /--
-Proposition.  If `G` is a Gröbner basis for `I`, then every `f` admits
+Proposition. If `G` is a Gröbner basis for `I`, then every `f` admits
 a unique decomposition `f = g + r` with
 1. `g ∈ I`, and
 2. no term of `r` is divisible by any `LT gᵢ`.
@@ -301,52 +255,31 @@ theorem normalForm_exists_unique
   {I : Ideal (MvPolynomial σ k)} {G : Finset (MvPolynomial σ k)}
   (hGB : IsGroebnerBasis m I G)
   (f  : MvPolynomial σ k) :
-  -- restated with ExistsUnique
   ExistsUnique (λ r : MvPolynomial σ k ↦
     (∃ g, g ∈ I ∧ f = g + r)
     ∧ ∀ c ∈ r.support, ∀ gi ∈ G, ¬ m.degree gi ≤ c) := by
-  -- 1) **Existence** via the division algorithm
-  have hGset : ∀ gi ∈ G, IsUnit (m.leadingCoeff gi) := by
-    intro gi
-    intro gi_in_G
-    exact isUnit_leadingCoeff.mpr (hGB.1 gi gi_in_G)
-  obtain ⟨gcomb, r, ⟨hre, hdeg, hnil⟩⟩ := m.div_set hGset f
+  -- 1) **Existence**
+  have h_unit : ∀ g ∈ G, IsUnit (m.leadingCoeff g) :=
+    fun g hg => isUnit_leadingCoeff.mpr (hGB.1 g hg)
+  obtain ⟨q, r, h_eq, -, h_rem⟩ := m.div_set h_unit f
 
-  -- 2) set `g := ∑ b in gcomb.support, gcomb b • (b : MvPolynomial)`
-  let g : MvPolynomial σ k := gcomb.sum (fun b coeff => coeff • (b : MvPolynomial σ k))
+  -- Define g as the quotient part and show g ∈ I
+  let g := q.sum (fun b (coeff : MvPolynomial σ k) => coeff * b)
   have hgI : g ∈ I := by
-    simp only [Finsupp.sum, Set.elem_mem, mem_val, smul_eq_mul, g]
-    have h_support_mem : ∀ b ∈ gcomb.support, (b : MvPolynomial σ k) ∈ I :=
+    simp only [Finsupp.sum, Set.elem_mem, mem_val, g]
+    have h_support_mem : ∀ b ∈ q.support, (b : MvPolynomial σ k) ∈ I :=
       fun b hb => hGB.2.1 b.2
-    exact Submodule.sum_smul_mem I gcomb h_support_mem
-  use r
-  constructor
-  · simp
-    constructor
-    · show ∃ g ∈ I, f = g + r -- g ∈ I because each `b ∈ G` lies in `I` and `I` is an ideal
-      use g
-      constructor
-      · show g ∈ I
-        exact hgI
-      · show f = g + r
-        simpa only [g] using hre
-    · -- no term of `r` is divisible by any `LT gᵢ`
-      show ∀ (c : σ →₀ ℕ), ¬coeff c r = 0 → ∀ gi ∈ G, ¬m.degree gi ≤ c
-      intro c hc gi hgi
-      have : c ∈ r.support := (mem_support_iff.mpr hc)
-      have : ∀ b ∈ ↑G, ¬m.degree b ≤ c := by exact fun b a ↦ hnil c this b a
-      have : ¬m.degree gi ≤ c := by (expose_names; exact hnil c this_1 gi hgi)
-      have : m.degree gi = m.degree (leadingTerm m gi) := by exact Eq.symm (degree_leadingTerm gi)
-      (expose_names; exact hnil c this_1 gi hgi)
+    exact Submodule.sum_smul_mem I q h_support_mem
+
+  refine ⟨r, ⟨⟨g, hgI, h_eq⟩, h_rem⟩, ?_⟩
 
   · -- **uniqueness**
     -- Suppose `r'` also works; then `f = g' + r'` and `r'` has no divisible LT–terms.
-    clear hdeg
-    rintro r' ⟨⟨g', hg'I, hre'⟩, hnil'⟩
+    rintro r' ⟨⟨g', hg'I, h_eq'⟩, h_rem'⟩
     by_contra hdiff
     have hne: ¬(r - r' = 0) := by exact sub_ne_zero_of_ne fun a ↦ hdiff (id (Eq.symm a))
     have hrg : r - r' = g' - g := by
-      rw [eq_sub_of_add_eq' (id (Eq.symm hre)), eq_sub_of_add_eq' (id (Eq.symm hre'))]
+      rw [eq_sub_of_add_eq' (id (Eq.symm h_eq)), eq_sub_of_add_eq' (id (Eq.symm h_eq'))]
       exact sub_sub_sub_cancel_left g g' f
     have dI : r - r' ∈ I := by
       rw [hrg]
@@ -378,8 +311,8 @@ theorem normalForm_exists_unique
       exact MonomialOrder.degree_mem_support hne
     simp only [Finset.mem_union] at hin
     cases hin with
-    | inl h => exact hnil (m.degree (r - r')) h gα hgα_in_G hα.2
-    | inr h => exact hnil' (m.degree (r - r')) h gα hgα_in_G hα.2
+    | inl h => exact h_rem (m.degree (r - r')) h gα hgα_in_G hα.2
+    | inr h => exact h_rem' (m.degree (r - r')) h gα hgα_in_G hα.2
 
 variable [DecidableEq σ] in
 /--
@@ -653,7 +586,7 @@ lemma Spolynomial_syzygy_of_degree_cancellation
             simp only [this, one_mul]
     have h2 : m.degree (p i - (lc i * (lc j)⁻¹) • p j)
           = m.degree ((lc i)⁻¹ • (p i - (lc i * (lc j)⁻¹) • p j)) := by
-            rw [MonomialOrder.degree_smul this]
+            rw [MonomialOrder.degree_smul_of_isRegular this]
 
     rw [←h1, ←h2]
     have hi_deg_δ : m.degree (p i) = δ := by exact hp_deg i hi
@@ -780,7 +713,7 @@ lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
     let lc_gⱼ := m.leadingCoeff gⱼ
     have hᵢ_ne_zero : monomial aᵢ cᵢ ≠ 0 := by
       contrapose hcᵢ_ne_zero
-      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      simp only [ne_eq, monomial_eq_zero] at *
       exact hcᵢ_ne_zero
     have hᵢ_degree : m.degree ((monomial aᵢ) cᵢ) = aᵢ := by
       rw [m.degree_monomial cᵢ]
@@ -789,7 +722,7 @@ lemma Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial
       rw [m.degree_mul hᵢ_ne_zero hgᵢ_ne_zero, hᵢ_degree]
     have hⱼ_ne_zero : monomial aⱼ cⱼ ≠ 0 := by
       contrapose hcⱼ_ne_zero
-      simp only [ne_eq, monomial_eq_zero, Decidable.not_not] at *
+      simp only [ne_eq, monomial_eq_zero] at *
       exact hcⱼ_ne_zero
     have hⱼ_degree : m.degree ((monomial aⱼ) cⱼ) = aⱼ := by
       rw [m.degree_monomial cⱼ]
@@ -1284,7 +1217,7 @@ theorem Buchberger_criterion
             -- We need to prove `i ∈ p.support ↔ i ∈ Finset.univ`.
             -- `i ∈ Finset.univ` is always true.
             simp only [Finset.mem_univ, Finsupp.mem_support_iff, iff_true]
-            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_apply, p]
 
             -- The goal is now `p_fun i ≠ 0`.
             unfold p_fun
@@ -1305,14 +1238,14 @@ theorem Buchberger_criterion
             -- Since `p.support` is `Finset.univ`, this is `∀ i, p i ≠ 0`.
             rw [h_p_support]
             intro i _ -- i is `Finset.mem_univ`
-            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_apply, p, p_fun]
             exact LT_hᵢi_ne_zero i
 
           -- Hypothesis 2: All polynomials in the family have degree `δ_min`.
           have hp_deg : ∀ i ∈ p.support, m.degree (p i) = δ_min := by
             rw [h_p_support]
             intro i _
-            dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p]
+            dsimp only [Finsupp.equivFunOnFinite_symm_apply_apply, p]
             -- Goal: `m.degree (LT(h_min i.val) * i.val) = δ_min`.
             -- We prove this by showing it's equal to `m.degree(h_min i.val * i.val)`,
             -- which is `δ_min` by definition of `G_δ`.
@@ -1337,7 +1270,7 @@ theorem Buchberger_criterion
             -- We know `∑ i in p.support, p i` is `P₁`.
             have h_sum_p_eq_P₁ : (∑ i ∈ p.support, p i) = P₁ := by
               rw [h_p_support, ← Finset.attach_eq_univ]
-              dsimp only [Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun, P₁]
+              dsimp only [Finsupp.equivFunOnFinite_symm_apply_apply, p, p_fun, P₁]
               exact Finset.sum_attach G_δ (fun i ↦ m.leadingTerm (h_min i) * i)
             rw [h_sum_p_eq_P₁]
             rw [AddEquiv.apply_symm_apply]
@@ -1359,7 +1292,7 @@ theorem Buchberger_criterion
 
             let gᵢ := ij.1.val; let gⱼ := ij.2.val
             let hᵢ := h_min gᵢ; let hⱼ := h_min gⱼ
-            dsimp only [leadingTerm, Finsupp.equivFunOnFinite_symm_apply_toFun, p, p_fun]
+            dsimp only [leadingTerm, Finsupp.equivFunOnFinite_symm_apply_apply, p, p_fun]
             rw [@Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial σ m k _ _ (↑ij.1) (↑ij.2) ?_ ?_ (m.degree (h_min ↑ij.1))]
             · --show (monomial (m.degree (h_min ↑ij.1) + m.degree ↑ij.1 - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2 = (monomial (δ_min - m.degree ↑ij.1 ⊔ m.degree ↑ij.2)) 1 * S_polynomial m ↑ij.1 ↑ij.2
               congr 4
@@ -1427,14 +1360,6 @@ theorem Buchberger_criterion
               rfl
 
             exact ⟨h_repr_eq, h_spec.2.1⟩
-
-          have hP₁_rw_S_poly_gᵢ_gⱼ : ∑ i ∈ p.support, p i
-            = ∑ ij ∈ p.support.offDiag, c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) 1 * S_polynomial m ↑ij.1 ↑ij.2) := by
-            rw [hP₁_rw_S_poly_pᵢ_pⱼ]
-            apply Finset.sum_congr rfl
-            intro ij hij
-            congr
-            exact h_S_relation ij hij
 
           have γ_le_δ (ij : ι × ι) (hi : ij.1.val ∈ G_δ) (hj : ij.2.val ∈ G_δ)
             :
@@ -1661,7 +1586,7 @@ theorem Buchberger_criterion
           have h_P₁_rw1 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • S_polynomial m (p ij.1) (p ij.2) := by
             convert hP₁_rw_S_poly_pᵢ_pⱼ
 
-          have h_P₁_rw2 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val)) 1 * S_polynomial m ij.1.val ij.2.val) := by
+          have h_P₁_rw2 : P₁ = ∑ ij ∈ p.support.offDiag, c ij • ((monomial (δ_min - m.degree ij.1.val.val ⊔ m.degree ij.2.val.val) 1) * S_polynomial m ij.1.val ij.2.val) := by
             rw [h_P₁_rw1]
             apply Finset.sum_congr rfl
             intro ij hij
@@ -1757,7 +1682,7 @@ theorem Buchberger_criterion
 
                     -- `Finsupp.sum` distributes over `Finset.sum`.
                     -- The lemma is `Finsupp.sum_sum_index`.
-                    rw [Finsupp.sum_sum_index']
+                    rw [←Finsupp.sum_finset_sum_index]
                     · congr
                       funext g
                       simp only [zero_mul, Finsupp.sum_single_index]
@@ -1781,7 +1706,7 @@ theorem Buchberger_criterion
                 have h_sum_of_sum_single :
                     ((∑ a ∈ G.attach, Finsupp.single a (h_P₃_fun a))).sum (fun g h => h * g.val)
                     = ∑ a ∈ G.attach, (h_P₃_fun a) * a.val := by
-                  rw [Finsupp.sum_sum_index']
+                  rw [←Finsupp.sum_finset_sum_index]
                   · congr
                     funext g
                     rw [Finsupp.sum_single_index]
@@ -1849,7 +1774,7 @@ theorem Buchberger_criterion
 
               · -- show m.toSyn (m.degree (h_P₂_finsupp g * ↑g)) < δ_syn_min
                 unfold h_P₂_finsupp
-                simp only [Finsupp.equivFunOnFinite_symm_apply_toFun]
+                simp only [Finsupp.equivFunOnFinite_symm_apply_apply]
                 unfold h_P₂_fun
                 simp only [ite_mul, zero_mul]
                 by_cases h : g ∈ G_δ
@@ -1862,7 +1787,7 @@ theorem Buchberger_criterion
 
             · -- show m.toSyn (m.degree (h_P₃_finsupp g * ↑g)) < δ_syn_min
               unfold h_P₃_finsupp
-              simp only [Finsupp.equivFunOnFinite_symm_apply_toFun]
+              simp only [Finsupp.equivFunOnFinite_symm_apply_apply]
               unfold h_P₃_fun
               simp only [ite_mul, zero_mul]
               by_cases h : g ∈ G.attach \ G_δ

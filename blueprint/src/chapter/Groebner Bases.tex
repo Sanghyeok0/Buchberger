@@ -92,7 +92,7 @@
 \begin{theorem} % [Cox] 77p Proposition 3
     \label{thm:initialIdeal_is_FG}
     \uses{def:initialIdeal, thm:Dickson_MvPolynomial}
-    \lean{MonomialOrder.initialIdeal_is_monomial_ideal, MonomialOrder.initialIdeal_is_FG}
+    \lean{MonomialOrder.leadingTermIdeal_is_initialIdeal, MonomialOrder.initialIdeal_is_FG}
     \leanok 
     Let $I \subseteq k[x_1, \ldots , x_n]$ be an ideal.
     \begin{enumerate}
@@ -132,7 +132,7 @@
 
 \begin{lemma}\label{lem:GroebnerBasis_prop_remove_zero}
   \uses{def:GroebnerBasis_prop}
-  \lean{MvPolynomial.IsGroebnerBasis_nonzero}
+  \lean{MonomialOrder.GroebnerBasis_prop_remove_zero}
   \leanok
   Let $I$ be an ideal and let $G$ be a finite set of polynomials.
   Then $G$ satisfies the Gr\"obner basis property for $I$ if and only if $G\setminus\{0\}$
