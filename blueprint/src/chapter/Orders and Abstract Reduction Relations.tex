@@ -236,35 +236,3 @@
   Conditions (i) and (ii) obviously continue to hold. 
   It now follows easily from condition (i) and the transitivity of $\preceq$ that $\{n_i\}_{i \in \mathbb{N}}$ has the desired property.
 \end{proof}
-
-\section{Orderings on the Monomials in $k[x_1,\ldots,x_n]$}
-
-\begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
-  \lean{MonomialOrder.degree_sum_le}
-  \leanok 
-  Let $f, g \in k[x_1, \dots, x_n]$ be nonzero polynomials. Then:
-  \begin{enumerate}
-      \item $\operatorname{multideg}(fg) = \operatorname{multideg}(f) + \operatorname{multideg}(g)$.
-      \item If $f + g \neq 0$, then $\operatorname{multideg}(f + g) \le \max(\operatorname{multideg}(f), \operatorname{multideg}(g))$. 
-        If, in \textit{addition}, $\operatorname{multideg}(f) \neq \operatorname{multideg}(g)$, then \textit{equality occurs}.
-  \end{enumerate}
-\end{lemma}
-
-\begin{lemma}\label{lem:degree_sum_le_syn}
-  \lean{MonomialOrder.degree_sum_le_syn}
-  \leanok 
-  Let $\iota$ be an index set and $s \subset \iota$ a finite subset. For each $i \in s$, let $h_i \in k[x_1,\dots,x_n]$. 
-  Then the following inequality holds:
-  \[
-  \operatorname{multideg}\left(\sum_{i \in s} h_i\right) \le \max_{i \in s} \left\{ \operatorname{multideg}(h_i) \right\}
-  \]
-  where the $\max$ is taken with respect to the monomial order.
-\end{lemma}
-\begin{proof}
-  \leanok
-  Let $M = \max_{i \in s} \{ \operatorname{multideg}(h_i) \}$. 
-  Any monomial $x^b$ appearing in the sum $\sum_{i \in s} h_i$ must be a monomial in at least one of the summands, say $h_{i_0}$ for some $i_0 \in s$.
-  By definition, the multidegree of any such term is bounded by the multidegree of the polynomial it belongs to, so $b \le \operatorname{multideg}(h_{i_0})$.
-  Also by definition, $\operatorname{multideg}(h_{i_0}) \le M$.
-  Therefore, $b \le M$ for any monomial $x^b$ in the sum. This implies that the multidegree of the sum itself cannot exceed $M$.
-\end{proof}
