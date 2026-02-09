@@ -1634,5 +1634,56 @@ theorem Buchberger_criterion
             WellFounded.not_lt_min wellFounded_lt RepDegrees hRepDegrees_nonempty h_new_in
           exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
 
+variable [DecidableEq σ] [DecidableEq k] in
+lemma grobner_basis_remove_redundant
+  {I : Ideal _} {G : Finset _} {p : MvPolynomial σ k}
+  (hG : IsGroebnerBasis m I G)
+  (hpG : p ∈ G)
+  (hLT : leadingTerm m p ∈ Ideal.span ((G.erase p).image (fun g ↦ leadingTerm m g))) :
+  IsGroebnerBasis m I (G.erase p) := by
+  -- Let G' be the smaller basis for clarity.
+  let G' := G.erase p
+  -- 1. `G'` is zero-free.
+  have hG'_zero_free : ∀ g ∈ G', g ≠ 0 := by
+    intro g hg_in_G'
+    have hg_in_G : g ∈ G := Finset.mem_of_mem_erase hg_in_G'
+    exact hG.1 g hg_in_G
+  -- 2. `G'` is a subset of the ideal `I`.
+  have hG'_subset_I : (G' : Set (MvPolynomial σ k)) ⊆ I := by
+    apply Set.Subset.trans
+    · -- `↑G' ⊆ ↑G`
+      apply Finset.coe_subset.mpr
+      exact Finset.erase_subset p G
+    · -- `↑G ⊆ I`
+      exact hG.2.1
+  -- 3. The ideal of leading terms of `G'` is the leading term ideal of `I`.
+  have h_lt_ideal_eq : Ideal.span (G'.image (leadingTerm m)) = leadingTermIdeal m I := by
+    rw [← hG.2.2]
+    apply le_antisymm
+    · -- `<LT(G')> ⊆ <LT(G)>` since `G' ⊆ G`
+      apply Ideal.span_mono
+      -- show: image (LT) (G') ⊆ image (LT) (G)
+      -- easiest: `G' ⊆ G` then apply `Set.image_mono`
+      have hsub : (G' : Set (MvPolynomial σ k)) ⊆ (G : Set (MvPolynomial σ k)) := by
+        exact Finset.coe_subset.mpr (Finset.erase_subset p G)
+      rw [Finset.coe_image]
+      exact Set.image_mono hsub
+    · -- `<LT(G)> ⊆ <LT(G')>`
+      -- show every generator `LT(g)` for `g ∈ G` is in `<LT(G')>`
+      rw [Ideal.span_le]
+      rintro lt_g ⟨g, hg_in_G, rfl⟩
+      by_cases h_g_is_p : g = p
+      · -- Case `g = p`: use the hypothesis `hLT`
+        subst h_g_is_p
+        -- rewrite the goal into exactly the type of `hLT`
+        simpa [G', Finset.image_image] using hLT
+      · -- Case `g ≠ p`: then `g ∈ G'` and is a generator
+        have hg_in_G' : g ∈ G' := Finset.mem_erase.mpr ⟨h_g_is_p, hg_in_G⟩
+        apply Ideal.subset_span
+        exact Finset.mem_image_of_mem (leadingTerm m) hg_in_G'
+  refine ⟨hG'_zero_free, ?_⟩
+  refine ⟨hG'_subset_I, ?_⟩
+  simpa only [GroebnerBasis_prop, G', Finset.coe_image, Finset.coe_image] using h_lt_ideal_eq
+
 end Field
 end MonomialOrder

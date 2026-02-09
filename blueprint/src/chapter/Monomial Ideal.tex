@@ -73,11 +73,11 @@
     \mathlibok
     Let $I=\langle x^\alpha \mid \alpha\in A\rangle$ be a monomial ideal in $k[x_1,\dots,x_n]$.
     For a polynomial $f=\sum_{\gamma} c_\gamma x^\gamma$, write
-    $\Supp(f)=\{\gamma \mid c_\gamma\neq 0\}$.
+    $\operatorname{supp}(f)=\{\gamma \mid c_\gamma\neq 0\}$.
     Then
     \[
       f\in I \quad\Longleftrightarrow\quad
-      \forall \gamma\in\Supp(f)\ \exists \alpha\in A\ \text{such that}\ \alpha\le \gamma,
+      \forall \gamma\in\operatorname{supp}(f)\ \exists \alpha\in A\ \text{such that}\ \alpha\le \gamma,
     \]
     equivalently, every monomial term $x^\gamma$ appearing in $f$ is divisible by some generator $x^\alpha$ with $\alpha\in A$.
 \end{lemma}
@@ -97,19 +97,19 @@
     f=\sum_{i,j} c_{i,j} x^{\beta(i,j)}x^{\alpha(i)}
       =\sum_{i,j} c_{i,j} x^{\beta(i,j)+\alpha(i)}.
   \]
-  Hence every exponent $\gamma$ in $\Supp(f)$ must be of the form
+  Hence every exponent $\gamma$ in $\operatorname{supp}(f)$ must be of the form
   $\gamma=\beta(i,j)+\alpha(i)$ for some $(i,j)$ with $c_{i,j}\neq 0$,
   so $\alpha(i)\le\gamma$.
-  This shows: for each $\gamma\in\Supp(f)$ there exists $\alpha\in A$ with $\alpha\le\gamma$.
+  This shows: for each $\gamma\in\operatorname{supp}(f)$ there exists $\alpha\in A$ with $\alpha\le\gamma$.
 
   ($\Leftarrow$)
-  Conversely, assume that for every $\gamma\in\Supp(f)$ there exists $\alpha(\gamma)\in A$ such that $\alpha(\gamma)\le\gamma$.
+  Conversely, assume that for every $\gamma\in\operatorname{supp}(f)$ there exists $\alpha(\gamma)\in A$ such that $\alpha(\gamma)\le\gamma$.
   Then for each such $\gamma$ we can write $\gamma=\alpha(\gamma)+\delta(\gamma)$ with $\delta(\gamma)\in\mathbb Z_{\ge 0}^n$, and
   \[
     c_\gamma x^\gamma = c_\gamma x^{\delta(\gamma)}x^{\alpha(\gamma)} \in I,
   \]
   since $x^{\alpha(\gamma)}$ is a generator and $I$ is an ideal.
-  Summing over all $\gamma\in\Supp(f)$ gives $f\in I$.
+  Summing over all $\gamma\in\operatorname{supp}(f)$ gives $f\in I$.
 \end{proof}
 
 \begin{theorem}\label{thm:Dickson} % [Becker-Weispfenning1993] 163p
