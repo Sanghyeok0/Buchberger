@@ -177,9 +177,9 @@
   as claimed.
 \end{proof}
 
-\begin{definition}\label{def:Groebner_basis}
+\begin{definition}\label{def:Groebner_basis} % [Cox] 84p Definition 3
   \uses{thm:initialIdeal_is_FG, def:GroebnerBasis_prop}
-  \lean{MvPolynomial.IsGroebnerBasis}
+  \lean{MonomialOrder.IsGroebnerBasis}
   \leanok 
   Fix a monomial order on $k[x_1,\dots,x_n]$ and let $I \subseteq k[x_1,\dots,x_n]$ be an ideal.
   A finite set $G \subseteq I$ is called a \textbf{Gr\"obner basis} (or \textbf{standard basis}) for $I$ if
@@ -196,8 +196,8 @@
 \end{definition}
 
 \begin{proposition}\label{prop:GR_Unique_Remainder} % [Cox] 83p Proposition 1
-  \uses{thm:div_alg, def:Groebner_basis, lem:mem_monomialIdeal_iff_divisible}
-  \lean{MvPolynomial.normalForm_exists_unique}
+  \uses{thm:div_alg, def:Groebner_basis, lem:mem_ideal_span_monomial_image}
+  \lean{MonomialOrder.normalForm_exists_unique}
   \leanok 
   Let $I \subseteq k[x_1,\dots,x_n]$ be an ideal and let $G = \{g_1,\dots,g_t\}$ be a Gr{\"o}bner basis for $I$.  
   Then given $f \in k[x_1,\dots,x_n]$ there is a unique $r \in k[x_1,\dots,x_n]$ with the following two properties:
@@ -214,14 +214,15 @@
   This proves the existence of $r$.
   To prove uniqueness, suppose $f = g+r = g'+r'$ satisfy (i) and (ii). 
   Then $r-r' = g' - g \in I$, so that if $r \ne r'$, then $\text{LT}(r-r') \in \langle \text{LT}(I) \rangle = \langle \text{LT}(g_1), \dots, \text{LT}(g_t) \rangle$. 
-  By Lemma~\ref{lem:mem_monomialIdeal_iff_divisible}, it follows that $\text{LT}(r-r')$ is divisible by some $\text{LT}(g_i)$. This is impossible since no term of $r, r'$ is divisible by one of $\text{LT}(g_1), \dots, \text{LT}(g_t)$. Thus $r-r'$ must be zero, and uniqueness is proved.
+  By Lemma~\ref{lem:mem_ideal_span_monomial_image}, it follows that $\text{LT}(r-r')$ is divisible by some $\text{LT}(g_i)$. 
+  This is impossible since no term of $r, r'$ is divisible by one of $\text{LT}(g_1), \dots, \text{LT}(g_t)$. Thus $r-r'$ must be zero, and uniqueness is proved.
   The final part of the proposition follows from the uniqueness of $r$.
 \end{proof}
 
 \begin{corollary}[Ideal Membership Problem]
   \label{cor:GB_membership_test} % [Cox] 84p Corollary 2
   \uses{prop:GR_Unique_Remainder}
-  \lean{MvPolynomial.mem_Ideal_iff_GB_normalForm_eq_zero}
+  \lean{MonomialOrder.mem_Ideal_iff_GB_normalForm_eq_zero}
   \leanok
   Let $G = \{g_1, \dots , g_t\}$ be a Gr{\"o}bner basis for an ideal $I \subseteq k[x_1, \dots , x_n]$
   (with respect to a given monomial order $>$) and let $f \in k[x_1, \dots , x_n]$.
@@ -236,22 +237,9 @@
   It follows that $0$ is the remainder of $f$ on division by $G$.
 \end{proof}
 
-
-\begin{definition}\label{def:Remainder} % [Cox] 84p Definition 3
-    \uses{thm:div_alg}
-    \lean{MvPolynomial.normalForm}
-    \leanok 
-    We will write \(\overline{f}^F\) for the remainder(normalform) on division of \(f\) by the ordered \(s\)-tuple
-    \[
-    F \;=\;(f_1,\dots,f_s).
-    \]
-    If \(F\) is a Gr{\"o}bner basis for the ideal \(\langle f_1,\dots,f_s\rangle\), then by Proposition 1
-    we may regard \(F\) as a set (without any particular order).
-\end{definition}
-
-\begin{definition}\label{def:S-polynomial} % [Cox] 84p Definition 4
-    \lean{MvPolynomial.S_polynomial}
-    \leanok 
+\begin{definition}\label{def:sPolynomial} % [Cox] 84p Definition 4
+    \lean{MonomialOrder.sPolynomial}
+    \mathlibok 
     Let \(f,g\in k[x_1,\dots,x_n]\) be nonzero polynomials.
     \begin{enumerate}
       \item If \(\operatorname{multideg}(f)=\alpha\) and \(\operatorname{multideg}(g)=\beta\), 
@@ -278,16 +266,16 @@
     \end{enumerate}
 \end{definition}
 
-\begin{lemma}\label{lem:Spolynomial_syzygy_of_degree_cancellation} % [Cox] 85p Lemma 5
-    \uses{thm:div_alg, def:S-polynomial}
-    \lean{MvPolynomial.Spolynomial_syzygy_of_degree_cancellation}
-    \leanok 
+\begin{lemma}\label{lem:sPolynomial_decomposition} % [Cox] 85p Lemma 5
+    \uses{thm:div_alg, def:sPolynomial}
+    \lean{MonomialOrder.sPolynomial_decomposition}
+    \mathlibok
     Suppose we have a sum $\sum_{i=1}^s p_i,$ where $\operatorname{multideg}(p_i)=\delta\in\mathbb Z_{\ge0}^n$ for all $i$.
     If $\operatorname{multideg}\Bigl(\sum_{i=1}^s p_i\Bigr)<\delta,$ then $\sum_{i=1}^s p_i$ is a linear combination, with coefficients in~$k$, of the $S$-polynomials $S(p_j,p_l)\quad\text{for }1\le j,\,l\le s$.
     Furthermore, each $S(p_j,p_l)$ has multidegree $<\delta$.
 \end{lemma}
 \begin{proof}
-  \leanok
+  \mathlibok
   Let $d_i = \text{LC}(p_i)$, so that $d_i x^\delta$ is the leading term of $p_i$. Since the sum $\sum_{i=1}^s p_i$ has strictly smaller multidegree, it follows easily that $\sum_{i=1}^s d_i = 0$.
 
   Next observe that since $p_i$ and $p_j$ have the same leading monomial, their S-polynomial reduces to
@@ -309,10 +297,10 @@
   Thus, $\sum_{i=1}^s p_i$ is a sum of S-polynomials of the desired form, and equation (1) makes it easy to see that $S(p_i, p_j)$ has multidegree $<\delta$. The lemma is proved.
 \end{proof}
 
-\begin{lemma}\label{lem:S-polynomials_and_Monomial_Multiplication} % [Cox] 89p Exercise 8
-  \uses{def:S-polynomial}
-  \lean{MvPolynomial.Spolynomial_of_monomial_mul_eq_monomial_mul_Spolynomial}
-  \leanok 
+\begin{lemma}\label{lem:sPolynomial_monomial_mul} % [Cox] 89p Exercise 8
+  \uses{def:sPolynomial}
+  \lean{MonomialOrder.sPolynomial_monomial_mul}
+  \mathlibok 
   Suppose that $p_i = c_i x^{\alpha^{(i)}} g_i$ and $p_j = c_j x^{\alpha^{(j)}} g_j$ have the same multidegree $\delta$. Then
   \[
   S(p_i, p_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
@@ -320,7 +308,7 @@
   where $x^{\gamma_{ij}} = \operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
 \end{lemma}
 \begin{proof}
-  \leanok
+  \mathlibok
   By hypothesis, $\operatorname{multideg}(p_i) = \operatorname{multideg}(p_j) = \delta$, which implies $\delta = \alpha^{(i)} + \operatorname{multideg}(g_i)$ and $\delta = \alpha^{(j)} + \operatorname{multideg}(g_j)$.
   The leading terms are $\operatorname{LT}(p_i) = c_i \operatorname{LC}(g_i) x^\delta$ and $\operatorname{LT}(p_j) = c_j \operatorname{LC}(g_j) x^\delta$.
   Let $\gamma_{ij}$ be the exponent of $\operatorname{lcm}(\operatorname{LM}(g_i), \operatorname{LM}(g_j))$.
@@ -345,8 +333,8 @@
 
 \begin{theorem}[Buchberger's Criterion] % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
     \label{thm:Buchbergers_Criterion}
-    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:Spolynomial_syzygy_of_degree_cancellation, lem:S-polynomials_and_Monomial_Multiplication, lem:sum_ite_not_mem}
-    \lean{MvPolynomial.Buchberger_criterion}
+    \uses{lem:degree_sum_le_syn, cor:GB_membership_test, lem:sPolynomial_decomposition, lem:sPolynomial_monomial_mul, lem:sum_ite_not_mem}
+    \lean{MonomialOrder.Buchberger_criterion}
     \leanok 
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 
     Then a basis $G = \{g_1, \dots , g_t\}$ of $I$ is a Gr{\"o}bner basis for $I$ (with respect to a given monomial order $>$)
@@ -389,15 +377,15 @@
   The monomials appearing in the second and third sums on the second line all have multidegree $<\delta$. 
   Then $\text{multideg}(f) < \delta$ means that the first sum on the second line also has multidegree $<\delta$.
 
-  The key to decreasing $\delta$ is to rewrite the first sum in two stages: use Lemma~\ref{lem:Spolynomial_syzygy_of_degree_cancellation} to rewrite the first sum in terms of S-polynomials, and then use $S(g_i, g_j) \overline{\hspace{1.5em}}^G 0$ to rewrite the S-polynomials without cancellation.
+  The key to decreasing $\delta$ is to rewrite the first sum in two stages: use Lemma~\ref{lem:sPolynomial_decomposition} to rewrite the first sum in terms of S-polynomials, and then use $S(g_i, g_j) \overline{\hspace{1.5em}}^G 0$ to rewrite the S-polynomials without cancellation.
 
   To express the first sum on the second line of (4) using S-polynomials, note that
   \begin{equation} \tag{5}
   \sum_{\text{multideg}(h_i g_i) = \delta} \text{LT}(h_i) g_i
   \end{equation}
-  satisfies the hypothesis of Lemma~\ref{lem:Spolynomial_syzygy_of_degree_cancellation} since each $p_i = \text{LT}(h_i) g_i$ has multidegree $\delta$ and the sum has multidegree $<\delta$.
+  satisfies the hypothesis of Lemma~\ref{lem:sPolynomial_decomposition} since each $p_i = \text{LT}(h_i) g_i$ has multidegree $\delta$ and the sum has multidegree $<\delta$.
   Hence, the first sum is a linear combination with coefficients in $k$ of the S-polynomials $S(p_i, p_j)$.
-  In Exercise~\ref{lem:S-polynomials_and_Monomial_Multiplication}, you will verify that
+  In Exercise~\ref{lem:sPolynomial_monomial_mul}, you will verify that
   \[
   S(p_i, p_j) = x^{\delta - \gamma_{ij}} S(g_i, g_j),
   \]
