@@ -1,4 +1,4 @@
-import Buchberger.GroebnerBases
+import Buchberger.Groebner
 import Mathlib.Data.Real.Basic
 import Mathlib.Analysis.Convex.Cone.Basic
 import Mathlib.LinearAlgebra.Matrix.DotProduct

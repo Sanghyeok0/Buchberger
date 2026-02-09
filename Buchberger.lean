@@ -3,6 +3,6 @@
 import Buchberger.Finset
 import Buchberger.Order
 import Buchberger.MonomialIdeal
-import Buchberger.GroebnerBases
+import Buchberger.Groebner
 import Buchberger.BuchbergerAlgorithm
 import Buchberger.Polytope
