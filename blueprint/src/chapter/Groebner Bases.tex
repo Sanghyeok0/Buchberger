@@ -22,6 +22,7 @@
 \end{proof}
 
 \begin{definition}[Quotients and remainder]\label{def:quotients_remainder}
+  \uses{thm:div_alg}
   \lean{MonomialOrder.quotients, MonomialOrder.normalForm}
   \leanok
   Fix a monomial order and a set (or ordered tuple) $B$ of polynomials with nonzero leading
@@ -39,6 +40,7 @@
 \end{definition}
 
 \begin{lemma}[Specification of the quotients and remainder]\label{lem:remainder_spec}
+  \uses{def:quotients_remainder}
   \lean{MonomialOrder.normalForm_spec}
   \leanok
   With the notation of Definition~\ref{def:quotients_remainder}, for every polynomial $f$ we have:
@@ -333,7 +335,9 @@
 
 \begin{theorem}[Buchberger's Criterion] % [Cox] 86p Buchberger’s Criterion % [Becker-Weispfenning1993] 213p Corollary 5.52
     \label{thm:Buchbergers_Criterion}
-    \uses{lem:degree_sum_le, cor:GB_membership_test, lem:sPolynomial_decomposition, lem:sPolynomial_monomial_mul, lem:sum_ite_not_mem}
+    \uses{lem:degree_sum_le, cor:GB_membership_test, 
+      lem:sPolynomial_decomposition, lem:sPolynomial_monomial_mul, 
+      lem:sum_product_eq_sum_offDiag_of_diag_zero, lem:remainder_spec}
     \lean{MonomialOrder.Buchberger_criterion}
     \leanok 
     Let $I$ be a polynomial ideal in $k[x_1, \dots, x_n]$. 

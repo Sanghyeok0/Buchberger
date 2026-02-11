@@ -118,3 +118,51 @@
     \]
     which is exactly the desired equality.
 \end{proof}
+
+\begin{lemma}[sum product eq sum offDiag of diag zero]\label{lem:sum_product_eq_sum_offDiag_of_diag_zero}
+    \lean{Finset.sum_product_eq_sum_offDiag_of_diag_zero}
+    \leanok
+    Let $s$ be a finite set of indices in $\iota$, and let $F \colon \iota \times \iota \to A$
+    where $A$ is an additive commutative monoid.
+    Assume that the diagonal values are all $0$, i.e.
+    \[
+      \forall a \in s,\quad F(a,a)=0.
+    \]
+    Then the sum of $F$ over the Cartesian product $s\times s$ equals the sum over the off-diagonal part:
+    \[
+      \sum_{x\in s\times s} F(x)
+      \;=\;
+      \sum_{x\in s.\mathrm{offDiag}} F(x).
+    \]
+\end{lemma}
+
+\begin{proof}
+    \leanok
+    We use the decomposition of the square into diagonal and off-diagonal parts:
+    \[
+      s\times s \;=\; s.\mathrm{diag} \,\cup\, s.\mathrm{offDiag},
+    \]
+    and these two subsets are disjoint.
+    Hence the sum over $s\times s$ splits as
+    \[
+      \sum_{x\in s\times s} F(x)
+      \;=\;
+      \left(\sum_{x\in s.\mathrm{diag}} F(x)\right)
+      +
+      \left(\sum_{x\in s.\mathrm{offDiag}} F(x)\right).
+    \]
+    On the diagonal, we have $F(a,a)=0$ for all $a\in s$, so
+    \[
+      \sum_{x\in s.\mathrm{diag}} F(x)
+      = \sum_{a\in s} F(a,a)
+      = \sum_{a\in s} 0
+      = 0.
+    \]
+    Therefore,
+    \[
+      \sum_{x\in s\times s} F(x)
+      = 0 + \sum_{x\in s.\mathrm{offDiag}} F(x)
+      = \sum_{x\in s.\mathrm{offDiag}} F(x),
+    \]
+    which is exactly the desired equality.
+\end{proof}
