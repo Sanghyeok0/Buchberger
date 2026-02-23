@@ -2,20 +2,20 @@
 
 \section{Orderings on the Monomials in $k[x_1,\ldots,x_n]$}
 
-\begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
-  \lean{MonomialOrder.degree_sum_le}
-  \leanok 
-  Let $f, g \in k[x_1, \dots, x_n]$ be nonzero polynomials. Then:
-  \begin{enumerate}
-      \item $\operatorname{multideg}(fg) = \operatorname{multideg}(f) + \operatorname{multideg}(g)$.
-      \item If $f + g \neq 0$, then $\operatorname{multideg}(f + g) \le \max(\operatorname{multideg}(f), \operatorname{multideg}(g))$. 
-        If, in \textit{addition}, $\operatorname{multideg}(f) \neq \operatorname{multideg}(g)$, then \textit{equality occurs}.
-  \end{enumerate}
-\end{lemma}
+% \begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
+%   \lean{MonomialOrder.degree_sum_le}
+%   \leanok 
+%   Let $f, g \in k[x_1, \dots, x_n]$ be nonzero polynomials. Then:
+%   \begin{enumerate}
+%       \item $\operatorname{multideg}(fg) = \operatorname{multideg}(f) + \operatorname{multideg}(g)$.
+%       \item If $f + g \neq 0$, then $\operatorname{multideg}(f + g) \le \max(\operatorname{multideg}(f), \operatorname{multideg}(g))$. 
+%         If, in \textit{addition}, $\operatorname{multideg}(f) \neq \operatorname{multideg}(g)$, then \textit{equality occurs}.
+%   \end{enumerate}
+% \end{lemma}
 
 \begin{lemma}\label{lem:degree_sum_le} % [Cox] 60p Lemma 8
   \lean{MonomialOrder.degree_sum_le}
-  \leanok 
+  \mathlibok
   Let $\iota$ be an index set and $s \subset \iota$ a finite subset. For each $i \in s$, let $h_i \in k[x_1,\dots,x_n]$. 
   Then the following inequality holds:
   \[
@@ -24,7 +24,7 @@
   where the $\max$ is taken with respect to the monomial order.
 \end{lemma}
 \begin{proof}
-  \leanok
+  \mathlibok
   Let $M = \max_{i \in s} \{ \operatorname{multideg}(h_i) \}$. 
   Any monomial $x^b$ appearing in the sum $\sum_{i \in s} h_i$ must be a monomial in at least one of the summands, say $h_{i_0}$ for some $i_0 \in s$.
   By definition, the multidegree of any such term is bounded by the multidegree of the polynomial it belongs to, so $b \le \operatorname{multideg}(h_{i_0})$.
