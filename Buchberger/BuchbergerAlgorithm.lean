@@ -2,9 +2,6 @@ module
 
 public import Buchberger.Groebner
 public import Mathlib.Algebra.EuclideanDomain.Field
-public import Mathlib.Algebra.Lie.OfAssociative
-public import Mathlib.Order.BourbakiWitt
-public import Mathlib.RingTheory.Henselian
 public import Mathlib.RingTheory.Polynomial.Basic
 
 @[expose] public section

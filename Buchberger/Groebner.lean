@@ -5,17 +5,9 @@ Authors: Antoine Chambert-Loir
 -/
 module
 
-public import Mathlib.Data.Finsupp.Lex
-public import Mathlib.Data.Finsupp.MonomialOrder
-public import Mathlib.Data.Finsupp.WellFounded
-public import Mathlib.Data.List.TFAE
-public import Mathlib.RingTheory.MvPolynomial.Homogeneous
-public import Mathlib.RingTheory.MvPolynomial.MonomialOrder
-public import Mathlib.RingTheory.MvPolynomial.Ideal
-public import Mathlib.Data.Finsupp.Defs
-public import Mathlib.RingTheory.MvPolynomial.Groebner
 public import Buchberger.Finset
 public import Buchberger.MonomialIdeal
+public import Mathlib.RingTheory.MvPolynomial.Groebner
 
 @[expose] public section
 
