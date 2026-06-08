@@ -6,6 +6,7 @@ public import Mathlib.RingTheory.Finiteness.Defs
 public import Mathlib.RingTheory.MvPolynomial.Ideal
 public import Mathlib.RingTheory.MvPolynomial.MonomialOrder
 
+@[expose] public section
 
 /-!
 # Initial Ideals and Dickson's Lemma

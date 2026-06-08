@@ -689,7 +689,7 @@ theorem Buchberger_criterion
               rw [leadingTerm, leadingTerm, mul_comm]
               rw [MvPolynomial.C_mul_monomial, mul_assoc]
               --nth_rw 2 [mul_comm]
-              rw [leadingCoeff_mul h_nzero_h_min_gᵢ (hG gᵢ (Finset.coe_mem gᵢ)), mul_inv_rev, mul_assoc]
+              rw [leadingCoeff_mul, mul_inv_rev, mul_assoc]
               nth_rw 3 [←mul_assoc]
               rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr h_nzero_h_min_gᵢ), one_mul]
               rw [inv_mul_cancel₀ (by exact leadingCoeff_ne_zero_iff.mpr (hG gᵢ (Finset.coe_mem gᵢ))), mul_one]
@@ -700,11 +700,19 @@ theorem Buchberger_criterion
               rw [hgᵢ_δ_min, h_deg_eq_δ]
             rw [this]
             apply Ideal.mul_mem_right
-            rw [leadingTerm_mul (h_nzero_h_min_gᵢ) (hG gᵢ (Finset.coe_mem gᵢ))]
-            apply Ideal.mul_mem_left
-            apply Submodule.mem_span_of_mem
-            simp only [Set.mem_image, SetLike.mem_coe]
-            exact ⟨gᵢ, ⟨Finset.coe_mem gᵢ, rfl⟩⟩
+            have hLT_gᵢ_mem :
+                m.leadingTerm (gᵢ : MvPolynomial σ k) ∈
+                  Ideal.span ((fun g ↦ m.leadingTerm g) '' (G : Set (MvPolynomial σ k))) := by
+              apply Ideal.subset_span
+              exact ⟨(gᵢ : MvPolynomial σ k), gᵢ.property, rfl⟩
+
+            have hLTmul :
+                m.leadingTerm (h_min gᵢ * (gᵢ : MvPolynomial σ k)) =
+                  m.leadingTerm (h_min gᵢ) * m.leadingTerm (gᵢ : MvPolynomial σ k) := by
+              rw [leadingTerm_mul]
+
+            rw [hLTmul]
+            exact Ideal.mul_mem_left _ _ hLT_gᵢ_mem
         · have f_deg_lt : m.toSyn (m.degree f) < δ_syn_min := by
             apply (LE.le.lt_iff_ne' f_deg_le).mpr (by exact fun a ↦ h_deg_eq_δ_syn (id (Eq.symm a)))
           clear f_deg_le; clear h_deg_eq_δ_syn
@@ -1622,9 +1630,11 @@ theorem Buchberger_criterion
                   -- φ g ≤ sup φ
                   simpa only [id_eq] using (Finset.le_sup (s := G.attach) (f := φ) hg)
               simpa only
-          have h_min_property :=
-            WellFounded.not_lt_min wellFounded_lt RepDegrees hRepDegrees_nonempty h_new_in
-          exact False.elim (h_min_property δ_new_min_lt_δ_syn_min)
+          exact False.elim
+            (WellFounded.notMem_of_lt_min
+              (by
+                simpa [δ_syn_min] using δ_new_min_lt_δ_syn_min)
+              h_new_in)
 
 variable [DecidableEq σ] [DecidableEq k] in
 lemma grobner_basis_remove_redundant
