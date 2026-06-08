@@ -1,9 +1,10 @@
+module
 
-import Buchberger.Order
-import Mathlib.Data.Finsupp.PWO
-import Mathlib.RingTheory.Finiteness.Defs
-import Mathlib.RingTheory.MvPolynomial.Ideal
-import Mathlib.RingTheory.MvPolynomial.MonomialOrder
+public import Buchberger.Order
+public import Mathlib.Data.Finsupp.PWO
+public import Mathlib.RingTheory.Finiteness.Defs
+public import Mathlib.RingTheory.MvPolynomial.Ideal
+public import Mathlib.RingTheory.MvPolynomial.MonomialOrder
 
 
 /-!
