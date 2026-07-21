@@ -11,12 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#157878">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  {% if jekyll.environment == "production" %}
-  <link rel="stylesheet"
-    href="{{ site.github.repository_name | append: '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
-  {% else %}
-  <link rel="stylesheet" href="{{ 'assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
-  {% endif %}
+  <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
   {% include head-custom.html %}
 </head>
 
@@ -27,9 +22,10 @@
     <h1 class="project-name">{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
     <h2 class="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline
       }}</h2>
-    <a href="blueprint" class="btn">Blueprint (web)</a>
-    <a href="blueprint.pdf" class="btn">Blueprint (pdf)</a>
-    <a href="docs" class="btn">Documentation</a>
+    <a href="{{ '/docs/' | relative_url }}" class="btn">API documentation</a>
+    <a href="https://github.com/Sanghyeok0/Buchberger/blob/main/ARTIFACT.md" class="btn">Artifact</a>
+    <a href="https://github.com/Sanghyeok0/mathlib4/tree/4868fec773dcba035d283904f8b118511cc83d73" class="btn">Lean source</a>
+    <a href="https://github.com/Sanghyeok0/Buchberger/tree/legacy-prototype" class="btn">Legacy prototype</a>
     {% if site.github.is_project_page %}
     <a href="{{ site.github.repository_url }}" class="btn">GitHub</a>
     {% endif %}

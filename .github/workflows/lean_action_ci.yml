@@ -1,4 +1,4 @@
-name: Lean Action CI
+name: Verify artifact
 
 on:
   push:
@@ -8,7 +8,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-      - uses: leanprover/lean-action@v1
+      - name: Checkout artifact
+        uses: actions/checkout@v4
+
+      - name: Install elan
+        run: curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+
+      - name: Resolve pinned dependencies
+        run: ~/.elan/bin/lake update
+
+      - name: Download Mathlib cache
+        run: >-
+          ~/.elan/bin/lake --dir .lake/packages/mathlib exe cache get
+          --scope=6e95f007303886f3523fdf27b66da9d06acfe42c
+
+      - name: Build artifact
+        run: ~/.elan/bin/lake build

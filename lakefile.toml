@@ -1,24 +1,21 @@
 name = "Buchberger"
 version = "0.1.0"
-keywords = ["math"]
+keywords = ["math", "groebner-bases", "buchberger"]
 defaultTargets = ["Buchberger"]
 
 [leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+pp.unicode.fun = true
 autoImplicit = false
 
 [[require]]
 name = "mathlib"
-scope = "leanprover-community"
-rev = "v4.30.0"
-
-[[require]]
-name = "checkdecls"
-git = "https://github.com/PatrickMassot/checkdecls.git"
+git = "https://github.com/Sanghyeok0/mathlib4.git"
+rev = "4868fec773dcba035d283904f8b118511cc83d73"
 
 [[require]]
 name = "«doc-gen4»"
 git = "https://github.com/leanprover/doc-gen4"
-rev = "v4.30.0"
+rev = "v4.33.0-rc1"
+
 [[lean_lib]]
 name = "Buchberger"

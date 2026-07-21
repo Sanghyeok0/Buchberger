@@ -1,66 +1,59 @@
 # Buchberger Algorithm Formalization
 
-[![GitHub CI](https://github.com/Sanghyeok0/Buchberger/actions/workflows/push.yml/badge.svg)](https://github.com/Sanghyeok0/Buchberger/actions/workflows/push.yml)
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/Sanghyeok0/Buchberger)
+This repository is the companion artifact and documentation site for a Lean 4
+formalization of relation-theoretic polynomial reduction, the Groebner basis
+criterion, and Buchberger's algorithm.
 
-This repository contains a Lean 4 formalization of **Buchberger's Algorithm** for computing **Gröbner bases** in polynomial rings. Gröbner bases, introduced by **Bruno Buchberger in 1965**, are a fundamental tool in computational algebra, providing a systematic way to solve polynomial systems.
+The canonical Lean sources live in the author's
+[`mathlib4` fork](https://github.com/Sanghyeok0/mathlib4), where they extend
+Mathlib modules directly. This artifact pins the exact source snapshot used by
+the paper rather than maintaining a second copy of the Lean files.
 
-This project is based on **Lean 4** and **Mathlib**, and aims to **rigorously formalize polynomial ideal theory**, closely following standard references such as *Ideals, Varieties, and Algorithms* [CLO1997] and *Gröbner Bases* [BW1993].
+## Formalization Snapshot
 
----
+- Development branch: [`buchberger-formalization`](https://github.com/Sanghyeok0/mathlib4/tree/buchberger-formalization)
+- Immutable commit: [`4868fec773dcba035d283904f8b118511cc83d73`](https://github.com/Sanghyeok0/mathlib4/tree/4868fec773dcba035d283904f8b118511cc83d73)
+- Generated API documentation: <https://sanghyeok0.github.io/Buchberger/docs/>
+- Reproducibility details: [`ARTIFACT.md`](ARTIFACT.md)
 
-## 📖 Documentation
+The snapshot contains the following six-file development:
 
-- **Blueprint of the proof**: [📚 Buchberger Blueprint](https://sanghyeok0.github.io/Buchberger/blueprint/)
-- **Documentation of the methods**: [📜 Lean API Docs](https://sanghyeok0.github.io/Buchberger/docs/)
-- **GitHub Repository**: [🔗 GitHub](https://github.com/Sanghyeok0/Buchberger)
-- **Discussion on Zulip**: [💬 Zulip Chat](https://leanprover.zulipchat.com/)
+1. `Mathlib/Logic/Relation.lean`
+2. `Mathlib/Logic/Relation/NormalForm.lean`
+3. `Mathlib/RingTheory/MvPolynomial/PolynomialReductions.lean`
+4. `Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion.lean`
+5. `Mathlib/RingTheory/MvPolynomial/BuchbergerCriterion.lean`
+6. `Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm.lean`
 
----
+`Buchberger.lean` imports this development from the pinned fork commit. The
+`lake-manifest.json` file records the complete dependency graph.
 
-## **📂 Project Structure**
-- `Buchberger/` - Lean 4 source files  
-  - Contains Lean formalizations (e.g., `MonomialIdeal.lean`, `GroebnerBases.lean`)  
-- `blueprint/` - Lean Blueprint documentation  
-  - `src/` - LaTeX sources for the Blueprint  
-    - `chapter/` - Individual chapters in LaTeX  
-    - `macros/` - Common and format-specific macros (`common.tex`, `web.tex`, `print.tex`)  
-    - `content.tex` - Main Blueprint content file  
-  - `web/` - HTML output of the Blueprint (after `leanblueprint web`)  
-  - `print/` - PDF output of the Blueprint (after `leanblueprint pdf`)  
-- `home_page/` - Jekyll-based GitHub Pages website  
-- `lakefile.toml` - Lean 4 package configuration  
-- `README.md` - This file!  
-- `.github/workflows/` - Continuous integration (CI) for Lean & Blueprint  
+## Build
 
----
+Install Lean through [elan](https://github.com/leanprover/elan), then run:
 
-## **🚀 Build Instructions**
-
-### **🔹 Build the Lean Files**
-To compile the Lean 4 code, ensure you have Lean installed.  
-Follow the [Lean installation guide](https://leanprover-community.github.io/get_started.html).
-
-### **🔹 Build the Blueprint**
-To generate the **Blueprint (formalization document)** and web version, run:
 ```sh
-leanblueprint web
-```
-To generate the **PDF version**, run:
-```
-leanblueprint pdf
-```
-The compiled **PDF document** will be located at:
-```
-blueprint/print/print.pdf
+lake update
+lake --dir .lake/packages/mathlib exe cache get \
+  --scope=6e95f007303886f3523fdf27b66da9d06acfe42c
+lake build
 ```
 
----
+No checkout of a moving branch is needed: the dependency is fixed to the full
+commit hash above. The optional cache scope is an ancestor PR commit from the
+same fork; omit `--scope=...` to rebuild outside that additional cache trust
+boundary.
 
-## **📌 Source References**
+## Paper
 
-`[CLO1997]`: <https://www.springer.com/gp/book/9780387946801>  
-*Cox, Little, and O'Shea*, *Ideals, Varieties, and Algorithms*, Springer, 1997.
+The manuscript is in preparation. Its arXiv and archival links will be added
+here when the first public version is deposited.
 
-`[BW1993]`: <https://www.cambridge.org/core/books/grobner-bases/2A360FC17BB715C2C99402D16A204BD6>  
-*Becker and Weispfenning*, *Gröbner Bases*, Cambridge University Press, 1993.
+## Legacy Prototype
+
+The earlier standalone implementation and its Lean Blueprint remain available
+in the [`legacy-prototype`](https://github.com/Sanghyeok0/Buchberger/tree/legacy-prototype)
+branch and at the immutable tag
+[`legacy-prototype-v1`](https://github.com/Sanghyeok0/Buchberger/tree/legacy-prototype-v1).
+They are preserved for historical reference and are not the source snapshot
+used by the current paper.

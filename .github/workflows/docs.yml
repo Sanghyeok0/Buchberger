@@ -1,0 +1,70 @@
+name: Build and deploy documentation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout artifact
+        uses: actions/checkout@v4
+
+      - name: Install elan
+        run: curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+
+      - name: Download Mathlib cache
+        run: |
+          ~/.elan/bin/lake update
+          ~/.elan/bin/lake --dir .lake/packages/mathlib exe cache get \
+            --scope=6e95f007303886f3523fdf27b66da9d06acfe42c
+
+      - name: Build artifact
+        run: ~/.elan/bin/lake build
+
+      - name: Cache generated dependency documentation
+        uses: actions/cache@v4
+        with:
+          path: .lake/build/doc
+          key: doc-gen-${{ hashFiles('lake-manifest.json') }}
+          restore-keys: doc-gen-
+
+      - name: Build API documentation
+        run: ~/.elan/bin/lake -R -Kenv=dev build Buchberger:docs
+
+      - name: Assemble website
+        run: |
+          rm -rf home_page/docs
+          cp -r .lake/build/doc home_page/docs
+          find home_page/docs -name "*.trace" -delete
+          find home_page/docs -name "*.hash" -delete
+
+      - name: Build Jekyll site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./home_page
+          destination: ./home_page/_site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./home_page/_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
