@@ -101,12 +101,12 @@ Listing~\ref{lst:buchberger-termination}.
 \begin{theorem}[Existence and correctness of a terminal Buchberger state]
 \label{thm:terminal-correctness}
 Let $G\subseteq R[X_\sigma]$ and let $I=\ideal{G}$.  Assume that $R$ has no
-zero divisors, that $R[X_\sigma]$ is Noetherian, and that every nonzero
-polynomial in $R[X_\sigma]$ has unit leading coefficient.  Then no infinite
-sequence of Buchberger steps starts from $G$.  Moreover, there exist a
-Buchberger state $H$ and a finite sequence of Buchberger steps from $G$ to $H$
-such that $H$ has no outgoing Buchberger step and the underlying polynomial
-set of $H$ is a Gr\"obner basis of $I$.
+zero divisors, $R[X_\sigma]$ is Noetherian, and every nonzero polynomial in
+$R[X_\sigma]$ has unit leading coefficient.  Then no infinite sequence of
+Buchberger steps starts from $G$.  Moreover, there exist a Buchberger state
+$H$ and a finite sequence of Buchberger steps from $G$ to $H$ such that $H$
+has no outgoing Buchberger step and the underlying polynomial set of $H$ is a
+Gr\"obner basis of $I$.
 \end{theorem}
 
 The Lean theorem also takes the corresponding initial-state invariant as an
@@ -132,7 +132,7 @@ development: one Buchberger step preserves finiteness, and every finite chain
 of steps preserves finiteness.  These results are
 \leandoc{Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm}{MonomialOrder.BuchbergerStep.finite}{MonomialOrder.BuchbergerStep.finite}
 and
-\leandoc{Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm}{MonomialOrder.ReflTransGen_BuchbergerStep.finite}{MonomialOrder.ReflTransGen_BuchbergerStep.finite},
+\leandoc{Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm}{MonomialOrder.ReflTransGen_BuchbergerStep.finite}{ReflTransGen_BuchbergerStep.finite},
 respectively.
 
 \begin{remark}[What is and is not executable]\label{rem:not-executable}
