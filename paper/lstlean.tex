@@ -1,0 +1,69 @@
+% Compact Lean 4 listing style for the manuscript.
+\usepackage{xcolor}
+\usepackage{listings}
+
+\definecolor{LeanKeyword}{RGB}{0,70,140}
+\definecolor{LeanTactic}{RGB}{120,40,120}
+\definecolor{LeanComment}{RGB}{0,105,55}
+\definecolor{LeanNumber}{RGB}{105,105,105}
+\definecolor{LeanSymbol}{RGB}{0,0,130}
+
+\lstdefinelanguage{Lean4}{
+  sensitive=true,
+  morekeywords=[1]{
+    import,prelude,namespace,section,end,open,export,include,omit,
+    variable,universe,noncomputable,private,protected,public,local,
+    def,abbrev,theorem,lemma,example,structure,class,instance,inductive,
+    where,deriving,mutual,partial,termination_by,decreasing_by
+  },
+  morekeywords=[2]{Sort,Type,Prop},
+  morekeywords=[3]{
+    by,fun,match,with,if,then,else,let,in,have,show,suffices,
+    exact,apply,refine,intro,rintro,rcases,obtain,cases,induction,
+    constructor,simp,simpa,rw,by_cases,change,clear
+  },
+  morecomment=[l]{--},
+  morecomment=[s]{/-}{-/},
+  morestring=[b]",
+  literate=
+    {α}{{$\alpha$}}1
+    {σ}{{$\sigma$}}1
+    {ℕ}{{$\mathbb{N}$}}1
+    {∀}{{\color{LeanSymbol}$\forall$}}1
+    {∃}{{\color{LeanSymbol}$\exists$}}1
+    {→}{{\color{LeanSymbol}$\to$}}1
+    {↔}{{\color{LeanSymbol}$\leftrightarrow$}}1
+    {⟶}{{\color{LeanSymbol}$\longrightarrow$}}1
+    {⟷}{{\color{LeanSymbol}$\longleftrightarrow$}}1
+    {∈}{{\color{LeanSymbol}$\in$}}1
+    {∉}{{\color{LeanSymbol}$\notin$}}1
+    {⊆}{{\color{LeanSymbol}$\subseteq$}}1
+    {≠}{{\color{LeanSymbol}$\neq$}}1
+    {¬}{{\color{LeanSymbol}$\neg$}}1
+    {∧}{{\color{LeanSymbol}$\wedge$}}1
+    {∨}{{\color{LeanSymbol}$\vee$}}1
+    {₀}{{$_0$}}1
+    {₁}{{$_1$}}1
+    {₂}{{$_2$}}1
+    {:=}{{\color{LeanSymbol}:=}}2
+}
+
+\lstdefinestyle{lean}{
+  language=Lean4,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=[1]\color{LeanKeyword}\bfseries,
+  keywordstyle=[2]\color{LeanKeyword},
+  keywordstyle=[3]\color{LeanTactic},
+  commentstyle=\color{LeanComment}\itshape,
+  numbers=left,
+  numberstyle=\scriptsize\color{LeanNumber},
+  numbersep=7pt,
+  frame=single,
+  framesep=4pt,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  captionpos=b
+}

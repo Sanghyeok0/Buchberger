@@ -1,0 +1,16 @@
+\section{Limitations and future work}\label{sec:future-work}
+
+The proved theorems provide a relational specification for polynomial reduction and the abstract Buchberger procedure.  The following results and implementations are not yet part of the development.
+\begin{itemize}[leftmargin=2em]
+  \item Define an executable Buchberger procedure using \lean{Finset}-based
+    states, a finite queue of critical pairs, a computable pair-selection
+    strategy, and a verified normal-form function.
+  \item Connect Mathlib's existing division procedure to the relational normal
+    form specification.
+  \item Separate specification-level polynomials from a computable ordered
+    representation suitable for efficient execution and reflection.
+  \item Formalize interreduction and reduced Gr\"obner bases in the
+    reduction-theoretic interface.
+  \item Extend the framework to matrix-based $F_4$ reduction and to
+    signature-based algorithms, including $F_5$-style criteria.
+\end{itemize}

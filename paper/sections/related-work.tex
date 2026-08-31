@@ -1,0 +1,30 @@
+\section{Related work}\label{sec:related-work}
+
+\citet{GuoEtAl2026} formalized polynomial division with remainder,
+Buchberger's criterion, reduced Gr\"obner bases, and results connecting
+finite-variable and infinite-variable polynomial rings in Lean 4.  Therefore,
+this article does not claim to be the first Lean formalization of Gr\"obner
+basis theory.  The ideal-relative predicate \lean{IsGroebnerBasis} is a
+standard definition also used in that development; this article does not
+claim the definition itself as a new contribution.  In comparison, the
+present development focuses on the explicit arbitrary-term reduction relation; the
+equivalence between the Gr\"obner condition and Church--Rosser, local
+confluence, confluence, reduction to zero, and uniqueness of normal forms;
+and the well-founded nondeterministic Buchberger step relation.
+
+\citet{ShenEtAl2026} developed tactics that send polynomial computations to
+SageMath or SymPy and verify the returned certificates in Lean using a
+computable polynomial representation.  Their system is designed for practical
+automation on concrete inputs.  The formalization in this article does not call
+an external computer algebra system: it proves the reduction theory and theorems about the abstract Buchberger
+procedure inside Lean.  Conversely, it does not yet compute Gr\"obner bases on
+concrete inputs.
+
+In Isabelle/HOL, \citet{MaletzkyImmler2018} formalized Gr\"obner bases of
+modules and executable implementations of Buchberger's and Faug\`ere's $F_4$
+algorithms.  \citet{Maletzky2021} then formalized a generic executable family
+of signature-based algorithms.  Those Isabelle developments include concrete
+functions that can be evaluated, whereas \lean{BuchbergerStep} in this article
+is a proposition-valued relation.  This difference motivates the future
+separation between the relation \lean{BuchbergerStep} and an efficient
+ordered representation for executable Lean code.

@@ -1,0 +1,246 @@
+\section{Polynomial reduction}\label{sec:polynomial-reduction}
+
+\subsection{One-step reduction}
+
+Continue to use the fixed monomial order $m$.
+
+\begin{definition}[One-step polynomial reduction]
+\label{def:one-step-reduction}
+Let $p,f,g\in\Rpoly$.  We say that $f$ reduces to $g$ by $p$ if
+there are monomials $x^t$ and $x^s$ and a coefficient $c\in R$ such that
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+  \item $p\neq0$ and $x^t$ occurs in $f$;
+  \item $\LM(p)\mid x^t$; equivalently, $x^t=x^s\LM(p)$;
+  \item $c\LC(p)$ equals the coefficient of $x^t$ in $f$; and
+  \item $g=f-cx^s p$.
+\end{enumerate}
+Reduction modulo a set $G$ means reduction by some polynomial $p\in G$.
+The Lean definition records the exponents $s$ and $t$ explicitly and writes
+the coefficient of $x^t$ in $f$ as \lean{f.coeff t}.
+\end{definition}
+
+The exact Lean definition is shown in
+Listing~\ref{lst:reduction-definition}.
+
+\begin{lstlisting}[style=lean,caption={One-step polynomial reduction and its existential closures.},label={lst:reduction-definition}]
+def ReducesToBy
+    (p f g : MvPolynomial σ R) (t : σ →₀ ℕ) : Prop :=
+  p ≠ 0 ∧
+    t ∈ f.support ∧
+      ∃ s : σ →₀ ℕ,
+        s + m.degree p = t ∧
+          ∃ c : R,
+            c * m.leadingCoeff p = f.coeff t ∧
+              g = f - monomial s c * p
+
+def ReducesToPoly (p f g : MvPolynomial σ R) : Prop :=
+  ∃ t : σ →₀ ℕ, m.ReducesToBy p f g t
+
+def ReducesToSet
+    (P : Set (MvPolynomial σ R))
+    (f g : MvPolynomial σ R) : Prop :=
+  ∃ p ∈ P, m.ReducesToPoly p f g
+\end{lstlisting}
+
+\begin{remark}[Single-reducer strong reduction]
+\label{rem:strong-reduction}
+The relation in Definition~\ref{def:one-step-reduction} is a single-reducer
+strong reduction relation: one step subtracts a monomial multiple of one
+polynomial $p\in G$.  It does not implement weak reduction over coefficient
+rings, where leading coefficients of several reducers may be combined to
+cancel a single term.  For example, in $\mathbb{Z}[x]$, let
+\[
+  G=\{2x,3x\},\qquad f=x.
+\]
+Under the present relation, $x$ is normal modulo $G$, because neither $2$ nor
+$3$ divides its coefficient $1$.  In a weak reduction framework, however, the
+identity
+\[
+  x=(-1)(2x)+(3x)
+\]
+allows the term to be cancelled by combining the two reducers.
+\end{remark}
+
+\begin{definition}[Reduction closures]
+\label{def:reduction-closures}
+For a fixed set $G\subseteq\Rpoly$:
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+  \item $f\red{G}g$ denotes one-step reduction by some $p\in G$;
+  \item $f\redstar{G}g$ denotes the reflexive-transitive closure of
+        one-step reduction;
+  \item $f\eqvred{G}g$ denotes the smallest equivalence relation containing
+        one-step reduction; and
+  \item $f\joinred{G}g$ means that there exists $h$ with
+        $f\redstar{G}h$ and $g\redstar{G}h$.
+\end{enumerate}
+\end{definition}
+
+The relation $\red{G}$ permits cancellation of any reducible monomial.
+Mathlib's division procedure, by contrast, selects terms according to a
+specific algorithm.  The arbitrary-term relation is used for confluence and
+Church--Rosser statements; leading-term reduction remains available as the
+separate predicate \lean{LTermReducesToPoly}.
+
+\subsection{Reducibility over rings}
+
+\begin{proposition}[Reducibility criterion over a commutative ring]
+\label{prop:reducibility-ring}
+For $p,f\in\Rpoly$, the polynomial $f$ is reducible by $p$ if and only if
+\[
+  p\neq0
+  \quad\text{and}\quad
+  \exists t\in\supp(f),\qquad
+    \LM(p)\mid x^t
+    \quad\text{and}\quad
+    \LC(p)\mid\operatorname{coeff}_t(f).
+\]
+Since $\LM(p)=x^{\deg_m(p)}$, the monomial-divisibility condition is
+equivalently the componentwise inequality $\deg_m(p)\leq t$ on exponent
+vectors.  Thus reducibility over a general coefficient ring consists of both
+monomial divisibility and coefficient divisibility.
+\end{proposition}
+
+Proposition~\ref{prop:reducibility-ring} is the exact content of
+\lean{MonomialOrder.ReducesToPoly.reducible_iff_exists_degree_le_and_leadingCoeff_dvd}.
+In particular, a unit leading coefficient is not required to define a
+reduction step.  It is a sufficient condition that makes the coefficient
+divisibility requirement automatic and reduces the criterion to monomial
+divisibility alone.
+
+\begin{remark}[The unit-leading-coefficient hypothesis]
+\label{rem:unit-condition}
+Several later translation and confluence theorems assume
+\begin{equation}\label{eq:unit-condition}
+  \forall g\in G,\qquad
+  g\neq0\;\Longrightarrow\;\LC(g)\text{ is a unit}.
+\end{equation}
+The Lean statements encode the same condition as
+\(
+  \operatorname{IsUnit}(\LC(g))\lor g=0
+\), which avoids imposing a unit condition on \(\LC(0)=0\).  Under this
+hypothesis, whenever $\LM(g)$ divides a selected monomial, the required
+coefficient multiple exists.  Over a field, Condition~\eqref{eq:unit-condition}
+is automatic.  Over a general ring, it is an algebraic hypothesis used by
+specific theorems rather than by the definition of reduction itself.
+\end{remark}
+
+\subsection{Termination by support colex order}
+
+Total degree is not a termination measure for arbitrary-term reduction:
+cancelling one monomial can introduce several monomials of the same total
+degree.
+
+\begin{definition}[Support colexicographic order]
+\label{def:support-colex}
+Identify the support of a polynomial with the finite set of monomials that
+occur with nonzero coefficient.  If
+$\supp(f)\mathbin{\triangle}\supp(g)\neq\varnothing$, let
+\[
+  M=\max\nolimits_m\bigl(\supp(f)\mathbin{\triangle}\supp(g)\bigr)
+\]
+be the largest monomial in the symmetric difference with respect to the fixed
+monomial order.  We declare
+\[
+  f<_{\mathrm{supp}}g
+\]
+when $M\in\supp(g)$.  If the supports are equal, their symmetric difference is
+empty and neither polynomial is smaller than the other.  Thus the polynomial
+containing the largest monomial at which the two supports differ is the larger
+one.
+\end{definition}
+
+In Lean, monomials are stored as exponent vectors.  The implementation
+transports these exponents to the linearly ordered synonym attached to $m$
+and then applies the finite-set colexicographic order; this is the role of
+\lean{m.toSyn} and \lean{toColex} in Listing~\ref{lst:termination}.
+
+\begin{lstlisting}[style=lean,caption={The support-colex measure and termination of polynomial reduction.},label={lst:termination}]
+def supportColexLt (f g : MvPolynomial σ R) : Prop :=
+  letI : LinearOrder m.syn := m.linearOrderSyn
+  toColex (f.support.image m.toSyn) <
+    toColex (g.support.image m.toSyn)
+
+theorem supportColexLt_wellFounded :
+    WellFounded
+      (m.supportColexLt :
+        MvPolynomial σ R → MvPolynomial σ R → Prop)
+
+theorem ReducesToSet.wellFounded
+    (P : Set (MvPolynomial σ R)) :
+    WellFounded (flip (m.ReducesToSet P)) :=
+  m.supportColexLt_wellFounded.mono
+    (by
+      intro f g h
+      exact ReducesToSet.supportColexLt m P h)
+\end{lstlisting}
+
+Suppose that $f\red{G}g$ cancels the monomial $x^t$.  Then
+$x^t\in\supp(f)\setminus\supp(g)$, while every monomial that occurs in $g$
+but not in $f$ is strictly smaller than $x^t$.  Hence $x^t$ is the largest
+monomial at which the supports differ, and it belongs to $f$.  Therefore
+$g<_{\mathrm{supp}}f$.
+
+\begin{theorem}[Termination of polynomial reduction]\label{thm:reduction-termination}
+For every set $G\subseteq\Rpoly$, there is no infinite forward reduction
+chain
+\[
+  f_0\red{G}f_1\red{G}f_2\red{G}\cdots.
+\]
+\end{theorem}
+
+Listing~\ref{lst:termination} expresses this theorem in Lean as
+well-foundedness of the flipped one-step reduction relation.
+
+\subsection{Translation to ideal congruence}
+
+If $f\red{G}g$, then the definition gives
+$f-g=cx^s p$ for some $p\in G$; hence $f-g\in\ideal{G}$.  The same conclusion
+holds for a finite reduction sequence and for the equivalence closure of
+reduction.
+
+Conversely, assume Condition~\eqref{eq:unit-condition} and
+$f-g\in\ideal{G}$.  Here \emph{span induction} means proving a property for
+every element of $\ideal{G}$ by checking it first for each generator in $G$
+and then showing that it is preserved by zero, addition, and polynomial
+scalar multiplication.  For a polynomial $x$, let $Q(x)$ be the assertion
+that
+\[
+  a+hx\eqvred{G}a
+\]
+for all polynomials $a$ and $h$.  If $p\in G$, then
+$hp\redstar{G}0$; hence
+\[
+  (a+hp)-a=hp\redstar{G}0,
+\]
+and the difference-to-equivalence part of the polynomial translation lemma,
+applied to $(a+hp)-a$, gives $a+hp\eqvred{G}a$.  In Lean, this implication is
+\lean{MonomialOrder.eqvGen_of_sub_reflTransGen_zero}; the generator case is
+packaged as \lean{MonomialOrder.eqvGen_add_mul_mem}.  Thus $Q$ holds for the
+generators and is preserved by zero, addition, and polynomial scalar
+multiplication.  Span induction therefore gives $Q(f-g)$, and the resulting
+full equivalence is
+\leandoc{Mathlib/RingTheory/MvPolynomial/PolynomialReductions}{MonomialOrder.eqvGen_iff_sub_mem_span}{MonomialOrder.eqvGen_iff_sub_mem_span}.
+Taking
+$a=g$ and $h=1$ yields
+\[
+  f=g+(f-g)\eqvred{G}g.
+\]
+
+\begin{lstlisting}[style=lean,caption={Reduction equivalence coincides with congruence modulo the generated ideal.},label={lst:translation}]
+theorem eqvGen_iff_sub_mem_span
+    (P : Set (MvPolynomial σ R))
+    (hP₀ :
+      ∀ p ∈ P,
+        IsUnit (m.leadingCoeff p) ∨ p = 0)
+    {f g : MvPolynomial σ R} :
+    f ⟷*[m, P] g ↔ f - g ∈ Ideal.span P
+\end{lstlisting}
+
+\begin{theorem}[Reduction/ideal translation]\label{thm:translation}
+Assume \eqref{eq:unit-condition}.  Then
+\[
+  f\eqvred{G}g
+  \quad\Longleftrightarrow\quad
+  f-g\in\ideal{G}.
+\]
+\end{theorem}

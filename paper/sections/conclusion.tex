@@ -1,0 +1,34 @@
+\section{Conclusion}\label{sec:conclusion}
+
+The formalization proves a specific chain of results.  Arbitrary-term
+polynomial reduction is terminating over an arbitrary commutative coefficient
+ring.  Under the unit-leading-coefficient hypothesis, reduction equivalence
+modulo $G$ agrees with congruence modulo $\ideal{G}$, and the Gr\"obner
+condition is equivalent to reduction-to-zero and the confluence properties.
+Assuming additionally that the coefficient ring has no zero divisors,
+Buchberger's S-polynomial condition is equivalent to the Gr\"obner condition.
+On the state space carrying the unit-leading-coefficient invariant,
+Noetherianity prevents infinite sequences of Buchberger-state steps.  One step
+and finite chains preserve finiteness, so finite input yields a finite terminal
+Gr\"obner basis in the finite-variable field specialization.  These theorems
+provide a verified relational specification of the abstract Buchberger
+procedure.  A practical certified solver additionally requires finite
+executable data structures, a verified normal-form function, and a computable
+strategy for selecting polynomial pairs and processing their S-polynomials.
+
+\section*{Acknowledgments}
+The author thanks the Lean and Mathlib communities for the existing library,
+discussion, and review on which this work builds.
+
+\section*{Funding}
+This work was supported by the National Research Foundation of Korea (NRF)
+grant funded by the Korea government (MSIT) (No. RS-2025-00520280).
+
+\section*{Data and software availability}
+No external dataset was generated or analyzed.  The canonical Lean source is
+publicly available in the author's \lean{mathlib4} fork.  The reproducible
+companion artifact, CI configuration, and generated documentation are
+available in the \lean{Buchberger} repository and through the artifact homepage
+\url{https://sanghyeok0.github.io/Buchberger/}.  The exact source and artifact
+snapshots, Lean toolchain, and reproduction commands are recorded in
+Section~\ref{sec:reproducibility}.

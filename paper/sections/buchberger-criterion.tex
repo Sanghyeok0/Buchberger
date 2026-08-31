@@ -1,0 +1,76 @@
+\section{Buchberger's criterion}\label{sec:buchberger-criterion}
+
+\begin{theorem}[Buchberger's criterion]
+\label{thm:buchberger-criterion}
+Assume Condition~\eqref{eq:unit-condition} and assume that $R$ has no zero
+divisors.  Then
+\[
+  \ideal{\LT(f)\mid f\in\ideal{G}}
+  =\ideal{\LT(g)\mid g\in G}
+  \quad\Longleftrightarrow\quad
+  \forall p,q\in G,\;\spoly(p,q)\redstar{G}0.
+\]
+\end{theorem}
+
+The quantification in Theorem~\ref{thm:buchberger-criterion} includes zero and
+diagonal pairs.  These cases add no substantive condition because
+\[
+  \spoly(0,q)=\spoly(p,0)=\spoly(p,p)=0,
+\]
+and the reflexive closure gives \(0\redstar{G}0\).  Moreover, every
+polynomial that actually performs a one-step reduction is nonzero by
+Definition~\ref{def:one-step-reduction}.
+
+For the forward implication, every S-polynomial of two elements of $G$
+belongs to $\ideal{G}$, so Theorem~\ref{thm:groebner-characterizations}
+shows that it reduces to zero.  For the converse implication, assume that all
+S-polynomials of pairs in $G$ reduce to zero.  The proof establishes local
+confluence by analyzing a peak
+\[
+  f\red{G}f_1,
+  \qquad
+  f\red{G}f_2.
+\]
+Write the two reductions as $f_i=f-q_i$, where
+$q_i=c_i x^{s_i} p_i$ cancels the term with exponent $t_i$.  If the two steps
+cancel the same exponent of $f$, then there exist an exponent $v$ and a
+coefficient $k\in R$ such that
+\[
+  f_2-f_1=q_1-q_2=kx^v\spoly(p_1,p_2).
+\]
+Finite reduction is preserved under multiplication by a monomial term, so the
+hypothesis $\spoly(p_1,p_2)\redstar{G}0$ implies that
+$f_2-f_1\redstar{G}0$.
+
+If the two steps cancel different exponents, order the cancelled monomials,
+say $x^{t_1}<_m x^{t_2}$.  The polynomial $q_1$ has leading exponent $t_1$,
+so its coefficient at $t_2$ is zero.  Hence $q_1-q_2$ reduces in one step to
+$q_1$, and $q_1=c_1x^{s_1} p_1$ reduces to zero.  The case
+$x^{t_2}<_m x^{t_1}$ is symmetric.  Since
+$f_2-f_1=q_1-q_2\redstar{G}0$, the difference-to-joinability part of the
+polynomial translation lemma yields $f_1\joinred{G}f_2$.  Hence every one-step
+peak is joinable, so $\red{G}$ is locally confluent.  The local-confluence equivalence from
+Section~\ref{sec:groebner-criterion} then proves
+\lean{MonomialOrder.IsGroebner}.
+
+Listing~\ref{lst:buchberger-criterion} states both nontrivial assumptions:
+every nonzero $g\in G$ has unit leading coefficient, and $R$ has no zero
+divisors.  The no-zero-divisor assumption is used when computing leading terms
+of polynomial products.
+
+\begin{lstlisting}[style=lean,caption={Buchberger's criterion for the self-relative Gr\"obner predicate.},label={lst:buchberger-criterion}]
+theorem IsGroebner.iff_sPolynomial_reflTransGen_zero
+    [NoZeroDivisors R]
+    (G : Set (MvPolynomial σ R))
+    (hG₀ :
+      ∀ g ∈ G,
+        IsUnit (m.leadingCoeff g) ∨ g = 0) :
+    m.IsGroebner G ↔
+      ∀ g₁ ∈ G, ∀ g₂ ∈ G,
+        m.sPolynomial g₁ g₂ ⟶*[m, G] 0
+\end{lstlisting}
+
+The file also contains an ideal-relative form.  If
+$\operatorname{Ideal.span}(G)=I$, then
+\lean{MonomialOrder.IsGroebnerBasis} is equivalent to the statement that every
+S-polynomial of two elements of $G$ reduces to zero modulo $G$.

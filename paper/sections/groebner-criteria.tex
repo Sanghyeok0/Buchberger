@@ -1,0 +1,94 @@
+\section{Gr\"obner bases as confluent reduction systems}\label{sec:groebner-criterion}
+
+Definition~\ref{def:groebner-conditions} distinguishes the self-relative
+predicate
+\leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner}{MonomialOrder.IsGroebner}
+from the ideal-relative predicate
+\leandoc{Mathlib/RingTheory/MvPolynomial/BuchbergerCriterion}{MonomialOrder.IsGroebnerBasis}{MonomialOrder.IsGroebnerBasis}.
+The theorem
+\leandoc{Mathlib/RingTheory/MvPolynomial/BuchbergerCriterion}{MonomialOrder.isGroebnerBasis_span_iff_isGroebner}{isGroebnerBasis_span_iff_isGroebner}
+identifies them when
+$I=\ideal{G}$.  Listing~\ref{lst:groebner-defs} displays the self-relative
+Lean definition and its confluence characterization.
+
+\begin{lstlisting}[style=lean,caption={The self-relative Gr\"obner condition and its confluence characterization.},label={lst:groebner-defs}]
+def IsGroebner
+    (G : Set (MvPolynomial σ R)) : Prop :=
+  Ideal.span
+      (m.leadingTerm ''
+        (((Ideal.span G : Ideal (MvPolynomial σ R)) :
+          Set (MvPolynomial σ R)))) =
+    Ideal.span (m.leadingTerm '' G)
+
+theorem IsGroebner.iff_confluent
+    (G : Set (MvPolynomial σ R))
+    (hG₀ :
+      ∀ g ∈ G,
+        IsUnit (m.leadingCoeff g) ∨ g = 0) :
+    m.IsGroebner G ↔
+      Relation.Confluent (m.ReducesToSet G)
+\end{lstlisting}
+
+\begin{theorem}[Reduction-theoretic characterizations of Gr\"obner bases]
+\label{thm:groebner-characterizations}
+Assume Condition~\eqref{eq:unit-condition}.  Then the following propositions
+are equivalent:
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+  \item $\ideal{\LT(f)\mid f\in\ideal{G}}
+        =\ideal{\LT(g)\mid g\in G}$;
+  \item every $f\in\ideal{G}$ satisfies $f\redstar{G}0$;
+  \item every nonzero element of $\ideal{G}$ is reducible modulo $G$;
+  \item $\red{G}$ satisfies the Church--Rosser property;
+  \item $\red{G}$ is locally confluent;
+  \item $\red{G}$ is confluent;
+  \item $\red{G}$ has unique normal forms; and
+  \item each residue class modulo $\ideal{G}$ has a unique normal-form
+        representative.
+\end{enumerate}
+\end{theorem}
+
+\begin{table}[t]
+\caption{Theorem~\ref{thm:groebner-characterizations} and its Lean declarations.}
+\label{tab:groebner-characterizations-lean}
+\centering
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.07\textwidth}>{\raggedright\arraybackslash}p{0.43\textwidth}>{\raggedright\arraybackslash}X@{}}
+\toprule
+Label & Mathematical condition & Lean declaration \doclinkmark \\
+\midrule
+(a) & Leading-term ideal criterion & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner}{MonomialOrder.IsGroebner} \\
+(b) & Every element of $\ideal{G}$ reduces to zero & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_idealElements_reduceTo_zero}{iff_idealElements_reduceTo_zero} \\
+(c) & Every nonzero element of $\ideal{G}$ is reducible & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_nonzero_idealElements_reducible}{iff_nonzero_idealElements_reducible} \\
+(d) & Church--Rosser & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_churchRosser}{iff_churchRosser} \\
+(e) & Local confluence & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_locallyConfluent}{iff_locallyConfluent} \\
+(f) & Confluence & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_confluent}{iff_confluent} \\
+(g) & Unique normal forms & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_uniqueNormalForms}{iff_uniqueNormalForms} \\
+(h) & Unique normal-form representative in each residue class & \leandoc{Mathlib/RingTheory/MvPolynomial/GroebnerBasisCriterion}{MonomialOrder.IsGroebner.iff_unique_normalForm_representatives}{iff_unique_normalForm_representatives} \\
+\bottomrule
+\end{tabularx}
+\medskip
+
+\raggedright\scriptsize
+The declarations corresponding to (b)--(h) are in the namespace
+\lean{MonomialOrder.IsGroebner}.
+\end{table}
+
+The proof of Theorem~\ref{thm:groebner-characterizations} is organized as
+explicit implications between the eight propositions.  Termination gives at
+least one normal form reachable from every polynomial.  The equality in
+(a) proves that a residue class modulo $\ideal{G}$ contains at most one
+normal polynomial, and hence exactly one.  By Theorem~\ref{thm:translation},
+equality of residue classes is the same as reduction equivalence, so uniqueness
+of normal representatives yields Church--Rosser.
+Theorem~\ref{thm:reduction-termination} and Newman's lemma identify local
+confluence with confluence.  The Church--Rosser property implies that every
+$f\in\ideal{G}$ reduces to zero because $f\eqvred{G}0$.
+
+The converse from (c) to (a) requires more than an immediate
+leading-term argument: a nonzero ideal element may initially be reducible at a
+lower term.  The Lean proof uses well-founded induction on the support-colex
+order.  If the reduction occurs below the leading term, the reduct has the same
+leading term and a strictly smaller support-colex measure, so the induction
+hypothesis applies.  Eventually one obtains a reduction at the leading term,
+which shows that the leading term is divisible by the leading term of an
+element of $G$ and proves the equality in (a).

@@ -1,0 +1,168 @@
+\section{Preliminaries and abstract reduction systems}\label{sec:setting}
+
+\subsection{Polynomial setting}
+
+Let $R$ be a commutative ring, let the variables be indexed by $\sigma$, and write $\Rpoly$ for the multivariate polynomial ring.  
+Lean represents this ring by \texttt{MvPolynomial }\(\sigma\)\texttt{ R}.  
+A monomial exponent is a finitely supported function $\alpha:\sigma\to_0\N$.  
+We continue to work with the fixed monomial order $m$.  For every nonzero $f\in\Rpoly$, write $\LM(f)$, $\LC(f)$, and $\LT(f)$
+for its leading monomial, leading coefficient, and leading term.  Thus
+$\LT(f)=\LC(f)\LM(f)$.  Mathlib represents the exponent of $\LM(f)$ by
+\lean{MonomialOrder.degree}; its leading coefficient and leading term are
+\lean{MonomialOrder.leadingCoeff} and \lean{MonomialOrder.leadingTerm}.
+
+\begin{remark}[Mathlib's convention for the zero polynomial]
+\label{rem:zero-polynomial}
+Mathlib makes its leading-data operations total.  In particular,
+\[
+  \texttt{m.degree 0}=0,\qquad \LC(0)=0,\qquad \LT(0)=0.
+\]
+For a nonzero polynomial, these operations have their usual meanings.  The
+value assigned by \lean{m.degree} at zero is only a totalization convention;
+it does not assert that the zero polynomial has a leading monomial.  Since
+$\LT(0)=0$, including the zero polynomial among the generators of a
+leading-term ideal does not change that ideal.
+\end{remark}
+
+\begin{definition}[Leading-term ideal and Gr\"obner conditions]
+\label{def:groebner-conditions}
+For an ideal $I\subseteq\Rpoly$, its leading-term ideal with respect to $m$ is
+\[
+  \ideal{\LT(f)\mid f\in I}.
+\]
+For a set $G\subseteq\Rpoly$, write $\ideal{G}$ for
+$\operatorname{Ideal.span}(G)$.
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+  \item The \emph{self-relative Gr\"obner condition} for $G$ is
+  \[
+    \ideal{\LT(f)\mid f\in\ideal{G}}
+    =\ideal{\LT(g)\mid g\in G}.
+  \]
+  \item If $G\subseteq I$, then $G$ is a \emph{Gr\"obner basis of $I$} when
+  \[
+    \ideal{\LT(f)\mid f\in I}
+    =\ideal{\LT(g)\mid g\in G}.
+  \]
+\end{enumerate}
+These conditions are represented by \lean{IsGroebner} and
+\lean{IsGroebnerBasis} in the namespace \lean{MonomialOrder}, respectively.
+\end{definition}
+
+\begin{definition}[S-polynomial]
+\label{def:s-polynomial}
+Let $f,g\in\Rpoly$ be nonzero, and let
+\[
+  M=\operatorname{lcm}\bigl(\LM(f),\LM(g)\bigr)
+\]
+be the least common multiple of their leading monomials.  The
+\emph{S-polynomial} of $f$ and $g$ is
+\begin{equation}\label{eq:spoly}
+  \spoly(f,g)
+  =
+  \LC(g)\frac{M}{\LM(f)}f
+  -
+  \LC(f)\frac{M}{\LM(g)}g.
+\end{equation}
+Here the quotients are monomial quotients.  The leading coefficients are
+cross-multiplied, so Formula~\eqref{eq:spoly} does not require coefficient
+inverses.
+\end{definition}
+
+\begin{remark}[Mathlib's total definition of the S-polynomial]
+\label{rem:spoly-total}
+Definition~\ref{def:s-polynomial} is the mathematical description for
+nonzero inputs.  Mathlib defines \lean{MonomialOrder.sPolynomial} for all
+polynomials.  Rather than explicitly forming $M$, Mathlib represents the two
+quotient exponents by the componentwise truncated differences
+$\deg_m(g)-\deg_m(f)$ and $\deg_m(f)-\deg_m(g)$.  These are equal,
+respectively, to
+\[
+  \bigl(\deg_m(f)\sqcup\deg_m(g)\bigr)-\deg_m(f)
+  \quad\text{and}\quad
+  \bigl(\deg_m(f)\sqcup\deg_m(g)\bigr)-\deg_m(g),
+\]
+and hence agree with the monomial quotients in
+Formula~\eqref{eq:spoly}.  Together with the conventions in
+Remark~\ref{rem:zero-polynomial}, the total definition also gives
+\[
+  \spoly(0,g)=0,\qquad
+  \spoly(f,0)=0,\qquad
+  \spoly(f,f)=0.
+\]
+\end{remark}
+
+\subsection{Abstract reduction systems}\label{sec:abstract-reduction}
+
+Let $r:\alpha\to\alpha\to\mathrm{Prop}$, and write $r^*$ for its
+reflexive-transitive closure.
+
+\begin{definition}[Normal forms and uniqueness]
+\label{def:normal-forms}
+An element $b$ is a \emph{normal form} if it has no outgoing $r$-step.  It is
+a \emph{normal form of $a$} if $r^*(a,b)$ and $b$ is a normal form.  The
+relation $r$ has \emph{unique normal forms} if any two normal forms reachable
+from the same element are equal.
+\end{definition}
+
+\begin{definition}[Joinability and confluence properties]
+\label{def:confluence-properties}
+Elements $b$ and $c$ are \emph{joinable} if there is a $d$ such that
+$r^*(b,d)$ and $r^*(c,d)$.
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+  \item The relation $r$ is \emph{locally confluent} if the two targets of
+        every pair of one-step reductions from the same source are joinable.
+  \item It is \emph{confluent} if the two targets of every pair of finite
+        reductions from the same source are joinable.
+  \item It has the \emph{Church--Rosser property} if any two elements related
+        by the equivalence closure of $r$ are joinable.
+\end{enumerate}
+\end{definition}
+
+Listing~\ref{lst:normal-forms} gives the corresponding Lean definitions of
+normal forms, uniqueness of normal forms, and local confluence.
+
+\begin{lstlisting}[style=lean,caption={Normal forms and local confluence for an abstract relation.},label={lst:normal-forms}]
+def IsNormalForm (r : α → α → Prop) (a : α) : Prop :=
+  ∀ b, ¬ r a b
+
+def IsNormalFormOf (r : α → α → Prop) (a b : α) : Prop :=
+  ReflTransGen r a b ∧ IsNormalForm r b
+
+def UniqueNormalForms (r : α → α → Prop) : Prop :=
+  ∀ {a b c : α},
+    ReflTransGen r a b → ReflTransGen r a c →
+    IsNormalForm r b → IsNormalForm r c → b = c
+
+def LocallyConfluent (r : α → α → Prop) : Prop :=
+  ∀ {a b c : α},
+    r a b → r a c → Join (ReflTransGen r) b c
+\end{lstlisting}
+
+A relation $r$ is called \emph{terminating} if there is no infinite
+sequence $a_0,a_1,a_2,\ldots$ satisfying
+\[
+  r(a_i,a_{i+1})
+  \qquad\text{for every }i\geq0.
+\]
+Lean encodes this condition as well-foundedness of $\operatorname{flip}(r)$:
+a forward $r$-sequence becomes a descending chain for the flipped relation.
+
+\begin{theorem}[Existence of normal forms]\label{thm:normal-form-exists}
+If $r$ is terminating, then every element has a normal form.
+\end{theorem}
+
+\begin{theorem}[Newman's lemma \citep{Newman1942}]\label{thm:newman}
+If $r$ is terminating and locally confluent, then $r$ is confluent.
+\end{theorem}
+
+\begin{proposition}[Confluence, Church--Rosser, and normal forms]
+\label{prop:abstract-equivalences}
+For every relation $r$, confluence implies uniqueness of normal forms, and
+confluence is equivalent to the Church--Rosser property.  If $r$ is
+terminating, then uniqueness of normal forms also implies confluence.
+\end{proposition}
+
+Theorems~\ref{thm:normal-form-exists}--\ref{thm:newman} and
+Proposition~\ref{prop:abstract-equivalences} are standard results about
+abstract reduction systems; see \citet[Chapter~2]{BaaderNipkow1998}.  They form
+the abstract rewriting layer used below and do not depend on polynomials.

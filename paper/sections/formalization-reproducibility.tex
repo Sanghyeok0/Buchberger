@@ -1,0 +1,83 @@
+\section{Formalization design and reproducibility}\label{sec:design}
+
+\subsection{Relation versus division function}
+
+Mathlib already provides polynomial division with respect to a monomial
+order.  The relation $\red{G}$ has a different role: it specifies which
+single cancellations are mathematically valid, independently of how an
+algorithm chooses them.  The current development proves bridge lemmas showing
+that a finite relational reduction sequence yields a finite linear-combination
+representation of the input, together with the same product-degree bound that
+appears in \lean{MonomialOrder.div_set}.  It does not yet prove that the remainder
+returned by Mathlib's division procedure is reachable by $\redstar{G}$ and is
+normal modulo $G$; establishing that direct connection remains future work.
+The relational specification can also be used to compare leading-term,
+arbitrary-term, matrix-based, and signature-restricted reduction procedures.
+
+\subsection{Existing and new infrastructure}
+
+The modified \lean{Relation.lean} file contains both pre-existing Mathlib
+code and new declarations.  The new declarations include \lean{Diamond},
+\lean{Confluent}, \lean{ChurchRosser}, the closure bridges
+\lean{Relation.ReflTransGen.to_eqvGen} and \lean{Relation.Join.to_eqvGen}, and
+the proofs relating confluence and Church--Rosser.  The file \lean{NormalForm.lean} is separate and defines the
+normal-form API used by the polynomial files.  Accordingly, the paper does not
+count the complete length of \lean{Relation.lean} as newly formalized code.
+
+\subsection{General coefficient rings}
+
+The coefficient assumptions are layered according to the result being proved.
+\begin{itemize}[leftmargin=2em]
+  \item Over an arbitrary commutative ring, the development defines reduction,
+    characterizes reducibility and normality, proves termination and degree
+    bounds, and extracts finite linear-combination certificates such as
+    \leandoc{Mathlib/RingTheory/MvPolynomial/PolynomialReductions}{MonomialOrder.exists_linearCombination_of_reflTransGen_with_degree_bound}{exists_linearCombination_of_reflTransGen_with_degree_bound}.
+  \item To prove that an arbitrary polynomial multiple of a reducer reduces to
+    zero, it is enough for the reducer's leading coefficient to be regular,
+    that is, a non-zero-divisor.
+  \item The translation lemma, the equivalence between reduction congruence and
+    ideal congruence, and the principal confluence/Gr\"obner equivalences use
+    the stronger unit-leading-coefficient hypothesis
+    \eqref{eq:unit-condition}.
+\end{itemize}
+Over a coefficient field, Condition~\eqref{eq:unit-condition} is automatic.
+
+\subsection{Reproducibility of the formal artifact}
+\label{sec:reproducibility}
+
+The six reviewed Lean files contain no occurrences of \lean{sorry} or
+\lean{admit}.  Two immutable snapshots identify the reviewed development:
+\begin{itemize}[leftmargin=2em]
+  \item the canonical Lean source is commit
+    \href{https://github.com/Sanghyeok0/mathlib4/tree/4868fec773dcba035d283904f8b118511cc83d73}
+    {\lean{4868fec773dcba035d283904f8b118511cc83d73}}
+    of the author's \lean{mathlib4} fork;
+  \item the companion artifact is commit
+    \href{https://github.com/Sanghyeok0/Buchberger/commit/3e7bbc935df0f545f4d56ed4a457fc23510e30e7}
+    {\lean{3e7bbc935df0f545f4d56ed4a457fc23510e30e7}}
+    of the \lean{Buchberger} repository.
+\end{itemize}
+The artifact pins the source commit and the Lean
+\lean{v4.33.0-rc1} toolchain.  A clean reproduction uses
+\begin{verbatim}
+git clone https://github.com/Sanghyeok0/Buchberger.git
+cd Buchberger
+git checkout 3e7bbc935df0f545f4d56ed4a457fc23510e30e7
+lake build
+\end{verbatim}
+The root module built by this command contains no copied formalization
+code: it imports exactly the six modules shown in
+Figure~\ref{fig:dependencies} from the pinned fork.  For a direct check of the
+final module in the canonical source repository, run
+\begin{verbatim}
+git clone https://github.com/Sanghyeok0/mathlib4.git
+cd mathlib4
+git checkout 4868fec773dcba035d283904f8b118511cc83d73
+lake exe cache get
+lake env lean Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm.lean
+\end{verbatim}
+The artifact homepage
+\url{https://sanghyeok0.github.io/Buchberger/} provides reproduction
+instructions.  Generated API documentation is available at
+\url{https://sanghyeok0.github.io/Buchberger/docs/}; each documented
+declaration links to its definition in the fixed \lean{mathlib4} source.

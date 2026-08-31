@@ -1,0 +1,51 @@
+name: Build paper
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "paper/**"
+      - ".github/workflows/paper.yml"
+  pull_request:
+    paths:
+      - "paper/**"
+      - ".github/workflows/paper.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-paper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile manuscript
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: paper
+          root_file: manuscript.tex
+          latexmk_use_xelatex: false
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode
+
+      - name: Prepare arXiv source
+        working-directory: paper
+        run: |
+          rm -rf arxiv-source
+          mkdir -p arxiv-source/sections
+          cp manuscript.tex references.bib lstlean.tex manuscript.bbl arxiv-source/
+          cp sections/*.tex arxiv-source/sections/
+          (cd arxiv-source && zip -r ../arxiv-source.zip .)
+
+      - name: Upload paper artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-build
+          path: |
+            paper/manuscript.pdf
+            paper/manuscript.bbl
+            paper/arxiv-source.zip
+          if-no-files-found: error

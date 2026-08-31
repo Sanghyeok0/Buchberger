@@ -46,8 +46,15 @@ boundary.
 
 ## Paper
 
-The manuscript is in preparation. Its arXiv and archival links will be added
-here when the first public version is deposited.
+The canonical manuscript source is maintained in [`paper/`](paper/), with
+[`paper/manuscript.tex`](paper/manuscript.tex) as the top-level file.  The
+[`Build paper`](.github/workflows/paper.yml) GitHub Actions workflow compiles
+the manuscript and produces three build artifacts: `manuscript.pdf`,
+`manuscript.bbl`, and an arXiv-ready `arxiv-source.zip`.
+
+The arXiv link will be added here after the first public version is deposited.
+For each submitted arXiv version, the corresponding repository commit should be
+preserved with a tag such as `arxiv-v1`.
 
 ## Legacy Prototype
 
