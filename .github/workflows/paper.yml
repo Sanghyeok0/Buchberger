@@ -1,12 +1,6 @@
 name: Build paper
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "paper/**"
-      - ".github/workflows/paper.yml"
   workflow_dispatch:
 
 permissions:
@@ -40,8 +34,7 @@ jobs:
           cp sections/*.tex arxiv-source/sections/
           (cd arxiv-source && zip -r ../arxiv-source.zip .)
 
-      - name: Bootstrap tracked review PDF
-        if: github.event_name == 'push'
+      - name: Update tracked review PDF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
