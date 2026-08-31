@@ -1,0 +1,15 @@
+{
+  "name": "Buchberger paper",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "james-yu.latex-workshop"
+      ]
+    }
+  },
+  "postCreateCommand": "chmod +x paper/build.sh paper/watch.sh paper/publish.sh && ./paper/build.sh"
+}

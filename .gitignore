@@ -2,3 +2,18 @@
 /.local-bin
 /home_page/_site
 /home_page/docs
+
+# LaTeX build by-products. The review PDF is intentionally tracked.
+/paper/*.aux
+/paper/*.blg
+/paper/*.fdb_latexmk
+/paper/*.fls
+/paper/*.log
+/paper/*.out
+/paper/*.synctex.gz
+/paper/*.toc
+/paper/*.lof
+/paper/*.lot
+/paper/manuscript.bbl
+/paper/arxiv-source/
+/paper/arxiv-source.zip

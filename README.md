@@ -47,10 +47,16 @@ boundary.
 ## Paper
 
 The canonical manuscript source is maintained in [`paper/`](paper/), with
-[`paper/manuscript.tex`](paper/manuscript.tex) as the top-level file.  The
-[`Build paper`](.github/workflows/paper.yml) GitHub Actions workflow compiles
-the manuscript and produces three build artifacts: `manuscript.pdf`,
-`manuscript.bbl`, and an arXiv-ready `arxiv-source.zip`.
+[`paper/manuscript.tex`](paper/manuscript.tex) as the top-level file. The
+current compiled review version is committed as
+[`paper/manuscript.pdf`](paper/manuscript.pdf), so readers of `main` can inspect
+the latest LaTeX source and rendered PDF together.
+
+For rapid editing and PDF review, open the repository in GitHub Codespaces and
+use the scripts documented in [`paper/README.md`](paper/README.md). The
+[`Build paper`](.github/workflows/paper.yml) GitHub Actions workflow is reserved
+for manual clean-build and arXiv-package checks; it produces `manuscript.pdf`,
+`manuscript.bbl`, and an arXiv-ready `arxiv-source.zip` as workflow artifacts.
 
 The arXiv link will be added here after the first public version is deposited.
 For each submitted arXiv version, the corresponding repository commit should be

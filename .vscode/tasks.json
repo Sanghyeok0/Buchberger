@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Paper: build PDF",
+      "type": "shell",
+      "command": "./paper/build.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Paper: watch PDF",
+      "type": "shell",
+      "command": "./paper/watch.sh",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

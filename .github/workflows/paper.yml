@@ -7,14 +7,14 @@ on:
     paths:
       - "paper/**"
       - ".github/workflows/paper.yml"
-  pull_request:
-    paths:
-      - "paper/**"
-      - ".github/workflows/paper.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: paper-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-paper:
@@ -39,6 +39,19 @@ jobs:
           cp manuscript.tex references.bib lstlean.tex manuscript.bbl arxiv-source/
           cp sections/*.tex arxiv-source/sections/
           (cd arxiv-source && zip -r ../arxiv-source.zip .)
+
+      - name: Bootstrap tracked review PDF
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper/manuscript.pdf
+          if git diff --cached --quiet; then
+            echo "Tracked PDF is already current."
+          else
+            git commit -m "Update manuscript PDF"
+            git push
+          fi
 
       - name: Upload paper artifacts
         uses: actions/upload-artifact@v4
