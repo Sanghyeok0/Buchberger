@@ -12,14 +12,16 @@ divisors.  Then
 \]
 \end{theorem}
 
-The quantification in Theorem~\ref{thm:buchberger-criterion} includes zero and
-diagonal pairs.  These cases add no substantive condition because
+Theorem~\ref{thm:buchberger-criterion} quantifies over all pairs
+$p,q\in G$, including pairs involving the zero polynomial and diagonal
+pairs.  These cases impose no additional condition because
 \[
   \spoly(0,q)=\spoly(p,0)=\spoly(p,p)=0,
 \]
-and the reflexive closure gives \(0\redstar{G}0\).  Moreover, every
-polynomial that actually performs a one-step reduction is nonzero by
-Definition~\ref{def:one-step-reduction}.
+and the reflexive closure gives \(0\redstar{G}0\).  Although $G$ may contain
+zero, this causes no problem in the local-confluence argument:
+Definition~\ref{def:one-step-reduction} requires every polynomial used as a
+one-step reducer to be nonzero.
 
 For the forward implication, every S-polynomial of two elements of $G$
 belongs to $\ideal{G}$, so Theorem~\ref{thm:groebner-characterizations}
