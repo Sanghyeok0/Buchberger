@@ -12,7 +12,7 @@ the paper rather than maintaining a second copy of the Lean files.
 ## Formalization Snapshot
 
 - Development branch: [`buchberger-formalization`](https://github.com/Sanghyeok0/mathlib4/tree/buchberger-formalization)
-- Immutable commit: [`59aad7c1fd8ba28bf8a1b72bcb24bcdaa74d3b81`](https://github.com/Sanghyeok0/mathlib4/tree/59aad7c1fd8ba28bf8a1b72bcb24bcdaa74d3b81)
+- Immutable commit: [`4868fec773dcba035d283904f8b118511cc83d73`](https://github.com/Sanghyeok0/mathlib4/tree/4868fec773dcba035d283904f8b118511cc83d73)
 - Generated API documentation: <https://sanghyeok0.github.io/Buchberger/docs/>
 - Reproducibility details: [`ARTIFACT.md`](ARTIFACT.md)
 
