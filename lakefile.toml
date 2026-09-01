@@ -10,7 +10,7 @@ autoImplicit = false
 [[require]]
 name = "mathlib"
 git = "https://github.com/Sanghyeok0/mathlib4.git"
-rev = "4868fec773dcba035d283904f8b118511cc83d73"
+rev = "0d10a03216579006a05dde6a9ad26fd92bcdd0f9"
 
 [[require]]
 name = "«doc-gen4»"
