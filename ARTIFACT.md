@@ -5,7 +5,7 @@
 The formalization extends Mathlib directly and is maintained in
 [`Sanghyeok0/mathlib4`](https://github.com/Sanghyeok0/mathlib4). The artifact
 for the paper is the immutable commit
-[`4868fec773dcba035d283904f8b118511cc83d73`](https://github.com/Sanghyeok0/mathlib4/tree/4868fec773dcba035d283904f8b118511cc83d73)
+[`59aad7c1fd8ba28bf8a1b72bcb24bcdaa74d3b81`](https://github.com/Sanghyeok0/mathlib4/tree/59aad7c1fd8ba28bf8a1b72bcb24bcdaa74d3b81)
 from the development branch `buchberger-formalization`.
 
 The branch name is provided for orientation only. Reproduction and citations
@@ -49,7 +49,7 @@ For a direct check of the final module in the source repository:
 ```sh
 git clone https://github.com/Sanghyeok0/mathlib4.git
 cd mathlib4
-git checkout 4868fec773dcba035d283904f8b118511cc83d73
+git checkout 59aad7c1fd8ba28bf8a1b72bcb24bcdaa74d3b81
 lake exe cache get
 lake env lean Mathlib/RingTheory/MvPolynomial/BuchbergerAlgorithm.lean
 ```
